@@ -1,0 +1,7 @@
+export type AppError =
+  | 'NOT_FOUND'
+  | 'ALREADY_EXISTS'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'INVALID_INPUT'
+  | 'INTERNAL_ERROR';
