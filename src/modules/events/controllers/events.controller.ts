@@ -3,7 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateEventDto } from '../dto/create-event.dto';
 import { CreateEventCommand } from '../commands/impl/create-event.command';
-import { matchResult } from '../../../common/http/match-result';
+import { matchResult } from '@common/http/match-result';
 
 @ApiTags('events')
 @Controller('events')

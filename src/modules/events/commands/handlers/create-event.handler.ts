@@ -2,9 +2,9 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ok, err, Result } from 'neverthrow';
-import { CreateEventCommand } from '../impl/create-event.command';
-import { EventEntity } from '../../domain/event.entity';
-import { AppError } from '../../../../common/errors/app-errors';
+import { CreateEventCommand } from '@events/commands/impl/create-event.command';
+import { EventEntity } from '@events/domain/entities/event.entity';
+import { AppError } from '@common/errors/app-errors';
 
 @CommandHandler(CreateEventCommand)
 export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
@@ -20,12 +20,10 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
 
     try {
       const event = this.eventRepository.create({
-        title: dto.title,
-        description: dto.description,
-        date: new Date(dto.date),
-        location: dto.location,
-        price: dto.price,
-        capacity: dto.capacity,
+        name: dto.title,
+        description: dto.description || null,
+        organizerId: 1, // ID de organizador temporal para compatibilidad
+        status: 'draft',
       });
 
       const savedEvent = await this.eventRepository.save(event);

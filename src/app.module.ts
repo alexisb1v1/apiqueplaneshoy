@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { EventsModule } from './modules/events/events.module';
+import { UsersModule } from './modules/users/infrastructure/nestjs/users.module';
+import { OrdersModule } from './modules/orders/infrastructure/nestjs/orders.module';
 
 @Module({
   imports: [
@@ -21,10 +23,12 @@ import { EventsModule } from './modules/events/events.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: configService.get<boolean>('DB_SYNCHRONIZE', true),
+        synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
       }),
     }),
     EventsModule,
+    UsersModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
