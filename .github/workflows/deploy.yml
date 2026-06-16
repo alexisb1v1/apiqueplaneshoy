@@ -1,0 +1,41 @@
+name: Deploy QuePlanesHoy API
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Environment Tag
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "ENV_TAG=latest" >> $GITHUB_ENV
+          else
+            echo "ENV_TAG=dev" >> $GITHUB_ENV
+          fi
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/apiqueplaneshoy:${{ github.sha }} \
+            -t ghcr.io/${{ github.repository_owner }}/apiqueplaneshoy:${{ env.ENV_TAG }} .
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/apiqueplaneshoy:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/apiqueplaneshoy:${{ env.ENV_TAG }}
