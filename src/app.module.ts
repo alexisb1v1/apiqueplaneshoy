@@ -23,7 +23,7 @@ import { OrdersModule } from './modules/orders/infrastructure/nestjs/orders.modu
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
+        synchronize: configService.get<string>('DB_SYNCHRONIZE') === 'true',
       }),
     }),
     EventsModule,
