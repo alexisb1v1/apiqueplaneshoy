@@ -1,0 +1,31 @@
+services:
+  apiqueplaneshoy-dev:
+    image: ghcr.io/alexisb1v1/apiqueplaneshoy:dev
+    container_name: apiqueplaneshoy-dev
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # Tamaño máximo de cada archivo de log (10 Megabytes)
+        max-file: "3"     # Mantener máximo 3 archivos históricos
+    environment:
+      PORT: 3001
+      
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE}
+      
+      NODE_ENV: production
+      
+    networks:
+      - centralafbv_dev
+      - db_internal_dev
+
+networks:
+  centralafbv_dev:
+    external: true
+  db_internal_dev:
+    external: true
