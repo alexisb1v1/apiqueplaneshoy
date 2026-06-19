@@ -24,7 +24,13 @@ export class TicketEntity {
   @Column({ name: 'order_id', type: 'bigint', nullable: true })
   orderId: string | null;
 
-  @Column({ name: 'qr_code', length: 255, nullable: true, unique: true })
+  @Column({ name: 'paid_base_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  paidBasePrice: number | null;
+
+  @Column({ name: 'paid_service_fee', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  paidServiceFee: number | null;
+
+  @Column({ name: 'qr_code', type: 'varchar', length: 255, nullable: true, unique: true })
   qrCode: string | null;
 
   @Column({ length: 50, default: 'available' })

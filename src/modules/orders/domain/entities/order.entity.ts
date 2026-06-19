@@ -17,6 +17,12 @@ export class OrderEntity {
   @Column({ length: 50, default: 'pending' })
   status: string;
 
+  @Column({ name: 'subtotal_tickets', type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  subtotalTickets: number;
+
+  @Column({ name: 'total_service_fee', type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  totalServiceFee: number;
+
   @Column({ name: 'total_amount', type: 'decimal', precision: 10, scale: 2, default: 0.00 })
   totalAmount: number;
 

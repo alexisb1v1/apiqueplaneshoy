@@ -18,7 +18,7 @@ export class UserEntity {
   @Column({ length: 150, unique: true })
   email: string;
 
-  @Column({ name: 'password_hash', length: 255, nullable: true })
+  @Column({ name: 'password_hash', type: 'varchar', length: 255, nullable: true })
   passwordHash: string | null;
 
   @Column({ length: 50, default: 'customer' })

@@ -21,7 +21,7 @@ export class PaymentEntity {
   @Column({ length: 50, default: 'pending' })
   status: string;
 
-  @Column({ name: 'external_transaction_id', length: 255, nullable: true })
+  @Column({ name: 'external_transaction_id', type: 'varchar', length: 255, nullable: true })
   externalTransactionId: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

@@ -19,8 +19,11 @@ export class ZoneEntity {
   @Column({ type: 'integer' })
   capacity: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price: number; // Mapeado a number en TS (TypeORM se encarga de convertir string decimal a number)
+  @Column({ name: 'base_price', type: 'decimal', precision: 10, scale: 2 })
+  basePrice: number;
+
+  @Column({ name: 'service_fee', type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  serviceFee: number;
 
   // Relaciones
   @ManyToOne(() => EventEntity, (event) => event.zones, { onDelete: 'CASCADE' })
