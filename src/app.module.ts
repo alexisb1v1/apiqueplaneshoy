@@ -6,6 +6,10 @@ import { AppService } from './app.service';
 import { EventsModule } from './modules/events/events.module';
 import { UsersModule } from './modules/users/infrastructure/nestjs/users.module';
 import { OrdersModule } from './modules/orders/infrastructure/nestjs/orders.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { MediaModule } from './modules/media/media.module';
+import { SearchModule } from './modules/search/search.module';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -29,6 +33,10 @@ import { OrdersModule } from './modules/orders/infrastructure/nestjs/orders.modu
     EventsModule,
     UsersModule,
     OrdersModule,
+    AuthModule,
+    MediaModule,
+    SearchModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

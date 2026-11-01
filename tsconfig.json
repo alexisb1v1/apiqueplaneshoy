@@ -20,8 +20,11 @@
     "paths": {
       "@common/*": ["src/common/*"],
       "@users/*": ["src/modules/users/*"],
+      "@auth/*": ["src/modules/auth/*"],
       "@events/*": ["src/modules/events/*"],
-      "@orders/*": ["src/modules/orders/*"]
+      "@orders/*": ["src/modules/orders/*"],
+      "@modules/*": ["src/modules/*"],
+      "@redis/*": ["src/modules/redis/*"]
     }
   }
 }

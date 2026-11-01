@@ -3,6 +3,7 @@ import {
   BadRequestException,
   UnauthorizedException,
   ForbiddenException,
+  ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Result } from 'neverthrow';
@@ -15,6 +16,7 @@ const DEFAULT_MESSAGES: Record<AppError, string> = {
   FORBIDDEN: 'Acceso denegado',
   INVALID_INPUT: 'Datos de entrada inválidos',
   INTERNAL_ERROR: 'Error interno del servidor',
+  EMAIL_NOT_VERIFIED: 'Debes confirmar tu correo electrónico antes de realizar esta acción',
 };
 
 export function matchResult<T>(
@@ -25,12 +27,13 @@ export function matchResult<T>(
   return result.match(onSuccess, (error) => {
     const msg = messages?.[error] ?? DEFAULT_MESSAGES[error];
     switch (error) {
-      case 'NOT_FOUND':      throw new NotFoundException(msg);
-      case 'ALREADY_EXISTS': throw new BadRequestException(msg);
-      case 'UNAUTHORIZED':   throw new UnauthorizedException(msg);
-      case 'FORBIDDEN':      throw new ForbiddenException(msg);
-      case 'INVALID_INPUT':  throw new BadRequestException(msg);
-      default:               throw new InternalServerErrorException(msg);
+      case 'NOT_FOUND':          throw new NotFoundException(msg);
+      case 'ALREADY_EXISTS':     throw new ConflictException(msg);
+      case 'UNAUTHORIZED':       throw new UnauthorizedException(msg);
+      case 'EMAIL_NOT_VERIFIED':
+      case 'FORBIDDEN':          throw new ForbiddenException(msg);
+      case 'INVALID_INPUT':      throw new BadRequestException(msg);
+      default:                   throw new InternalServerErrorException(msg);
     }
   });
 }

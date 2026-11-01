@@ -4,4 +4,5 @@ export type AppError =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'INVALID_INPUT'
-  | 'INTERNAL_ERROR';
+  | 'INTERNAL_ERROR'
+  | 'EMAIL_NOT_VERIFIED';

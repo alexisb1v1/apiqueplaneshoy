@@ -1,0 +1,589 @@
+# Flujos de Negocio y Arquitectura de Procesos - "Qué planes hoy"
+
+Este documento describe los flujos de negocio fundamentales de la plataforma, detallando la interacción entre el **Frontend Web**, la **App de Puerta (Escáner)**, el **Backend NestJS (CQRS)**, la **Base de Datos PostgreSQL** y las **Pasarelas de Pago Externas**.
+
+---
+
+## 1. Mapa General de Flujos
+
+```mermaid
+graph TD
+    U["0. Registro y Extensión de Perfil (Promotor/Comprador)"] -->|"Cuenta Activa"| B["2. Venta, Cupones y Checkout de Entradas"]
+    U -->|"Activa Perfil Promotor"| A["1. Creación de Eventos, Preventas y Cupones"]
+    A -->|"Publicación"| B
+    B -->|"Emisión de QR con Firma Digital Ed25519"| C["3. Validación de Accesos en Puerta (App Escáner)"]
+    B -->|"Recaudación Neta Custodiada"| D["4. Ciclo Financiero: Anticipos y Liquidación Final"]
+```
+
+---
+
+## 2. Flujo 0: Registro, Autenticación y Extensión de Perfil (Comprador y Organizador)
+
+Garantiza que una misma persona pueda comprar entradas como cliente final y, cuando lo desee, activar su perfil de promotor para gestionar espectáculos sin registrar cuentas duplicadas.
+
+### 2.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Usuario as Usuario Único
+    participant Web as Web Clientes / Promotores (Next.js)
+    participant OAuth as Proveedor OAuth (Google/Facebook)
+    participant API as Backend NestJS
+    participant DB as PostgreSQL
+    participant Mail as Servicio de Email (SMTP/Resend)
+
+    alt Camino A: Autenticación con Redes Sociales (Google / Facebook)
+        Usuario->>Web: Clic en "Continuar con Google"
+        Web->>OAuth: Redirige a consentimiento OAuth
+        OAuth-->>Web: Devuelve authorization_code
+        Web->>API: POST /api/auth/social-login { provider, code }
+        API->>OAuth: Valida token y obtiene perfil (email verificado)
+        API->>DB: Busca en users por email
+        opt Usuario nuevo
+            API->>DB: INSERT INTO users (email, email_verified_at=NOW(), role='customer', is_organizer=false)
+            API->>DB: INSERT INTO social_identities (provider, provider_id)
+        end
+        API-->>Web: 200 OK { access_token, user_profile }
+        Web-->>Usuario: Sesión iniciada y cuenta 100% activa para comprar
+
+    else Camino B: Registro Tradicional (Formulario con Correo y Contraseña)
+        Usuario->>Web: Ingresa Nombre, Correo y Contraseña
+        Web->>API: POST /api/auth/register { name, email, password }
+        activate API
+        API->>DB: INSERT INTO users (email, password_hash=bcrypt, email_verified_at=NULL, is_organizer=false)
+        API->>Mail: Envía correo con Token de Verificación (enlace de 6 dígitos)
+        API-->>Web: 201 Created { message: 'Cuenta creada. Revisa tu correo.' }
+        deactivate API
+
+        Usuario->>Mail: Abre correo y hace clic en "Confirmar Cuenta"
+        Mail->>Web: Redirige a /verify-email?token=xyz
+        Web->>API: POST /api/auth/verify-email { token }
+        API->>DB: UPDATE users SET email_verified_at = NOW()
+        API-->>Web: 200 OK { message: 'Correo verificado exitosamente' }
+        Web-->>Usuario: Cuenta habilitada para comprar boletos
+    end
+
+    opt Extensión Opcional: Activación de Perfil Organizador
+        Usuario->>Web: Clic en "Crear Evento / Soy Organizador"
+        Web->>Usuario: Formulario KYC (Razón Social/Nombre, DNI/RUC, Teléfono, Logo)
+        Usuario->>Web: Envía datos comerciales
+        Web->>API: POST /api/auth/become-organizer { organizerName, organizerDocumentType, organizerDocumentNumber, organizerPhone, organizerLogoUrl }
+        API->>DB: UPDATE users SET is_organizer = true, organizer_name = :name, organizer_phone = :phone ...
+        API-->>Web: 200 OK { token, user: { isOrganizer: true, organizerName, ... } }
+        Web-->>Usuario: Acceso desbloqueado al Dashboard de Promotor con nuevo JWT (sin cerrar sesión)
+    end
+```
+
+### 2.2 Reglas de Negocio y Endpoints de Autenticación:
+* **Endpoints Oficiales de Auth:**
+  * `POST /api/auth/register`: Registro tradicional con hashing bcrypt y emisión de token criptográfico de verificación (24h).
+  * `POST /api/auth/login`: Autenticación con email/password y retorno de JWT con payload `{ sub, id, email, role, isOrganizer }`.
+  * `POST /api/auth/verify-email`: Confirmación de correo mediante token seguro. Actualiza `users.email_verified_at = NOW()`.
+  * `POST /api/auth/resend-verification`: Reenvío de enlace de verificación con protección contra spam.
+  * `GET /api/auth/me`: Retorna los datos normalizados del usuario autenticado (`AuthUserDto`).
+  * `PUT /api/auth/profile`: Actualización de datos de perfil (`name`, `phone`).
+  * `POST /api/auth/become-organizer`: Activación de perfil de organizador para cuentas unificadas.
+* **Verificación de Email Obligatoria (Plan B):** Un usuario con `email_verified_at IS NULL` puede registrar eventos como borrador (`draft`), pero no puede avanzar al checkout de compra ni publicar eventos (`published`).
+* **Sesión Única:** El mismo JWT autentica al usuario tanto en la tienda de boletos como en el panel administrativo de promotor.
+
+---
+
+## 3. Flujo 1: Creación de Eventos, Preventas Escalonadas, Cupones y Personalización
+
+Permite al promotor configurar integralmente su evento: ficha técnica, restricción de edad, términos y condiciones (en texto y/o enlace PDF oficial), preguntas frecuentes (FAQs), landing page con croquis de zonas, funciones de shows, precios regulares, hasta 3 preventas escalonadas y cupones de descuento.
+
+### 3.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Org as Promotor (is_organizer=true)
+    participant Web as Panel Web Promotor (Next.js)
+    participant API as Backend NestJS (CQRS)
+    participant Crypto as Módulo Criptográfico (Ed25519)
+    participant DB as PostgreSQL (Transacción Atómica)
+
+    Org->>Web: Completa el Asistente de Creación en 6 Secciones
+    Note over Org,Web: 1. Ficha General (Nombre, Categoría oficial EVENT_CATEGORIES, Tags de búsqueda text[], Ubigeo INEI 6 dígitos, Recinto, Coordenadas lat/lng vía Mapa Leaflet, Restricción de edad AGE_RESTRICTIONS, Límite entradas usuario, Requisitos acceso, Horarios informativos)<br/>2. Legal y Contenido (Términos URL PDF, FAQs, Landing config con selección de fondo por color sólido o patrón en mosaico repeat: header, body, footer, theme)<br/>3. Shows (nombre, start_time fecha y hora, sales_end_at hora de cierre de ventas, duration_hours en horas enteras)<br/>4. Zonas (Badge con color HEX, nombre, título comercial resaltado, beneficios, aforo, regular_price S/., comisión service_fee, max_tickets_per_order, max_tickets_per_user, sales_start_at)<br/>   + Hasta 3 Preventas por zona (zone_pricing_tiers: tier_number, price, capacity, end_at)<br/>5. Cupones (code, discount_type % o S/., discount_value, usage_type, max_uses, expires_at)<br/>6. Multimedia (carga directa de imágenes para portada, galería, croquis y landing)
+    
+    Web->>API: POST /api/events (CreateEventCommand Payload)
+    activate API
+    API->>API: Valida coherencia (fechas shows, cupo preventas <= aforo zona, precios preventa < regular_price)
+    API->>Crypto: Genera par de llaves Ed25519 exclusivo para este evento
+    Crypto-->>API: { signing_key_id, signing_public_key, private_key }
+    
+    API->>DB: Inicia Transacción Atómica
+    DB->>DB: INSERT INTO events (organizer_id, category, tags, age_restriction, terms_and_conditions_url, faqs, landing_config, ubigeo_code, coordinates, google_maps_url, user_ticket_limit, entry_requirements, opening_hours_comment, signing_key_id, signing_public_key, status='draft')
+    DB->>DB: INSERT INTO shows (event_id, name, start_time, sales_end_at, duration_hours)
+    DB->>DB: INSERT INTO zones (event_id, name, title, color, capacity, regular_price, service_fee, benefits, max_tickets_per_order, max_tickets_per_user, sales_start_at)
+    DB->>DB: INSERT INTO zone_pricing_tiers (zone_id, tier_number, name, price, capacity, end_at)
+    opt Cupones iniciales configurados
+        DB->>DB: INSERT INTO coupons (event_id, organizer_id, code, discount_type, discount_value, usage_type, max_uses, expires_at)
+    end
+    DB->>DB: INSERT INTO event_images (image_type='banner'|'gallery'|'zone_map')
+    DB-->>API: Commit Transacción (public_uuid generado)
+    deactivate API
+    
+    API-->>Web: 201 Created { event_public_uuid, status: 'draft' }
+    Web-->>Org: Redirige a Vista Previa del Evento y Dashboard de Gestión
+```
+
+### 3.2 Reglas de Negocio en la Configuración:
+* **Precio Regular de la Zona (`zones.regular_price`):** Es la tarifa de lista oficial en Soles (S/.) y permanece perenne. En las tarjetas de zonas, el nombre del sector se presenta en un **badge con el color HEX** configurado, el título comercial de la zona se resalta visualmente con sus beneficios abajo, y se expone la comisión de ticketera (10%) y el IGV incluido (18%). Se permite duplicar cualquier zona con un solo clic.
+* **Preventas Escalonadas (`zone_pricing_tiers`):** Hasta 3 preventas por zona ordenadas por `tier_number ASC`. El precio promocional debe ser estrictamente menor que `regular_price` y la suma de cupos de preventa no puede exceder el `capacity` total de la zona.
+* **Shows y Funciones (`shows`):** Cada función se lista a razón de 1 por fila con un cuadro de calendario (`OCT 15`), hora de inicio, solo hora de cierre de venta de boletos, duración estimada del show en horas enteras (`duration_hours`), aforo asignado y opción de duplicar show con 1 clic.
+* **Multimedia, Galería Oficial y Cloudflare R2:** Organización en 2 filas visuales:
+  - **Fila 1:** Banner Principal (1920x800) y Croquis de Zonas (Plano del Recinto) en dos columnas.
+  - **Fila 2:** Galería de Fotos Oficiales con cuadrícula de 4 slots y **regla estricta de máximo 4 fotos oficiales** (`event_images` con `image_type='gallery'`).
+  - **Arquitectura de Subida Directa:** Las imágenes se cargan directamente a **Cloudflare R2** mediante URLs prefirmadas temporales de 5 minutos generadas por el endpoint `POST /api/media/presigned-url`, eliminando el consumo de memoria RAM y ancho de banda del servidor VPS. Se organizan automáticamente por prefijos (`banners/`, `croquis/`, `gallery/`, `landings/`).
+* **Categorías y Restricciones Canónicas (`eventConstants.ts`):** Todo evento se clasifica mediante el catálogo unificado `EVENT_CATEGORIES` (`CONCERTS`, `THEATER`, `SPORTS`, `FESTIVALS`, `COMEDY`, `GASTRONOMY`) y su restricción de edad mediante `AGE_RESTRICTIONS` (`ALL_AGES`, `PLUS_14`, `PLUS_18`), facilitando el filtrado en cartelera y consistencia de badges e iconos emoji.
+* **Etiquetas de Búsqueda (`events.tags text[]`):** Arreglo de palabras clave administradas desde un control interactivo (con inserción mediante Enter/coma, chips de borrado y sugerencias rápidas) para optimizar el motor de indexación y búsqueda.
+* **Landing Page Dedicada, Fondo Personalizado y Live Preview:** Diseño modular y compacto que permite elegir entre un **color de fondo sólido** (`backgroundColor`) o una **imagen pequeña en mosaico** (`backgroundPatternUrl` con repetición `repeat`). Incluye un simulador interactivo en tiempo real (*Live Mini-Preview*) que refleja fielmente el fondo, Hero, 3 atractivos del Body y Footer.
+* **Modales Drawer Laterales:** Todos los formularios secundarios (agregar/editar shows, zonas y cupones) se despliegan en paneles laterales (*Drawer*) a pantalla completa vertical en el margen derecho, optimizando la concentración del usuario y el espacio de trabajo.
+* **Cupones de Descuento:** Selector de vigencia con campos separados de Fecha (`dd/mm/aaaa`) y Hora (`hh:mm`), previniendo desajustes de hidratación SSR y confusiones de zona horaria.
+* **Geolocalización Normalizada:** El distrito se resuelve con el código de 6 dígitos `ubigeo_code` (INEI) y las coordenadas geográficas se almacenan en un único campo `coordinates` (`latitud, longitud`) capturado con el selector de mapa OpenStreetMap / Leaflet.
+* **Términos y Condiciones:** Se gestiona exclusivamente mediante enlace web o documento PDF oficial (`terms_and_conditions_url`).
+* **Control de Boletos:** Se valida `max_tickets_per_order` (máximo por checkout) y `max_tickets_per_user` (límite acumulado en esa zona para el evento).
+
+### 3.3 Publicación de Eventos y Regla de Oro del Plan B (Email Verification Gate)
+
+Permite al promotor crear y guardar borradores de sus eventos sin ninguna barrera de verificación previa. Sin embargo, para activar la venta pública de entradas y publicar el evento en la cartelera oficial, el sistema aplica una validación criptográfica estricta de correo.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Org as Organizador / Promotor
+    participant Web as Web Promotor (Next.js)
+    participant Local as Almacenamiento Local (qph_event_draft)
+    participant API as Backend NestJS (CQRS)
+    participant DB as PostgreSQL
+
+    Note over Org,Web: Acceso Público Libre a /organizer/events/new (Lazy Authentication)
+    Org->>Web: Configura título, funciones, aforos y precios
+    
+    alt Caso 1: Guardar Borrador (status = 'draft')
+        Org->>Web: Clic en "Guardar Borrador"
+        opt Usuario sin sesión
+            Web->>Local: Guarda borrador en localStorage
+            Web->>Org: Modal: "Inicia sesión para persistir tu evento"
+        end
+        Web->>API: POST /api/events (Bearer Token)
+        API->>DB: INSERT INTO events (status = 'draft', organizer_id = req.user.id)
+        API-->>Web: 201 Created { id, slug, status: 'draft' }
+        Web-->>Org: Notificación: "Borrador guardado exitosamente"
+
+    else Caso 2: Publicar Evento (status = 'published')
+        Org->>Web: Clic en "Publicar Evento Ahora"
+        Web->>API: POST /api/events/:id/publish (Bearer Token)
+        activate API
+        API->>DB: SELECT id, email_verified_at, role FROM users WHERE id = req.user.id
+        
+        alt Correo NO verificado (email_verified_at IS NULL)
+            API-->>Web: 403 Forbidden { code: 'EMAIL_NOT_VERIFIED', message: 'Debes confirmar tu correo...' }
+            deactivate API
+            Web->>Org: Modal Plan B: "Tu evento está guardado como borrador.<br/>Confirma tu correo para ponerlo a la venta." + [Reenviar Correo]
+        else Correo SÍ verificado (email_verified_at NOT NULL)
+            activate API
+            API->>DB: UPDATE events SET status = 'published' WHERE id = :id AND organizer_id = req.user.id
+            API-->>Web: 200 OK { id, status: 'published' }
+            deactivate API
+            Web-->>Org: Toast: "¡Evento publicado en vivo exitosamente!"
+        end
+    end
+```
+
+* **Control de Autorización (BOLA / OWASP API1):** El endpoint `/api/events/:id/publish` valida que el `organizer_id` del evento coincida obligatoriamente con el usuario autenticado en el token JWT (o rol `admin`).
+* **Experiencia de Usuario (Lazy Authentication):** La ruta `/organizer/events/new` no fuerza redirecciones inmediatas al login, permitiendo a visitantes anónimos probar el creador de espectáculos y asegurando los datos en `localStorage` antes de solicitar el inicio de sesión.
+
+---
+
+## 4. Flujo 2: Compra, Validación de Cupones, Control de Concurrencia y Checkout
+
+Controla la alta concurrencia mediante doble ventana temporal (10 min en backend vs 5 min en pasarela), valida límites de compra por checkout y por usuario, aplica cupones de descuento y emite tickets firmados criptográficamente.
+
+### 4.1 La Doble Ventana de Tiempos
+* **10 Minutos (Reserva de Inventario en Backend):** `locked_until = now() + 10 min`. El sistema retiene los boletos en la base de datos con bloqueo atómico (`SELECT FOR UPDATE`).
+* **5 Minutos (Sesión Activa en la Pasarela de Pago):** La pasarela bancaria (Niubiz / Culqi / Mercado Pago) expira su formulario de cobro a los 5 minutos de inactividad. Si la tarjeta es rechazada, el cliente aún dispone de los 5 minutos restantes en su reserva para reintentar con otro medio.
+
+### 4.2 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Comprador
+    participant Web as Web Clientes (Next.js)
+    participant API as Backend NestJS
+    participant DB as PostgreSQL
+    participant Gateway as Pasarela (Niubiz/Mercado Pago/Stripe)
+
+    Cliente->>Web: Selecciona Zona y Cantidad (ej: 2 VIP)
+    Web->>API: POST /api/orders/draft { show_uuid, zone_uuid, quantity: 2 }
+    activate API
+
+    API->>DB: 1. Valida límite por compra: quantity <= zone.max_tickets_per_order
+    API->>DB: 2. Valida límite acumulado por usuario: (previos_pagados + quantity) <= zone.max_tickets_per_user
+    Note over API,DB: Si excede cualquiera ➔ Rechaza con 400 Bad Request
+
+    API->>DB: 3. Determina tarifa vigente de la zona
+    Note over API,DB: Busca zone_pricing_tiers activos por tier_number ASC.<br/>Si Tier 1 vigente ➔ Cobra tier1.price.<br/>Si no hay tiers vigentes ➔ Cobra zone.regular_price.
+
+    API->>DB: 4. SELECT FOR UPDATE tickets disponibles
+    Note over API,DB: Bloqueo atómico de inventario<br/>status='locked', locked_until=now() + 10 min
+    DB->>DB: INSERT INTO orders (status='pending', expires_at=now() + 10 min, subtotal_tickets, total_amount)
+    API-->>Web: 201 Created { order_token, expires_at, total_amount, gateway_session_limit: 300s }
+    deactivate API
+
+    Web->>Cliente: Muestra pantalla de checkout con resumen de compra
+
+    opt Aplicación de Cupón de Descuento
+        Cliente->>Web: Ingresa código de cupón (ej: "INFLUENCERJUAN")
+        Web->>API: POST /api/orders/:order_token/apply-coupon { code: 'INFLUENCERJUAN' }
+        activate API
+        API->>DB: Valida cupón: event_id, is_active=true, starts_at <= now() <= expires_at
+        API->>DB: Valida tipo: si single_use (used_count==0), si reusable (used_count < max_uses)
+        API->>DB: Valida min_order_amount <= subtotal_tickets
+        API->>API: Calcula discount_amount (% o monto fijo)
+        API->>DB: UPDATE orders SET coupon_id = :id, discount_amount = :disc, total_amount = (subtotal + fees - disc)
+        API-->>Web: 200 OK { discount_amount, new_total_amount, coupon_code }
+        deactivate API
+        Web-->>Cliente: Muestra desglose actualizado con descuento aplicado
+    end
+
+    Cliente->>Web: Ingresa tarjeta y confirma pago en la pasarela
+    Web->>Gateway: Procesa cobro seguro (sesión válida por 5 minutos)
+    Gateway-->>API: Webhook: Transacción Procesada (con payload crudo)
+
+    activate API
+    API->>DB: SELECT * FROM orders WHERE id = :order_id FOR UPDATE
+    
+    alt Orden Válida y Vigente (status == 'pending' y now() <= expires_at)
+        API->>DB: INSERT INTO payments (status='approved', gateway_response=JSONB)
+        API->>DB: UPDATE orders SET status='paid'
+        API->>DB: UPDATE zones SET locked_count = locked_count - :qty, sold_count = sold_count + :qty
+        opt Si compró en Preventa
+            API->>DB: UPDATE zone_pricing_tiers SET locked_count = locked_count - :qty, sold_count = sold_count + :qty WHERE id = :tier_id
+        end
+        opt Si orden tenía cupón
+            API->>DB: UPDATE coupons SET used_count = used_count + 1 WHERE id = :coupon_id
+        end
+        API->>API: Firma criptográfica Ed25519: ticket_uuid + signing_private_key
+        API->>DB: UPDATE tickets SET status='sold', paid_base_price=tarifa_congelada, pricing_tier_id=:tier_id, qr_code=token_firmado
+        API-->>Gateway: 200 OK (Webhook recibido)
+        API->>Cliente: Envía correo con tickets PDF y códigos QR firmados
+        Web-->>Cliente: Pantalla de éxito con QR y botón "Agregar a Billetera"
+
+    else Orden Expirada Tardíamente (CANDADO 3: status == 'expired')
+        Note over API,Gateway: La reserva de 10 min venció y el stock ya se liberó.<br/>¡CERO SOBREVENTA! El backend no genera boletos.
+        API->>Gateway: POST /refunds { transaction_id, reason: 'ORDER_EXPIRED_TIMEOUT' }
+        Gateway-->>API: Reembolso confirmado
+        API->>DB: INSERT INTO payments (status='refunded', gateway_response=JSONB)
+        API->>Cliente: Correo: "Tu compra expiró por tiempo. El dinero fue reembolsado a tu tarjeta"
+        API-->>Gateway: 200 OK (Webhook procesado con reembolso)
+    end
+    deactivate API
+```
+
+### 4.3 Ciclo de Liberación Dinámica de Stock y Reactivación Automática
+
+El worker en segundo plano se ejecuta periódicamente (cada 60 segundos) para auditar órdenes pendientes:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cron as Worker de Timeout (Cada 60s)
+    participant DB as PostgreSQL (Transacción)
+    participant UI as Catálogo Web (Clientes)
+
+    Cron->>DB: SELECT * FROM orders WHERE status='pending' AND expires_at < NOW() FOR UPDATE
+    loop Por cada orden abandonada
+        Cron->>DB: UPDATE orders SET status = 'expired'
+        Cron->>DB: UPDATE tickets SET status = 'available', locked_until = NULL WHERE order_id = :id
+        Cron->>DB: UPDATE zones SET locked_count = locked_count - :qty WHERE id = :zone_id
+        
+        opt Si la orden tenía boletos de Preventa (tier_id)
+            Cron->>DB: UPDATE zone_pricing_tiers SET locked_count = locked_count - :qty WHERE id = :tier_id
+            alt Fecha tier aún vigente (now() <= tier.end_at)
+                Note over Cron,UI: La Preventa 1 recupera stock ➔ Vuelve a activarse con precio promocional
+                Cron->>UI: Notificación de WebSocket / Invalida caché: Preventa reabierta
+            else Fecha tier ya caducó
+                Note over Cron,UI: La Preventa 1 caducó por calendario ➔ Boletos pasan a precio regular
+            end
+        end
+
+        opt Si la zona estaba marcada "SOLD OUT" temporal
+            Note over Cron,UI: El local ya no está lleno ➔ El cartel de "Agotado" desaparece
+            Cron->>UI: Zona reabierta: "¡Últimas entradas disponibles!"
+        end
+    end
+```
+
+### 4.4 Resiliencia ante Desconexión del Cliente y Garantía en "Mis Boletos"
+
+Para proteger al usuario contra caídas de internet doméstico, cierre accidental del navegador o cuelgues del dispositivo mientras se procesa el pago:
+
+1. **Desacoplamiento Total del Frontend:**
+   * La confirmación de la compra **NO depende de que el navegador del usuario permanezca abierto**.
+   * Una vez enviado el formulario de tarjeta a la pasarela, la confirmación se ejecuta exclusivamente mediante comunicación **Servidor a Servidor (Webhook)** entre la pasarela y el backend de Qué Planes Hoy.
+2. **Procesamiento Autónomo en Servidor:**
+   * Aunque el usuario pierda conexión, el webhook bancario es recibido y procesado por el backend:
+     * La orden pasa a `paid`.
+     * Los tickets pasan a `sold`.
+     * Se genera la firma criptográfica Ed25519 y se graba el `qr_code`.
+     * Se despacha el correo electrónico de respaldo con los boletos en PDF.
+3. **Recuperación Inmediata en "Mis Boletos / Billetera":**
+   * Cuando el usuario restablece su conexión o vuelve a iniciar sesión en la plataforma, sus entradas están disponibles de inmediato en su panel personal:
+     $$\text{Ruta Frontend: } \texttt{/my-tickets} \quad \longleftrightarrow \quad \text{Endpoint: } \texttt{GET /api/users/me/tickets}$$
+   * La interfaz muestra sus códigos QR activos, datos del recinto, horario y opción de descarga sin requerir ninguna acción adicional ni soporte técnico.
+
+---
+
+## 5. Flujo 3: Control de Acceso y Validación de QR en Puerta (App Escáner)
+
+Detalla cómo el personal de puerta escanea los códigos QR, la validación antifraude con `scanned_at` y la contingencia fuera de línea.
+
+### 5.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Asistente as Asistente con Ticket QR
+    actor Validador as Personal de Puerta
+    participant App as App Escáner (PWA Móvil)
+    participant API as Backend NestJS
+    participant DB as PostgreSQL
+
+    Note over Validador,App: AL INICIAR TURNO: Descarga previa de Manifiesto y Llave Pública (events.signing_public_key)
+
+    Asistente->>Validador: Muestra código QR en celular o impreso
+    Validador->>App: Escanea el código QR
+    
+    alt Modo Conectado (Online - 95% del tiempo)
+        App->>API: POST /api/tickets/validate-qr { qr_payload, device_id }
+        activate API
+        API->>DB: SELECT * FROM tickets WHERE qr_code = :qr_payload
+        
+        alt Ticket válido y sin usar (status == 'sold')
+            API->>DB: UPDATE tickets SET status = 'used', scanned_at = NOW()
+            API-->>App: 200 OK { result: 'AUTHORIZED', zone: 'VIP', attendee: 'Juan Pérez' }
+            App-->>Validador: PANTALLA VERDE + Sonido de Éxito ("Pase VIP Autorizado")
+        else Ticket ya utilizado (status == 'used')
+            API-->>App: 409 Conflict { result: 'ALREADY_USED', scanned_at: '2026-12-15 19:42:15' }
+            App-->>Validador: PANTALLA ROJA + Alerta Sonora ("Boleto ya usado a las 19:42:15")
+        else Ticket inexistente o fraudulento
+            API-->>App: 404 Not Found { result: 'INVALID_TICKET' }
+            App-->>Validador: PANTALLA ROJA ("Código QR no registrado")
+        else Ticket cancelado o reembolsado
+            API-->>App: 400 Bad Request { result: 'CANCELLED_TICKET' }
+            App-->>Validador: PANTALLA ROJA ("Entrada Anulada por Reembolso")
+        end
+        deactivate API
+
+    else Modo Contingencia (Sin Internet en Puerta)
+        App->>App: Valida firma digital localmente con events.signing_public_key
+        alt Firma válida y en lista local sin usar
+            App->>App: Marca en SQLite local: status='used', scanned_at=NOW()
+            App-->>Validador: PANTALLA VERDE ("Autorizado Offline")
+            Note over App,API: En cuanto recupera red: Envía ráfaga de boletos validados (Background Sync)
+        else Ya marcado localmente
+            App-->>Validador: PANTALLA ROJA ("Boleto ya ingresó localmente")
+        end
+    end
+```
+
+---
+
+## 6. Flujo 4: Ciclo Financiero: Anticipos a Cuenta y Liquidación Final
+
+Regula la custodia del dinero recaudado, el impacto de los cupones de descuento en el saldo disponible, la carga obligatoria de comprobantes bancarios y el cierre definitivo inmutable 1 a 1.
+
+### 6.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Org as Promotor del Evento
+    actor Admin as Administración / Finanzas QPH
+    participant Web as Panel Administrativo
+    participant API as Backend NestJS
+    participant S3 as Storage Seguro (S3/Cloud)
+    participant DB as PostgreSQL
+    participant Banco as Banca Empresa (BCP / BBVA / Interbank)
+
+    Note over Org,Banco: FASE A: SOLICITUD DE ANTICIPOS A CUENTA (Durante la Venta - 1 a N)
+    Org->>Web: Solicita adelanto (ej: S/ 10,000 para señas)
+    Web->>API: GET /api/events/:id/financial-summary
+    API->>DB: Calcula Recaudación Neta Custodiada = Ventas Cobradas - Comisiones Ticketera - Comisiones Pasarela
+    API-->>Web: Devuelve { available_balance, gross_nominal, total_discount_from_coupons, advances_paid }
+    Web-->>Org: Muestra saldo real disponible (considerando cupones aplicados)
+    
+    Org->>Web: Envía solicitud de adelanto con cuenta bancaria y CCI
+    Web->>API: POST /api/events/:id/advances { amount: 10000, bank_account_cci }
+    API->>DB: INSERT INTO event_advances (status='requested', amount=10000)
+    Admin->>Web: Revisa recaudación acumulada y aprueba solicitud
+    Admin->>Banco: Ejecuta transferencia bancaria
+    Banco-->>Admin: Emite Comprobante Oficial (Nro Operación: 849201 + Voucher PDF)
+    Admin->>Web: Carga voucher PDF y digita Nro de Operación
+    Web->>S3: Sube comprobante bancario
+    S3-->>Web: URL voucher (transfer_voucher_url)
+    Web->>API: POST /api/advances/:id/pay { transfer_reference: '849201', transfer_voucher_url }
+    API->>DB: UPDATE event_advances SET status='paid', paid_at=NOW()
+
+    Note over Org,Banco: FASE B: LIQUIDACIÓN FINAL (Relación 1 a 1 Estricta al concluir el Show)
+    Org->>Web: Solicita Liquidación Final del Evento
+    Web->>API: POST /api/events/:id/settlements/request
+    activate API
+    API->>DB: Calcula ventas brutas de tickets vendidos (status IN ('sold', 'used'))
+    API->>DB: SELECT COALESCE(SUM(discount_amount), 0) FROM orders WHERE event_id=:id AND status='paid' (total_coupons_discount_amount)
+    API->>DB: Suma comisiones de ticketera QPH (platform_fee)
+    API->>DB: Suma comisiones de pasarela de pago (gateway_fee)
+    API->>DB: SELECT SUM(amount) FROM event_advances WHERE status='paid' (total_advances_amount)
+    API->>DB: Genera Subreporte JSONB (breakdown_by_zone con zonas, tiers, cupones canjeados y anticipos)
+    API->>DB: INSERT INTO event_settlements (event_id UNIQUE, status='in_review', gross_amount, total_coupons_discount_amount, net_payout_amount)
+    deactivate API
+
+    Admin->>Web: Audita corte congelado y aprueba desembolso
+    Admin->>Banco: Realiza transferencia del saldo final neto
+    Banco-->>Admin: Constancia bancaria de saldo final
+    Admin->>Web: Carga voucher final y digita Nro de Operación
+    Web->>S3: Sube voucher final
+    Web->>API: POST /api/settlements/:id/complete { transfer_reference, transfer_voucher_url }
+    API->>DB: UPDATE event_settlements SET status='paid', paid_at=NOW()
+    API->>Org: Notificación con Estado de Cuenta Oficial y Voucher Bancario descargable
+```
+
+### 6.2 Fórmula de Liquidación Inmutable:
+$$\text{Saldo Final a Transferir} = \text{Ventas Brutas} - \mathbf{\text{Total Descuento Cupones}} - \text{Comisión QPH} - \text{Pasarelas} - \mathbf{\text{Total Anticipos Ya Pagados}} - \text{Ajustes}$$
+
+---
+
+## 7. Resumen de Estados de Entidades en los Flujos
+
+| Entidad | Campo de Estado | Valores Posibles | Transición Típica |
+| :--- | :--- | :--- | :--- |
+| **`users`** | `role` / `is_organizer` / `email_verified_at` | `customer`, `admin` / `false ➔ true` / `NULL ➔ NOW()` | Registro ➔ Verificación Email ➔ Activación Promotor |
+| **`events`** | `status` | `draft`, `published`, `paused`, `cancelled` | `draft` ➔ `published` |
+| **`shows`** | `status` | `scheduled`, `ongoing`, `completed`, `cancelled` | `scheduled` ➔ `ongoing` ➔ `completed` |
+| **`zone_pricing_tiers`** | `is_active` | `true`, `false` | `true` (activo) ➔ `false` (agotado o caducado) |
+| **`coupons`** | `is_active` / `usage_type` | `true`, `false` / `single_use`, `reusable` | Creado ➔ Canjeado (`used_count`++) ➔ Agotado |
+| **`orders`** | `status` | `pending`, `paid`, `expired`, `cancelled`, `refunded` | `pending` ➔ `paid` (o `expired` a los 10 min) |
+| **`tickets`** | `status` | `available`, `locked`, `sold`, `used`, `cancelled` | `available` ➔ `locked` ➔ `sold` ➔ `used` |
+| **`payments`** | `status` | `pending`, `approved`, `rejected`, `refunded` | `pending` ➔ `approved` |
+| **`event_advances`** | `status` | `requested`, `in_review`, `approved`, `paid`, `rejected` | `requested` ➔ `approved` ➔ `paid` |
+| **`event_settlements`** | `status` | `requested`, `in_review`, `approved`, `paid`, `rejected` | `requested` ➔ `approved` ➔ `paid` |
+
+---
+
+## 8. Flujo 5: Búsqueda Instantánea e Indexación con Meilisearch
+
+Garantiza respuestas de búsqueda en menos de 30ms con tolerancia a errores tipográficos (*typo-tolerance*), filtros facetados por categoría/precio/ubigeo y sin sobrecargar la base de datos transaccional PostgreSQL.
+
+### 8.1 Sincronización Automática e Indexación
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Org as Organizador
+    participant API as Backend NestJS
+    participant DB as PostgreSQL
+    participant Meili as Meilisearch (:7700)
+    actor Publico as Usuario Público
+    participant Web as Web (Next.js)
+
+    Note over Org,Meili: FASE A: INDEXACIÓN AL PUBLICAR
+    Org->>API: POST /api/events/:id/publish
+    API->>DB: UPDATE events SET status='published'
+    API->>Meili: POST /indexes/events/documents { id, title, slug, category, ubigeoCode, minPrice, date, bannerUrl }
+    Meili-->>API: 202 Accepted (Indexado)
+    API-->>Org: 200 OK (Evento Publicado y Listo en Búsqueda)
+
+    Note over Publico,Meili: FASE B: BÚSQUEDA INSTANTÁNEA EN TIEMPO REAL
+    Publico->>Web: Escribe en la barra de búsqueda ("conciert...")
+    Web->>API: GET /api/v1/search/events?q=conciert&category=CONCERTS
+    API->>Meili: POST /indexes/events/search { q, filter, limit: 20, sort: ['date:asc'] }
+    Meili-->>API: Resultados rankeados (< 20ms)
+    API-->>Web: 200 OK { hits, totalHits, processingTimeMs }
+    Web-->>Publico: Desplegable instantáneo con fotos, fechas y precios
+```
+
+### 8.2 Sincronización Masiva en Lote y Resiliencia DevSecOps
+
+1. **Aislamiento Estricto de Borradores (Draft Isolation):**  
+   Meilisearch **NUNCA** almacena eventos en estado `draft`, `paused` o `cancelled`. Al crear un evento, este permanece exclusivamente en PostgreSQL. Solo la aprobación y publicación (`POST /api/events/:id/publish`) lo ingresa al motor de búsqueda. Cualquier llamada a `indexEvent` con un evento no publicado es rechazada y fuerza su eliminación del índice (`removeEvent`).
+2. **Reindexación en Lote y Purga de Seguridad (`POST /api/v1/search/sync`):**  
+   Ejecuta una purga total de documentos en Meilisearch (`DELETE /indexes/events/documents`) para erradicar cualquier registro residual, y luego reconstruye el catálogo leyendo estrictamente de PostgreSQL con `where: { status: 'published' }`.
+3. **Listado Dinámico de Ciudades Activas (`GET /api/v1/search/cities`):**  
+   Retorna únicamente las ciudades que cuentan con eventos publicados (`status = 'published'`), con el conteo de eventos activos por ciudad (`eventCount`). Evita desplegar departamentos o regiones sin eventos registrados para proteger la UX de los usuarios.
+4. **Degradación Elegante (Modo Pasivo):**  
+   Si Meilisearch está reiniciándose o desconectado, las peticiones HTTP del backend cuentan con `AbortSignal.timeout(3000)`. La API no colapsa y devuelve un resultado vacío seguro sin exponer mensajes de infraestructura al cliente.
+5. **Privacidad de Arquitectura:**  
+   Los payloads y respuestas expuestas al público ocultan los identificadores de motores internos (`engine: Search Engine` / `healthy: true`).
+
+### 8.3 Selección de Eventos Destacados para el Hero Carousel (`GET /api/v1/events/featured`)
+
+1. **Aislamiento de Negocio:** El campo `is_featured` NO se expone en la creación de eventos para evitar auto-asignación por promotores; queda reservado para administración y planes de monetización.
+2. **Estrategia Híbrida (Máx 5 Eventos):**
+   * Prioridad 1: Consulta eventos con `status = 'published'` e `is_featured = true`.
+   * Prioridad 2: Si hay menos de 5, rellena automáticamente con los eventos publicados más recientes hasta completar el cupo.
+3. **Navegación Inteligente en Clientes:** Si el evento cuenta con landing page dedicada (`has_landing_page = true` y `slug`), el CTA conduce a `/e/:slug`. De lo contrario, conduce a la vista pública de detalle `/events/:id`.
+
+
+---
+
+## 9. Flujo 6: Caché en Memoria con Redis para Hero Carousel e Invalidación a Demanda
+
+Garantiza tiempos de respuesta inmediatos (< 3ms) en el Hero Carousel de portada evitando golpear a PostgreSQL con miles de lecturas concurrentes, manteniendo una vigencia automática de 12 horas y proporcionando endpoints administrativos para purga y regeneración en caliente.
+
+### 9.1 Diagrama de Secuencia: Lectura, Cache HIT / MISS y Purga
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Publico as Visitante / Web
+    participant Web as Web (Next.js)
+    participant API as Backend NestJS
+    participant Redis as Redis Cache (:6379)
+    participant DB as PostgreSQL (:5433)
+    actor Admin as Administrador
+
+    Note over Publico,DB: ESCENARIO 1: LECTURA DEL HERO CAROUSEL (CACHE HIT)
+    Publico->>Web: Carga la página principal (Home)
+    Web->>API: GET /events/featured
+    API->>Redis: GET qph:home:hero
+    Redis-->>API: 200 Datos en memoria (JSON)
+    API-->>Web: 200 OK [FeaturedEventResponseDto x5] (< 3ms)
+    Web-->>Publico: Renderiza carrusel dinámico con fotos y CTA inteligente
+
+    Note over Publico,DB: ESCENARIO 2: CACHE MISS (EXPIRADO TRAS 12 HORAS O PRIMERA CONSULTA)
+    Publico->>Web: Carga la página principal (Home)
+    Web->>API: GET /events/featured
+    API->>Redis: GET qph:home:hero
+    Redis-->>API: null (Cache MISS)
+    API->>DB: SELECT eventos WHERE status='published' ORDER BY is_featured DESC, createdAt DESC LIMIT 5
+    DB-->>API: 5 Eventos con imágenes, funciones y zonas
+    API->>Redis: SETEX qph:home:hero 43200 <JSON> (TTL: 12 horas)
+    API-->>Web: 200 OK [FeaturedEventResponseDto x5]
+    Web-->>Publico: Renderiza carrusel dinámico
+
+    Note over Admin,DB: ESCENARIO 3: INVALIDACIÓN Y REGENERACIÓN EN CALIENTE A DEMANDA
+    Admin->>API: POST /events/featured/cache/purge
+    API->>Redis: DEL qph:home:hero
+    API->>DB: Consulta fresca a PostgreSQL (skipCache=true)
+    DB-->>API: 5 Eventos actualizados
+    API->>Redis: SETEX qph:home:hero 43200 <JSON>
+    API-->>Admin: 200 OK { purged: true, recreated: true, count: 5, ttlSeconds: 43200 }
+```
+
+### 9.2 Reglas Operativas y DevSecOps
+
+1. **Namespace Jerárquico en Redis (`qph:home:*`):**
+   * `qph:home:hero`: Hero Carousel (TTL: 12 horas).
+   * `qph:home:upcoming`: Próximos eventos cronológicos (TTL: 15 minutos).
+   * `qph:home:weekly_featured`: Destacados de la semana / selección editorial (TTL: 15 minutos).
+   * `qph:home:weekend`: Planes para fin de semana vigente (TTL: 15 minutos).
+2. **TTL Adaptativo para Inventario Vivo:**
+   * Las secciones con aforo y boletos en movimiento (`upcoming`, `weekly_featured`, `weekend`) operan con un TTL de **15 minutos** (900 s) para refrescar el `urgencyBadge` periódicamente sin sobrecargar la base de datos.
+3. **Purga Global de Portada en Caliente (`POST /events/home/cache/purge`):**
+   * Emplea `delPattern('qph:home:*')` para erradicar simultáneamente todas las secciones de la Home en Redis.
+   * Ejecuta en paralelo las 4 consultas a PostgreSQL (*Cache Warm-up*) y repuebla de inmediato las 4 claves con sus nuevos TTLs, asegurando una experiencia instantánea al siguiente visitante.
+4. **Degradación Elegante:** Si la conexión a Redis no está disponible o el servicio se reinicia, el backend loguea una advertencia controlada y efectúa la consulta directamente en PostgreSQL sin lanzar excepciones 500 al cliente.
