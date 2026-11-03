@@ -21,6 +21,8 @@ import { GetWeeklyFeaturedEventsHandler } from './queries/handlers/get-weekly-fe
 import { GetWeekendEventsHandler } from './queries/handlers/get-weekend-events.handler';
 import { GetEventLandingHandler } from './queries/handlers/get-event-landing.handler';
 import { GetEventDetailHandler } from './queries/handlers/get-event-detail.handler';
+import { EventStatusCronService } from './services/event-status-cron.service';
+import { EventSeederService } from './services/event-seeder.service';
 
 const CommandHandlers = [CreateEventHandler, PublishEventHandler];
 const QueryHandlers = [
@@ -53,9 +55,13 @@ const QueryHandlers = [
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
+    EventStatusCronService,
+    EventSeederService,
   ],
   exports: [
     TypeOrmModule,
+    EventStatusCronService,
+    EventSeederService,
   ],
 })
 export class EventsModule {}

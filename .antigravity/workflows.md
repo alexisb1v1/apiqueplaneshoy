@@ -668,3 +668,61 @@ sequenceDiagram
    * En pantallas de escritorio, el croquis oficial del escenario (`body.bodyImageUrl`) y el listado de tarifas se sitúan en paralelo (7 columnas para zonas y 5 para croquis). El comprador visualiza la ubicación física y presiona *"Comprar"* sin scroll innecesario ni selectores `- 1 +`.
 5. **Cero Fricción y Highlights Compactos:**
    * Se erradica el texto editorial tipo blog. Los atractivos se resumen en viñetas de 1 línea con checks (`primaryColor`) y una barra de 1 clic para copiar la URL amigable con feedback instantáneo (`navigator.clipboard`).
+
+---
+
+## 11. Flujo 8: Tarea Cron de Cierre Automático de Shows y Eventos Vencidos (01:00 AM)
+
+Automatiza el ciclo de vida de espectáculos y funciones en la plataforma, asegurando que las funciones pasadas no admitan compras y que los eventos concluidos se retiren automáticamente de la cartelera pública sin intervención manual de los promotores.
+
+### 11.1 Diagrama de Secuencia: Ejecución del Cron (01:00 AM)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cron as Cron Runner (@nestjs/schedule)
+    participant Service as EventStatusCronService
+    participant DB as PostgreSQL (:5433)
+    participant Search as MeiliSearch (:7700)
+    participant Redis as Redis Cache (:6379)
+
+    Note over Cron,Redis: EJECUCIÓN PROGRAMADA DIARIA (01:00 AM HORA PERÚ - America/Lima)
+    Cron->>Service: handleDailyExpiredStatusCron() [0 1 * * *]
+    Service->>DB: SELECT shows WHERE status IN ('scheduled', 'ongoing')
+    DB-->>Service: Lista de funciones activas
+    Service->>Service: Evalúa: (startTime + durationHours) <= NOW()
+    opt Existen Shows Vencidos
+        Service->>DB: UPDATE shows SET status = 'completed' WHERE id IN (:expiredIds)
+        DB-->>Service: Shows actualizados
+    end
+
+    Service->>DB: SELECT events con shows WHERE status = 'published'
+    DB-->>Service: Lista de eventos publicados con sus funciones
+    Service->>Service: Evalúa si TODOS los shows del evento finalizaron (ningún show futuro activo)
+    opt Existen Eventos con Todos sus Shows Vencidos
+        Service->>DB: UPDATE events SET status = 'completed' WHERE id IN (:completedEventIds)
+        DB-->>Service: Eventos actualizados a 'completed'
+        Service->>Search: indexEvent() con status: 'completed' para cada evento finalizado
+        Search-->>Service: Índice de búsqueda actualizado
+        Service->>Redis: DEL qph:home:hero, qph:home:upcoming, qph:home:weekly_featured, qph:home:weekend
+        Service->>Redis: DEL qph:events:landing:[slug], qph:events:detail:[uuid]
+        Redis-->>Service: Claves de caché invalidadas
+    end
+    Service-->>Cron: Resumen de auditoría (X shows, Y eventos completados)
+```
+
+### 11.2 Reglas Operativas y Criterios de Transición
+
+1. **Expresión Cron y Zona Horaria:**
+   * Se ejecuta diariamente a la 1:00 AM con la expresión `'0 1 * * *'` bajo la zona horaria del negocio `America/Lima`.
+2. **Cálculo de Término de la Función (Show):**
+   * Un show se considera finalizado cuando:
+     $$\text{Fecha de Fin} = \text{startTime} + \text{durationHours (default 2h)} \le \text{NOW()}$$
+   * Al cumplirse esta condición, su estado transiciona a `'completed'`.
+3. **Cierre Integral de Eventos:**
+   * Un evento con estado `'published'` transiciona a `'completed'` únicamente si **todos sus shows asociados están concluidos** (es decir, ningún show permanece agendado a futuro con fecha vigente).
+4. **Sincronización de Búsqueda y Caché:**
+   * Al finalizar eventos, se actualiza el estado en MeiliSearch y se invalidan de forma atómica todas las claves de caché de portada en Redis (`qph:home:*`), garantizando que la cartelera pública refleje siempre eventos vigentes.
+5. **Disparo Manual / Auditoría:**
+   * Se dispone del endpoint `POST /api/events/admin/sync-expired-status` para que administradores o pruebas automatizadas puedan gatillar el proceso bajo demanda.
+

@@ -32,6 +32,7 @@ import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.consta
 import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
 import { matchResult } from '@common/http/match-result';
 import { plainToInstance } from 'class-transformer';
+import { EventStatusCronService } from '../services/event-status-cron.service';
 
 @ApiTags('Events')
 @Controller('events')
@@ -40,6 +41,7 @@ export class EventsController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
     private readonly redisService: RedisService,
+    private readonly eventStatusCronService: EventStatusCronService,
   ) {}
 
   @Get('featured')
@@ -254,5 +256,13 @@ export class EventsController {
         NOT_FOUND: 'Evento no encontrado.',
       },
     );
+  }
+
+  @Post('admin/sync-expired-status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ejecutar manualmente la sincronización de shows y eventos vencidos (Cron de 1:00 AM)' })
+  @ApiResponse({ status: 200, description: 'Sincronización manual ejecutada exitosamente' })
+  async syncExpiredStatus() {
+    return this.eventStatusCronService.syncExpiredShowsAndEvents();
   }
 }

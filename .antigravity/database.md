@@ -321,7 +321,7 @@ erDiagram
 * **`user_ticket_limit`** (`integer`, default 4): Límite global por defecto de entradas por usuario en el evento (actúa como salvaguarda si la zona no lo especifica).
 * **`signing_key_id`** (`varchar(64)`): Identificador del par de llaves criptográficas del evento para rotación y revocación.
 * **`signing_public_key`** (`text`, NULL): Llave pública asimétrica (Ed25519) del evento descargada por los escáneres de puerta para validación offline.
-* **`status`** (`varchar(50)`, INDEX): Estado (`draft`, `published`, `paused`, `cancelled`).
+* **`status`** (`varchar(50)`, INDEX): Estado (`draft`, `published`, `paused`, `completed`, `cancelled`). La transición a `completed` se procesa automáticamente a la 1:00 AM por la tarea Cron programada cuando todas las funciones del evento han culminado.
 * **`created_at`** (`timestamptz`): Fecha de creación del registro.
 * **Índice Compuesto:** `(status, name)` para optimizar el buscador público de eventos.
 
@@ -334,7 +334,7 @@ erDiagram
 * **`start_time`** (`timestamptz`, INDEX): Fecha y hora exacta de inicio de la función o apertura de puertas.
 * **`sales_end_at`** (`timestamptz`, NULL): Fecha y hora límite en que se cierra la venta de entradas para esta función (si es nulo, cierra en `start_time`).
 * **`duration_hours`** (`integer`, default 2): Duración estimada del espectáculo expresada en horas enteras (ej: 1, 2, 3, 4, 5).
-* **`status`** (`varchar(50)`, INDEX): Estado (`scheduled`, `ongoing`, `completed`, `cancelled`).
+* **`status`** (`varchar(50)`, INDEX): Estado (`scheduled`, `ongoing`, `completed`, `cancelled`). Pasa a `completed` automáticamente a la 1:00 AM si su fecha estimada de fin (`startTime + durationHours`) ya expiró.
 * **Índice Compuesto:** `(event_id, start_time)` para listar funciones cronológicamente.
 
 #### Tabla: `zones`
