@@ -796,11 +796,14 @@ Para garantizar latencias sub-milisegundo (< 3 ms) en la portada de la plataform
 
 ```
 qph
- └── home
-      ├── hero                     # Eventos destacados del Hero Carousel (TTL: 12h = 43200s)
-      ├── upcoming                 # Próximos eventos ordenados cronológicamente (TTL: 15m = 900s)
-      ├── weekly_featured          # Eventos destacados de la semana / selección editorial (TTL: 15m = 900s)
-      └── weekend                  # Planes para el fin de semana vigente (TTL: 15m = 900s)
+ ├── home
+ │    ├── hero                     # Eventos destacados del Hero Carousel (TTL: 12h = 43200s)
+ │    ├── upcoming                 # Próximos eventos ordenados cronológicamente (TTL: 15m = 900s)
+ │    ├── weekly_featured          # Eventos destacados de la semana / selección editorial (TTL: 15m = 900s)
+ │    ├── weekend                  # Planes para el fin de semana vigente (TTL: 15m = 900s)
+ └── events
+      ├── landing:{slug}           # Experiencia inmersiva y tarifas de landing page dedicada (TTL: 15m = 900s)
+      └── detail:{identifier}      # Detalle completo de evento oficial por ID, UUID o slug (TTL: 15m = 900s)
 ```
 
 #### Claves y Políticas de Expiración (TTL)
@@ -811,6 +814,8 @@ qph
 | **`qph:home:upcoming`** | `String` (JSON) | **900 s (15 m)** | Próximos eventos (`GET /events/upcoming`) | Eventos `published` con funciones futuras (`shows.startTime >= NOW()`) ordenados por `startTime ASC`. Rellena con publicados recientes si faltan para completar 8. |
 | **`qph:home:weekly_featured`** | `String` (JSON) | **900 s (15 m)** | Destacados de la semana (`GET /events/weekly-featured`) | Prioriza `is_featured = true` y eventos con funciones en los próximos 30 días. Rellena con publicados recientes si faltan para completar 8. |
 | **`qph:home:weekend`** | `String` (JSON) | **900 s (15 m)** | Planes para fin de semana (`GET /events/weekend`) | Filtro dinámico de ventana: Viernes 12:00 PM a Domingo 23:59:59 PM. Fallback a los próximos 14 días y publicados recientes para **nunca dejar la sección vacía**. |
+| **`qph:events:landing:{slug}`** | `String` (JSON) | **900 s (15 m)** | Landing Page dedicada (`GET /events/landing/:slug`) | Consulta evento por `slug`, verifica `hasLandingPage = true`, calcula precios de preventas en cascada y normaliza `landingConfig`. |
+| **`qph:events:detail:{identifier}`** | `String` (JSON) | **900 s (15 m)** | Detalle Oficial del Evento (`GET /events/:identifier`) | Busca por ID numérico, publicUuid o slug (`status = 'published'`), resuelve preventas en cascada, ubicación y ubigeo con DTO DevSecOps. |
 
 #### Estructura del Objeto en Caché (`HomeEventCardResponseDto`)
 
@@ -859,10 +864,101 @@ qph
    * `GET /events/upcoming`: Próximos eventos (TTL: 15m).
    * `GET /events/weekly-featured`: Destacados de la semana (TTL: 15m).
    * `GET /events/weekend`: Planes para fin de semana (TTL: 15m).
+   * `GET /events/landing/:slug`: Landing Page dedicada (TTL: 15m).
 2. **Invalidación y Regeneración a Demanda:**
    * `POST /events/featured/cache/purge`: Invalida y regenera el Hero (`qph:home:hero`).
    * `DELETE /events/featured/cache`: Borra la clave del Hero.
    * `POST /events/home/cache/purge`: **Purga masiva** mediante patrón `qph:home:*` y regeneración paralela de las 4 secciones en caliente (*Cache Warm-up*).
+
+---
+
+### 3.16 Catálogo de Estructura de Landing Page Dedicada (`EventLandingResponseDto`)
+
+Para espectáculos con `hasLandingPage = true`, la plataforma expone el endpoint `GET /events/landing/:slug`, resguardado por Redis en `qph:events:landing:{slug}` con TTL de 15 minutos (900 s).
+
+#### Estructura del Documento DTO (`EventLandingResponseDto`)
+
+```json
+{
+  "id": "105",
+  "publicUuid": "a9b2c3d4-e5f6-4a1b-8c2d-9e0f1a2b3c4d",
+  "slug": "los-portales-del-huayllabamba",
+  "name": "LOS PORTALES DEL HUAYLLABAMBA",
+  "category": "CONCERTS",
+  "venue": "Los Portales",
+  "address": "Av. Principal 123",
+  "city": "LIMA",
+  "hasLandingPage": true,
+  "bannerUrl": "https://pub-xxxx.r2.dev/landings/afiche.jpg",
+  "termsAndConditionsUrl": "https://pub-xxxx.r2.dev/docs/bases.pdf",
+  "ageRestriction": "PLUS_18",
+  "landingConfig": {
+    "theme": {
+      "primaryColor": "#6366F1",
+      "backgroundType": "color",
+      "backgroundColor": "#18181B",
+      "backgroundPatternUrl": null
+    },
+    "header": {
+      "title": "LOS PORTALES DEL HUAYLLABAMBA",
+      "subtitle": "EXPERIENCIA EXCLUSIVA",
+      "ctaText": "Comprar Entradas Oficiales",
+      "headerImageUrl": "https://pub-xxxx.r2.dev/landings/header.jpg",
+      "videoTeaserUrl": "https://www.youtube.com/watch?v=..."
+    },
+    "body": {
+      "aboutText": "Una experiencia inmersiva con los mejores artistas...",
+      "bodyImageUrl": "https://pub-xxxx.r2.dev/landings/body.webp",
+      "highlight1": "3 Escenarios y Zonas Exclusivas",
+      "highlight2": "Patio Gastronómico Gourmet",
+      "highlight3": "Seguridad y Accesos Preferenciales",
+      "highlight4": null
+    },
+    "footer": {
+      "footerImageUrl": "https://pub-xxxx.r2.dev/landings/footer.png",
+      "tiktokUrl": "https://tiktok.com/@...",
+      "facebookUrl": "https://facebook.com/...",
+      "instagramUrl": "https://instagram.com/..."
+    }
+  },
+  "shows": [
+    {
+      "id": "1",
+      "publicUuid": "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
+      "name": "Función Principal",
+      "startTime": "2026-11-20T20:00:00.000Z",
+      "durationHours": 4
+    }
+  ],
+  "zones": [
+    {
+      "id": "10",
+      "publicUuid": "z1x2c3v4-b5n6-7m8l-9k0j-1h2g3f4d5s6a",
+      "name": "General",
+      "title": "Pista Central",
+      "color": "#10B981",
+      "benefits": "Acceso a pista y barras",
+      "regularPrice": 50.00,
+      "currentPrice": 35.00,
+      "activeTierName": "Early Bird",
+      "capacity": 500,
+      "remainingTickets": 120,
+      "isSoldOut": false
+    }
+  ]
+}
+```
+
+#### Reglas de Renderizado Granular Estricto (Frontend)
+1. **Header Teleticket-style:** Header superior sticky con logo oficial de QPH a la izquierda que redirecciona al Home (`/`), y enlaces ancla `#landing-inicio`, `#landing-info`, `#landing-entradas`, `#landing-legales` junto con botón CTA directo.
+2. **Precarga Oficial (`LandingPreloader`):** Isotipo de QPH centrado con pulsación luminosa en `electric-indigo` que se desvanece suavemente (*fade-out*).
+3. **Independencia de Componentes de Contenido:**
+   * Si hay imagen de body pero no highlights $\rightarrow$ Se muestra la imagen.
+   * Si no hay imagen pero sí highlights $\rightarrow$ Se muestran los checks con `primaryColor`.
+   * Si en el footer hay imagen pero no redes $\rightarrow$ Se muestra la imagen de auspiciadores/artistas.
+   * Si hay redes pero no imagen $\rightarrow$ Se muestran los botones circulares de Instagram, TikTok y Facebook.
+4. **Compra Directa de Localidades:**
+   * La tabla de zonas expone nombre, precio actual en soles (**S/.**) y botón *"Comprar"* directo a `/events/[id]` **sin selector de cantidad (`- 1 +`)**, transfiriendo la selección al flujo formal de checkout.
 
 #### Resiliencia y Degrado Elegante (DevSecOps)
 * **Tolerancia a Fallos:** Si el servicio de Redis está apagado o experimenta intermitencia, el backend captura el fallo en modo advertencia (`logger.warn`) y degrada automáticamente a PostgreSQL, sirviendo los eventos con normalidad sin interrumpir el servicio ni arrojar excepciones 500 al cliente.

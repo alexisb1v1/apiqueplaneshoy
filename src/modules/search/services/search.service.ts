@@ -350,7 +350,7 @@ export class SearchService implements OnModuleInit {
     };
 
     if (!this.isReady()) {
-      return defaultResponse;
+      return this.searchEventsFromPostgres(dto);
     }
 
     try {
@@ -390,7 +390,7 @@ export class SearchService implements OnModuleInit {
       });
 
       if (!res.ok) {
-        return defaultResponse;
+        return this.searchEventsFromPostgres(dto);
       }
 
       const data = await res.json();
@@ -399,6 +399,11 @@ export class SearchService implements OnModuleInit {
       const hits = (data.hits || []).map((hit: any) =>
         plainToInstance(EventSearchItemDto, hit, { excludeExtraneousValues: true }),
       );
+
+      // Si Meilisearch no arrojó resultados y no hay filtros restrictivos, respaldar con PostgreSQL
+      if (hits.length === 0 && !dto.q && !dto.category && !dto.city && dto.minPrice === undefined && dto.maxPrice === undefined) {
+        return this.searchEventsFromPostgres(dto);
+      }
 
       return {
         hits,
@@ -409,8 +414,128 @@ export class SearchService implements OnModuleInit {
         offset: dto.offset || 0,
       };
     } catch (err: any) {
-      this.logger.error(`Error al buscar en Meilisearch: ${err.message || err}`);
-      return defaultResponse;
+      this.logger.error(`Error al buscar en Meilisearch: ${err.message || err}. Usando fallback a PostgreSQL...`);
+      return this.searchEventsFromPostgres(dto);
+    }
+  }
+
+  /**
+   * Respaldo resiliente de búsqueda directamente en PostgreSQL cuando Meilisearch no está disponible.
+   * Diseñado bajo directivas DevSecOps de Alta Disponibilidad y Tolerancia a Fallos.
+   */
+  private async searchEventsFromPostgres(dto: SearchEventsRequestDto): Promise<SearchEventsResponseDto> {
+    const startTime = Date.now();
+    try {
+      const qb = this.eventRepository
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.images', 'images')
+        .leftJoinAndSelect('event.zones', 'zones')
+        .leftJoinAndSelect('event.shows', 'shows')
+        .where('event.status = :status', { status: 'published' });
+
+      if (dto.q && dto.q.trim()) {
+        const queryTerm = `%${dto.q.trim().toLowerCase()}%`;
+        qb.andWhere(
+          '(LOWER(event.name) LIKE :q OR LOWER(event.description) LIKE :q OR LOWER(event.venue) LIKE :q OR LOWER(event.address) LIKE :q)',
+          { q: queryTerm },
+        );
+      }
+
+      if (dto.category && dto.category !== 'Todas' && dto.category !== 'Todos') {
+        qb.andWhere('UPPER(event.category) = :category', {
+          category: dto.category.toUpperCase(),
+        });
+      }
+
+      const allEvents = await qb.orderBy('event.createdAt', 'DESC').getMany();
+
+      // Filtrado complementario por ciudad y precio
+      let filtered = allEvents;
+
+      if (dto.city && dto.city !== 'Todas' && dto.city !== 'Todos') {
+        const targetCity = dto.city.toLowerCase().trim();
+        filtered = filtered.filter((ev) => {
+          const cityInfo = resolveCityFromUbigeo(ev.ubigeoCode);
+          return (
+            cityInfo.name.toLowerCase().includes(targetCity) ||
+            (ev.address && ev.address.toLowerCase().includes(targetCity)) ||
+            (ev.venue && ev.venue.toLowerCase().includes(targetCity))
+          );
+        });
+      }
+
+      // Mapear a EventSearchItemDto
+      let items: EventSearchItemDto[] = filtered.map((event) => {
+        const banner =
+          event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
+        const prices = (event.zones || [])
+          .map((z) => Number(z.regularPrice))
+          .filter((p) => !isNaN(p) && p >= 0);
+        const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+        const firstShow = (event.shows || []).sort(
+          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        )[0];
+        const date = firstShow?.startTime
+          ? new Date(firstShow.startTime).toISOString()
+          : (event.createdAt ? event.createdAt.toISOString() : new Date().toISOString());
+
+        const cityInfo = resolveCityFromUbigeo(event.ubigeoCode);
+
+        return plainToInstance(
+          EventSearchItemDto,
+          {
+            id: event.id.toString(),
+            publicUuid: event.publicUuid,
+            title: event.name,
+            slug: event.slug,
+            description: event.description,
+            category: event.category,
+            tags: event.tags || [],
+            venue: event.venue,
+            ubigeoCode: event.ubigeoCode,
+            city: cityInfo.name,
+            departmentCode: cityInfo.departmentCode,
+            minPrice,
+            date,
+            bannerUrl: banner?.imageUrl || null,
+            hasLandingPage: event.hasLandingPage,
+            isFeatured: event.isFeatured,
+          },
+          { excludeExtraneousValues: true },
+        );
+      });
+
+      // Filtro de precio
+      if (dto.minPrice !== undefined) {
+        items = items.filter((item) => item.minPrice >= dto.minPrice!);
+      }
+      if (dto.maxPrice !== undefined) {
+        items = items.filter((item) => item.minPrice <= dto.maxPrice!);
+      }
+
+      const totalHits = items.length;
+      const limit = dto.limit || 20;
+      const offset = dto.offset || 0;
+      const paginatedHits = items.slice(offset, offset + limit);
+
+      return {
+        hits: paginatedHits,
+        totalHits,
+        processingTimeMs: Date.now() - startTime,
+        query: dto.q || '',
+        limit,
+        offset,
+      };
+    } catch (err: any) {
+      this.logger.error(`Error en fallback PostgreSQL de búsqueda: ${err.message || err}`);
+      return {
+        hits: [],
+        totalHits: 0,
+        processingTimeMs: Date.now() - startTime,
+        query: dto.q || '',
+        limit: dto.limit || 20,
+        offset: dto.offset || 0,
+      };
     }
   }
 

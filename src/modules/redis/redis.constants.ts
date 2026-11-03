@@ -18,6 +18,10 @@ export const REDIS_CACHE_KEYS = {
     WEEKLY_FEATURED: 'qph:home:weekly_featured',
     WEEKEND: 'qph:home:weekend',
   },
+  EVENTS: {
+    LANDING: (slug: string) => `qph:events:landing:${slug}` as const,
+    DETAIL: (identifier: string) => `qph:events:detail:${identifier}` as const,
+  },
   // Clave canónica de eventos destacados en el Hero de la Home
   FEATURED_EVENTS: 'qph:home:hero',
 } as const;
@@ -25,4 +29,6 @@ export const REDIS_CACHE_KEYS = {
 export const REDIS_DEFAULT_TTL = {
   FEATURED_EVENTS_SECONDS: 12 * 60 * 60, // 12 horas = 43,200 segundos
   HOME_SECTIONS_SECONDS: 15 * 60,        // 15 minutos = 900 segundos
+  EVENT_LANDING_SECONDS: 15 * 60,        // 15 minutos = 900 segundos
+  EVENT_DETAIL_SECONDS: 15 * 60,         // 15 minutos = 900 segundos
 } as const;

@@ -19,6 +19,8 @@ import { GetFeaturedEventsHandler } from './queries/handlers/get-featured-events
 import { GetUpcomingEventsHandler } from './queries/handlers/get-upcoming-events.handler';
 import { GetWeeklyFeaturedEventsHandler } from './queries/handlers/get-weekly-featured-events.handler';
 import { GetWeekendEventsHandler } from './queries/handlers/get-weekend-events.handler';
+import { GetEventLandingHandler } from './queries/handlers/get-event-landing.handler';
+import { GetEventDetailHandler } from './queries/handlers/get-event-detail.handler';
 
 const CommandHandlers = [CreateEventHandler, PublishEventHandler];
 const QueryHandlers = [
@@ -26,6 +28,8 @@ const QueryHandlers = [
   GetUpcomingEventsHandler,
   GetWeeklyFeaturedEventsHandler,
   GetWeekendEventsHandler,
+  GetEventLandingHandler,
+  GetEventDetailHandler,
 ];
 
 @Module({

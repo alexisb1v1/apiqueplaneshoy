@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   Req,
   UseGuards,
   HttpCode,
@@ -15,6 +16,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { CreateEventDto } from '../dto/create-event.dto';
 import { FeaturedEventResponseDto } from '../dto/featured-event.response.dto';
 import { HomeEventCardResponseDto } from '../dto/home-event-card.response.dto';
+import { EventLandingResponseDto } from '../dto/event-landing.response.dto';
+import { EventDetailResponseDto } from '../dto/event-detail.response.dto';
 import { PurgeFeaturedCacheResponseDto } from '../dto/purge-featured-cache.response.dto';
 import { CreateEventCommand } from '../commands/impl/create-event.command';
 import { PublishEventCommand } from '../commands/impl/publish-event.command';
@@ -22,6 +25,8 @@ import { GetFeaturedEventsQuery } from '../queries/impl/get-featured-events.quer
 import { GetUpcomingEventsQuery } from '../queries/impl/get-upcoming-events.query';
 import { GetWeeklyFeaturedEventsQuery } from '../queries/impl/get-weekly-featured-events.query';
 import { GetWeekendEventsQuery } from '../queries/impl/get-weekend-events.query';
+import { GetEventLandingQuery } from '../queries/impl/get-event-landing.query';
+import { GetEventDetailQuery } from '../queries/impl/get-event-detail.query';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
 import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
@@ -143,6 +148,19 @@ export class EventsController {
     return this.queryBus.execute(new GetWeekendEventsQuery());
   }
 
+  @Get('landing/:slug')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Obtener configuración enriquecida de Landing Page por slug (Caché Redis: qph:events:landing:{slug})' })
+  @ApiResponse({
+    status: 200,
+    description: 'Configuración visual, zonas y contenido del Landing del evento',
+    type: EventLandingResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado o no tiene landing habilitada' })
+  async getLanding(@Param('slug') slug: string): Promise<EventLandingResponseDto> {
+    return this.queryBus.execute(new GetEventLandingQuery(slug));
+  }
+
   @Post('home/cache/purge')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Invalidar todas las cachés de la Home (qph:home:*) y regenerarlas en caliente' })
@@ -173,6 +191,22 @@ export class EventsController {
       },
       message: 'Todas las secciones de la Home (qph:home:*) fueron invalidadas y precalentadas en Redis exitosamente.',
     };
+  }
+
+  @Get(':identifier')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Obtener detalle público completo de un evento por ID, UUID o slug (Caché Redis: qph:events:detail:{identifier})' })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalle del evento con recintos, funciones y zonas con tarifas activas',
+    type: EventDetailResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado o no publicado' })
+  async getDetail(
+    @Param('identifier') identifier: string,
+    @Query('skipCache') skipCache?: string,
+  ): Promise<EventDetailResponseDto> {
+    return this.queryBus.execute(new GetEventDetailQuery(identifier, skipCache === 'true'));
   }
 
   @Post()

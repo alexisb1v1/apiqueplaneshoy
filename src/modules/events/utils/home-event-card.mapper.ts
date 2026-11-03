@@ -36,13 +36,16 @@ export function mapEventToHomeCard(event: EventEntity): HomeEventCardResponseDto
   let ticketType = 'GENERAL';
   let ticketBadgeStyle: 'general' | 'vip' | 'platinum' | 'error' = 'general';
 
-  const zoneNames = (event.zones || []).map((z) => `${z.name} ${z.title || ''}`.toUpperCase());
-  if (zoneNames.some((z) => z.includes('PLATINUM') || z.includes('PLATINO'))) {
+  const onlyNames = (event.zones || []).map((z) => (z.name || '').toUpperCase());
+  if (onlyNames.some((name) => name.includes('PLATINUM') || name.includes('PLATINO'))) {
     ticketType = 'PLATINUM';
     ticketBadgeStyle = 'platinum';
-  } else if (zoneNames.some((z) => z.includes('VIP') || z.includes('BOX'))) {
+  } else if (onlyNames.some((name) => name.includes('VIP') || name.includes('BOX'))) {
     ticketType = 'VIP DISPONIBLE';
     ticketBadgeStyle = 'vip';
+  } else if (onlyNames.length > 0 && onlyNames[0]) {
+    ticketType = onlyNames[0];
+    ticketBadgeStyle = 'general';
   }
 
   // 6. Cálculo Dinámico de Urgencia Basado en Aforo Real

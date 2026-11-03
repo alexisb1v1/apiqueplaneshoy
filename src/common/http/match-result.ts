@@ -17,6 +17,8 @@ const DEFAULT_MESSAGES: Record<AppError, string> = {
   INVALID_INPUT: 'Datos de entrada inválidos',
   INTERNAL_ERROR: 'Error interno del servidor',
   EMAIL_NOT_VERIFIED: 'Debes confirmar tu correo electrónico antes de realizar esta acción',
+  PAYMENT_REJECTED: 'Transacción rechazada por la pasarela de pagos. Fondos insuficientes o tarjeta declinada.',
+  TICKET_LIMIT_EXCEEDED: 'Has superado el límite de entradas permitido por compra o por evento para este usuario.',
 };
 
 export function matchResult<T>(
@@ -32,6 +34,8 @@ export function matchResult<T>(
       case 'UNAUTHORIZED':       throw new UnauthorizedException(msg);
       case 'EMAIL_NOT_VERIFIED':
       case 'FORBIDDEN':          throw new ForbiddenException(msg);
+      case 'PAYMENT_REJECTED':
+      case 'TICKET_LIMIT_EXCEEDED':
       case 'INVALID_INPUT':      throw new BadRequestException(msg);
       default:                   throw new InternalServerErrorException(msg);
     }

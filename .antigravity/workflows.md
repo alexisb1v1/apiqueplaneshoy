@@ -202,6 +202,22 @@ sequenceDiagram
 
 Controla la alta concurrencia mediante doble ventana temporal (10 min en backend vs 5 min en pasarela), valida límites de compra por checkout y por usuario, aplica cupones de descuento y emite tickets firmados criptográficamente.
 
+### 4.0 Enrutamiento Contextual y Entrada al Checkout (Triada de Navegación)
+1. **Cartelera Principal / Home:**
+   * Si `hasLandingPage = true && slug` $\rightarrow$ Redirige a la landing page dedicada `/e/[slug]`.
+   * De lo contrario $\rightarrow$ Redirige a la ficha técnica oficial `/events/[id]`.
+2. **Landing Page Dedicada (`/e/[slug]`):**
+   * Disposición panorámica full-width. Al hacer clic en *"Comprar"* en cualquier localidad, envía directamente a `/checkout?eventId=[id]&zoneId=[zoneId]`.
+3. **Ficha Técnica Oficial (`/events/[id]`):**
+   * Carga dinámica de datos oficiales mediante `GET /events/:identifier` apoyada en caché Redis `qph:events:detail:{identifier}` (15 min).
+   * Al seleccionar una zona o pulsar *"Comprar Entradas"*, deriva a `/checkout?eventId=[id]` con la zona seleccionada.
+4. **Checkout Inteligente (`/checkout`):**
+   * Lee `searchParams` (`eventId`, `zoneId`), autoselecciona la primera función disponible y preselecciona 1 entrada (`quantity = 1`) en la zona indicada en `zoneId`.
+   * **Simulación de Pasarela y Emisión de Tickets (`POST /api/orders/simulate-checkout`):**
+     * Procesa la orden con simulación probabilística (80% éxito, 20% rechazo bancario simulado o forzado).
+     * En caso de éxito (`approved`): crea en transacción atómica la `OrderEntity` (status `paid`), `PaymentEntity` (status `approved`) y emite los `TicketEntity` con tokens QR criptográficos únicos, incrementando `sold_count` en las zonas.
+     * En caso de rechazo (`PAYMENT_REJECTED`): devuelve error de negocio para permitir al cliente cambiar de método de pago de inmediato sin perder sus entradas.
+
 ### 4.1 La Doble Ventana de Tiempos
 * **10 Minutos (Reserva de Inventario en Backend):** `locked_until = now() + 10 min`. El sistema retiene los boletos en la base de datos con bloqueo atómico (`SELECT FOR UPDATE`).
 * **5 Minutos (Sesión Activa en la Pasarela de Pago):** La pasarela bancaria (Niubiz / Culqi / Mercado Pago) expira su formulario de cobro a los 5 minutos de inactividad. Si la tarjeta es rechazada, el cliente aún dispone de los 5 minutos restantes en su reserva para reintentar con otro medio.
@@ -221,9 +237,9 @@ sequenceDiagram
     Web->>API: POST /api/orders/draft { show_uuid, zone_uuid, quantity: 2 }
     activate API
 
-    API->>DB: 1. Valida límite por compra: quantity <= zone.max_tickets_per_order
-    API->>DB: 2. Valida límite acumulado por usuario: (previos_pagados + quantity) <= zone.max_tickets_per_user
-    Note over API,DB: Si excede cualquiera ➔ Rechaza con 400 Bad Request
+    API->>DB: 1. Valida límite por compra: total_order_tickets <= event.user_ticket_limit y quantity <= zone.max_tickets_per_order
+    API->>DB: 2. Valida límite acumulado por usuario: (previos_pagados + total_order_tickets) <= event.user_ticket_limit y <= zone.max_tickets_per_user
+    Note over API,DB: Si excede cualquiera ➔ Rechaza con 400 Bad Request (TICKET_LIMIT_EXCEEDED)
 
     API->>DB: 3. Determina tarifa vigente de la zona
     Note over API,DB: Busca zone_pricing_tiers activos por tier_number ASC.<br/>Si Tier 1 vigente ➔ Cobra tier1.price.<br/>Si no hay tiers vigentes ➔ Cobra zone.regular_price.
@@ -587,3 +603,68 @@ sequenceDiagram
    * Emplea `delPattern('qph:home:*')` para erradicar simultáneamente todas las secciones de la Home en Redis.
    * Ejecuta en paralelo las 4 consultas a PostgreSQL (*Cache Warm-up*) y repuebla de inmediato las 4 claves con sus nuevos TTLs, asegurando una experiencia instantánea al siguiente visitante.
 4. **Degradación Elegante:** Si la conexión a Redis no está disponible o el servicio se reinicia, el backend loguea una advertencia controlada y efectúa la consulta directamente en PostgreSQL sin lanzar excepciones 500 al cliente.
+
+---
+
+## 10. Flujo 7: Experiencia Inmersiva de Landing Page Dedicada (`/e/[slug]`), Header Teleticket-style y Caché Redis
+
+Permite a eventos especiales con `hasLandingPage = true` ofrecer una experiencia de marca personalizada (fondo por color sólido o patrón en mosaico, botón CTA custom, teaser de YouTube, highlights y tarifas) manteniendo la identidad de la ticketera con un header superior fijo estilo Teleticket y preloader con isotipo animado de QPH.
+
+### 10.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Fan as Visitante / Fan
+    participant Web as Next.js (/e/[slug])
+    participant UseCase as GetEventLandingUseCase (neverthrow)
+    participant API as Backend NestJS
+    participant Redis as Redis Cache (:6379)
+    participant DB as PostgreSQL (:5433)
+
+    Fan->>Web: Ingresa a /e/los-portales-del-huayllabamba
+    Web->>Web: Despliega LandingPreloader (Isotipo QPH pulsante)
+    Web->>UseCase: execute("los-portales-del-huayllabamba")
+    UseCase->>API: GET /events/landing/los-portales-del-huayllabamba
+
+    alt Cache HIT en Redis
+        API->>Redis: GET qph:events:landing:los-portales-del-huayllabamba
+        Redis-->>API: 200 JSON en memoria (< 3ms)
+    else Cache MISS o Expirado
+        API->>Redis: GET qph:events:landing:los-portales-del-huayllabamba (null)
+        API->>DB: SELECT event + images + shows + zones + tiers WHERE slug = :slug AND status = 'published'
+        DB-->>API: Registro completo del evento
+        API->>API: Valida hasLandingPage = true y calcula preventas en cascada
+        API->>API: Normaliza landingConfig (theme, header, body, footer)
+        API->>Redis: SETEX qph:events:landing:los-portales-del-huayllabamba 900 <JSON>
+    end
+
+    API-->>UseCase: 200 OK (EventLandingResponseDto)
+    UseCase-->>Web: ok(EventLandingModel)
+    Web->>Web: Oculta LandingPreloader con animación suave (fade-out)
+    Web-->>Fan: Renderiza Vista Inmersiva con Header Teleticket y Secciones Granulares
+
+    opt Interacción de Compra de Entrada
+        Fan->>Web: Clic en "Comprar" en zona seleccionada (sin selector - 1 +)
+        Web-->>Fan: Redirige a /events/[id] para el flujo de Checkout
+    end
+
+    opt Retorno al Home
+        Fan->>Web: Clic en Logo Oficial QPH del Header
+        Web-->>Fan: Redirige de inmediato a la cartelera principal (/)
+    end
+```
+
+### 10.2 Reglas de Arquitectura Híbrida y Alta Conversión (CRO / UX)
+
+1. **Aislamiento Visual y Diseño Panorámico Full-Width:** La ruta `/e/[slug]` reside fuera de la agrupación `(main)`, heredando únicamente `RootLayout`. Se elimina cualquier contenedor central angosto (`max-w-2xl`), estructurando cada sección para acaparar el 100% del ancho de la pantalla (`w-full`), con fondos cinemáticos en gradiente hacia `deep-slate` y paneles de vidrio (*glassmorphism*).
+2. **Navegación Fija estilo Teleticket:**
+   * Logo oficial de QPH a la izquierda con enlace directo a `/` para volver a la tienda en cualquier momento.
+   * Menú ancla de acceso directo: `INICIO` (`#landing-inicio`), `ENTRADAS` (`#zonas-entradas`), `LEGALES` (`#landing-legales`).
+   * Botón CTA destacado con el color principal (`primaryColor`) y texto configurado (`ctaText`).
+3. **Franja Flotante de 4 Métricas (`-mt-10`):**
+   * Resumen inmediato sin scroll: 📅 *Fecha & Hora*, 📍 *Lugar & Ciudad*, 💳 *Entradas Desde (S/.)*, 🛡️ *Acceso Criptográfico Ed25519*.
+4. **Núcleo Transaccional (Zonas + Croquis Lado a Lado):**
+   * En pantallas de escritorio, el croquis oficial del escenario (`body.bodyImageUrl`) y el listado de tarifas se sitúan en paralelo (7 columnas para zonas y 5 para croquis). El comprador visualiza la ubicación física y presiona *"Comprar"* sin scroll innecesario ni selectores `- 1 +`.
+5. **Cero Fricción y Highlights Compactos:**
+   * Se erradica el texto editorial tipo blog. Los atractivos se resumen en viñetas de 1 línea con checks (`primaryColor`) y una barra de 1 clic para copiar la URL amigable con feedback instantáneo (`navigator.clipboard`).
