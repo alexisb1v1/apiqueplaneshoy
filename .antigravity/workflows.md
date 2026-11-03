@@ -726,3 +726,53 @@ sequenceDiagram
 5. **Disparo Manual / Auditoría:**
    * Se dispone del endpoint `POST /api/events/admin/sync-expired-status` para que administradores o pruebas automatizadas puedan gatillar el proceso bajo demanda.
 
+---
+
+## 12. Flujo 9: Carga Masiva de Eventos de Prueba (Seeding Administrativo)
+
+Permite poblar la base de datos bajo demanda con una cantidad dinámica de eventos realistas (`POST /api/events/admin/seed?count=N`), listos para validar el Hero Carousel, secciones de la Home, filtros por ciudad, Landing Pages y la tarea Cron de eventos vencidos.
+
+### 12.1 Diagrama de Secuencia: Carga Masiva de Eventos
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrador / Tester
+    participant API as Backend NestJS
+    participant Seeder as EventSeederService
+    participant DB as PostgreSQL (:5433)
+    participant Search as MeiliSearch (:7700)
+    participant Redis as Redis Cache (:6379)
+
+    Admin->>API: POST /api/events/admin/seed?count=15 (o { "count": 15 })
+    API->>Seeder: seedEvents(15)
+    Seeder->>DB: Obtiene o asegura usuario organizador oficial
+    loop Para cada uno de los N eventos solicitados
+        Seeder->>DB: Inserta EventEntity (status='published', slug único)
+        Seeder->>DB: Inserta 1 o 2 ShowEntity (repartición: pasados, hoy, fin de semana, futuro)
+        Seeder->>DB: Inserta ZoneEntity (VIP, General) con ZonePricingTierEntity
+        Seeder->>DB: Inserta EventImageEntity (banner oficial + galería en WebP)
+        Seeder->>Search: indexEvent() en MeiliSearch para búsqueda instantánea
+    end
+    Seeder->>Redis: DEL qph:home:hero, qph:home:upcoming, qph:home:weekly_featured, qph:home:weekend
+    Redis-->>Seeder: Caché purgada
+    Seeder-->>API: SeedEventsResponseDto con resumen detallado
+    API-->>Admin: 201 Created { requestedCount: 15, pastEventsCount: 4, upcomingEventsCount: 11, ... }
+```
+
+### 12.2 Distribución Temporal de los Eventos Creados
+
+* **25% Eventos Pasados (Hace 1 a 3 días):** Diseñados específicamente para probar la tarea Cron (`POST /api/events/admin/sync-expired-status`) y comprobar que pasan de forma atómica a `completed`.
+* **25% Eventos de Hoy (Esta noche a las 21:00):** Para probar los eventos de consumo inmediato en portada.
+* **25% Eventos del Fin de Semana (Próximo Sábado):** Para poblar y validar la sección `weekend` de Redis.
+* **25% Eventos a Mediano Plazo (En 12 a 35 días):** Para probar la cartelera general, paginación y filtros por categoría y ciudad.
+
+### 12.3 Cupones de Descuento y Experiencia Multimedia (YouTube)
+
+* **Cupones Activos por Evento:** Cada evento genera automáticamente 2 cupones promocionales reutilizables en `coupons`:
+  * Cupón Porcentual: `PROMO15-[SUFIJO]` (15% de descuento en el total de entradas).
+  * Cupón de Monto Fijo: `VIP20-[SUFIJO]` (S/ 20.00 de rebaja directa con compra mínima de S/ 60.00).
+* **Teaser de YouTube en Landing Pages:** Los eventos con `hasLandingPage = true` configuran un enlace oficial de YouTube en `landingConfig.header.videoTeaserUrl`, habilitando en el frontend el botón flotante de reproducción y el modal `VideoTeaserModal`.
+
+
+

@@ -50,6 +50,18 @@ export class SeededEventSummaryDto {
   @Expose()
   @ApiProperty({ example: 3 })
   zonesCount: number;
+
+  @Expose()
+  @ApiProperty({ example: true, description: 'True si tiene video de YouTube configurado en la landing' })
+  hasYoutubeVideo: boolean;
+
+  @Expose()
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk', nullable: true })
+  videoTeaserUrl: string | null;
+
+  @Expose()
+  @ApiProperty({ example: ['QPH15', 'VIP20'], description: 'Códigos de cupones de descuento activos para este evento' })
+  coupons: string[];
 }
 
 @Exclude()
@@ -61,6 +73,10 @@ export class SeedEventsResponseDto {
   @Expose()
   @ApiProperty({ example: 15 })
   createdCount: number;
+
+  @Expose()
+  @ApiProperty({ example: 30, description: 'Cantidad total de cupones promocionales generados' })
+  totalCouponsCount: number;
 
   @Expose()
   @ApiProperty({ example: 4, description: 'Cantidad de eventos con funciones en el pasado (ideales para validar el Cron)' })
@@ -79,3 +95,4 @@ export class SeedEventsResponseDto {
   @ApiProperty({ type: [SeededEventSummaryDto] })
   events: SeededEventSummaryDto[];
 }
+

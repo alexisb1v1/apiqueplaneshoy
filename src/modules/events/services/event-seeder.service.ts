@@ -6,6 +6,7 @@ import { ShowEntity } from '../domain/entities/show.entity';
 import { ZoneEntity } from '../domain/entities/zone.entity';
 import { ZonePricingTierEntity } from '../domain/entities/zone-pricing-tier.entity';
 import { EventImageEntity } from '../domain/entities/event-image.entity';
+import { CouponEntity } from '@orders/domain/entities/coupon.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS } from '@modules/redis/redis.constants';
@@ -32,6 +33,7 @@ interface EventTemplate {
     tiers: Array<{ name: string; price: number; capacity: number }>;
   }>;
   hasLandingPage?: boolean;
+  videoTeaserUrl?: string;
 }
 
 const EVENT_TEMPLATES: EventTemplate[] = [
@@ -74,6 +76,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
       },
     ],
     hasLandingPage: true,
+    videoTeaserUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
   },
   {
     name: 'Festival Selva Viva 2026 - Cumbia & Huayno Electrónico',
@@ -113,6 +116,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
       },
     ],
     hasLandingPage: true,
+    videoTeaserUrl: 'https://www.youtube.com/watch?v=09R8_2nJtjg',
   },
   {
     name: 'Carlos Álvarez - Habla Causa Stand Up',
@@ -147,6 +151,8 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         tiers: [],
       },
     ],
+    hasLandingPage: false,
+    videoTeaserUrl: 'https://www.youtube.com/watch?v=fJ9rUzIMcZQ',
   },
   {
     name: 'Armonía 10 - La Primerísima en Vivo',
@@ -181,6 +187,8 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         ],
       },
     ],
+    hasLandingPage: true,
+    videoTeaserUrl: 'https://www.youtube.com/watch?v=L_LUpnjgPso',
   },
   {
     name: 'El Rey León - El Gran Musical',
@@ -215,6 +223,8 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         tiers: [],
       },
     ],
+    hasLandingPage: true,
+    videoTeaserUrl: 'https://www.youtube.com/watch?v=7TavVZMewpY',
   },
   {
     name: 'Copa Regional de Pádel Open Pucallpa 2026',
@@ -237,6 +247,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         tiers: [],
       },
     ],
+    hasLandingPage: false,
   },
   {
     name: 'Feria Gastronómica Mistura Amazónica',
@@ -261,6 +272,8 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         ],
       },
     ],
+    hasLandingPage: true,
+    videoTeaserUrl: 'https://www.youtube.com/watch?v=09R8_2nJtjg',
   },
 ];
 
@@ -279,6 +292,8 @@ export class EventSeederService {
     private readonly tierRepository: Repository<ZonePricingTierEntity>,
     @InjectRepository(EventImageEntity)
     private readonly imageRepository: Repository<EventImageEntity>,
+    @InjectRepository(CouponEntity)
+    private readonly couponRepository: Repository<CouponEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly redisService: RedisService,
@@ -286,12 +301,13 @@ export class EventSeederService {
   ) {}
 
   /**
-   * Genera masivamente eventos de prueba con funciones pasadas, de hoy y futuras.
+   * Genera masivamente eventos de prueba con funciones pasadas, de hoy y futuras,
+   * incluyendo cupones promocionales y videos de YouTube en landing pages.
    * @param count Cantidad solicitada por el usuario (default: 10)
    */
   async seedEvents(count: number = 10): Promise<SeedEventsResponseDto> {
     const validCount = Math.max(1, Math.min(count, 100));
-    this.logger.log(`🌱 Iniciando generación masiva de ${validCount} eventos de prueba...`);
+    this.logger.log(`🌱 Iniciando generación masiva de ${validCount} eventos de prueba con cupones y videos...`);
 
     // 1. Obtener o crear organizador de prueba
     const organizer = await this.getOrCreateOrganizer();
@@ -299,6 +315,7 @@ export class EventSeederService {
     const seededEvents: SeededEventSummaryDto[] = [];
     let pastCount = 0;
     let upcomingCount = 0;
+    let totalCouponsCount = 0;
 
     const baseNow = new Date();
 
@@ -329,7 +346,6 @@ export class EventSeederService {
         // Evento de Hoy: Esta noche a las 21:00
         showDate = new Date(baseNow);
         showDate.setHours(21, 0, 0, 0);
-        // Si ya pasaron las 21:00 hoy, sumarle 3 horas
         if (showDate.getTime() <= baseNow.getTime()) {
           showDate = new Date(baseNow.getTime() + 3 * 60 * 60 * 1000);
         }
@@ -348,9 +364,10 @@ export class EventSeederService {
         upcomingCount++;
       }
 
-      // Crear la Entidad Evento
+      // Configuración de Landing Page y Video de YouTube
       const isFeatured = i < 3; // Los 3 primeros son destacados para el Hero Carousel
-      const hasLandingPage = !!template.hasLandingPage && i % 2 === 0;
+      const hasLandingPage = !!template.hasLandingPage;
+      const videoTeaserUrl = hasLandingPage ? template.videoTeaserUrl || 'https://www.youtube.com/watch?v=kJQP7kiw5Fk' : null;
 
       const event = this.eventRepository.create({
         name: eventName,
@@ -379,6 +396,19 @@ export class EventSeederService {
                 title: eventName,
                 subtitle: `Experiencia exclusiva en ${template.city}`,
                 ctaText: 'Asegurar Entradas Ahora',
+                headerImageUrl: template.bannerUrl,
+                videoTeaserUrl: videoTeaserUrl,
+              },
+              body: {
+                highlight1: 'Acceso digital garantizado con código QR Ed25519',
+                highlight2: 'Sonido line-array y pantallas LED de alta resolución',
+                highlight3: 'Seguridad privada, puestos de primeros auxilios y zona gastronómica',
+                highlight4: 'Estacionamiento vigilado con capacidad para más de 200 vehículos',
+              },
+              footer: {
+                instagramUrl: 'https://instagram.com/queplaneshoy',
+                tiktokUrl: 'https://tiktok.com/@queplaneshoy',
+                facebookUrl: 'https://facebook.com/queplaneshoy',
               },
             }
           : null,
@@ -396,7 +426,6 @@ export class EventSeederService {
       });
       await this.showRepository.save(show);
 
-      // Si es un evento grande, crear una segunda función al día siguiente
       let totalShows = 1;
       if (i % 3 === 0) {
         const nextDayShow = new Date(showDate.getTime() + 24 * 60 * 60 * 1000);
@@ -428,7 +457,6 @@ export class EventSeederService {
         const savedZone = await this.zoneRepository.save(zone);
         totalZones++;
 
-        // Crear Tiers de preventa
         let tierNum = 1;
         for (const t of z.tiers) {
           const tier = this.tierRepository.create({
@@ -464,6 +492,49 @@ export class EventSeederService {
         await this.imageRepository.save(galleryImage);
       }
 
+      // =========================================================================
+      // GENERACIÓN DE CUPONES DE DESCUENTO PARA ESTE EVENTO
+      // =========================================================================
+      const eventCoupons: string[] = [];
+
+      // 1. Cupón Porcentual (15% de descuento)
+      const percentCode = `PROMO15-${randomSuffix.toUpperCase()}`;
+      const coupon1 = this.couponRepository.create({
+        eventId: savedEvent.id,
+        organizerId: organizer.id,
+        code: percentCode,
+        discountType: 'percentage',
+        discountValue: 15.0,
+        usageType: 'reusable',
+        maxUses: 150,
+        usedCount: 0,
+        minOrderAmount: 30.0,
+        startsAt: baseNow,
+        isActive: true,
+      });
+      await this.couponRepository.save(coupon1);
+      eventCoupons.push(percentCode);
+      totalCouponsCount++;
+
+      // 2. Cupón de Monto Fijo (S/ 20.00 de descuento directo)
+      const fixedCode = `VIP20-${randomSuffix.toUpperCase()}`;
+      const coupon2 = this.couponRepository.create({
+        eventId: savedEvent.id,
+        organizerId: organizer.id,
+        code: fixedCode,
+        discountType: 'fixed',
+        discountValue: 20.0,
+        usageType: 'reusable',
+        maxUses: 100,
+        usedCount: 0,
+        minOrderAmount: 60.0,
+        startsAt: baseNow,
+        isActive: true,
+      });
+      await this.couponRepository.save(coupon2);
+      eventCoupons.push(fixedCode);
+      totalCouponsCount++;
+
       // Sincronizar en MeiliSearch
       this.searchService
         .indexEvent({
@@ -498,10 +569,13 @@ export class EventSeederService {
         isPast: isPastScenario,
         showsCount: totalShows,
         zonesCount: totalZones,
+        hasYoutubeVideo: Boolean(videoTeaserUrl),
+        videoTeaserUrl,
+        coupons: eventCoupons,
       });
     }
 
-    // Invalidar caché de Redis para que se reflejen los nuevos eventos de inmediato
+    // Invalidar caché de Redis para refresco instantáneo en la Home
     await Promise.allSettled([
       this.redisService.del(REDIS_CACHE_KEYS.HOME.HERO),
       this.redisService.del(REDIS_CACHE_KEYS.HOME.UPCOMING),
@@ -510,15 +584,16 @@ export class EventSeederService {
     ]);
 
     this.logger.log(
-      `🎉 Carga masiva exitosa: ${validCount} eventos creados (${pastCount} con funciones pasadas para validar Cron, ${upcomingCount} vigentes en cartelera).`,
+      `🎉 Carga masiva exitosa: ${validCount} eventos creados (${pastCount} con funciones pasadas, ${upcomingCount} vigentes, ${totalCouponsCount} cupones activos).`,
     );
 
     return {
       requestedCount: validCount,
       createdCount: seededEvents.length,
+      totalCouponsCount,
       pastEventsCount: pastCount,
       upcomingEventsCount: upcomingCount,
-      message: `Se crearon ${seededEvents.length} eventos exitosamente. Se sincronizaron en MeiliSearch y se invalidó la caché de Redis.`,
+      message: `Se crearon ${seededEvents.length} eventos y ${totalCouponsCount} cupones de descuento exitosamente con videos de YouTube en Landing Pages.`,
       events: seededEvents,
     };
   }
@@ -544,7 +619,6 @@ export class EventSeederService {
       return this.userRepository.save(firstUser);
     }
 
-    // Si la tabla users estuviera completamente vacía, creamos un usuario organizador
     const newOrganizer = this.userRepository.create({
       name: 'QPH Productora Oficial',
       email: 'organizador.demo@queplaneshoy.com',

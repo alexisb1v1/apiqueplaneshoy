@@ -17,3 +17,4 @@ export class SeedEventsRequestDto {
   @Max(100, { message: 'La cantidad máxima permitida por ejecución es 100 eventos' })
   readonly count?: number = 10;
 }
+

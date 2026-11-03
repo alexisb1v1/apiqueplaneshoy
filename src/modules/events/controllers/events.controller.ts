@@ -33,6 +33,9 @@ import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/
 import { matchResult } from '@common/http/match-result';
 import { plainToInstance } from 'class-transformer';
 import { EventStatusCronService } from '../services/event-status-cron.service';
+import { EventSeederService } from '../services/event-seeder.service';
+import { SeedEventsRequestDto } from '../dto/seed-events.request.dto';
+import { SeedEventsResponseDto } from '../dto/seed-events.response.dto';
 
 @ApiTags('Events')
 @Controller('events')
@@ -42,6 +45,7 @@ export class EventsController {
     private readonly queryBus: QueryBus,
     private readonly redisService: RedisService,
     private readonly eventStatusCronService: EventStatusCronService,
+    private readonly eventSeederService: EventSeederService,
   ) {}
 
   @Get('featured')
@@ -264,5 +268,28 @@ export class EventsController {
   @ApiResponse({ status: 200, description: 'Sincronización manual ejecutada exitosamente' })
   async syncExpiredStatus() {
     return this.eventStatusCronService.syncExpiredShowsAndEvents();
+  }
+
+  @Post('admin/seed')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Carga masiva de eventos de prueba (definir cantidad por query o body)',
+    description: 'Genera N eventos de prueba completos (con funciones pasadas, de hoy y futuras, zonas, preventas y fotos). Sincroniza MeiliSearch y purga Redis.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Eventos generados exitosamente con sus relaciones completas',
+    type: SeedEventsResponseDto,
+  })
+  async seedEvents(
+    @Query() queryDto: SeedEventsRequestDto,
+    @Body() bodyDto?: SeedEventsRequestDto,
+  ): Promise<SeedEventsResponseDto> {
+    const rawCount = bodyDto?.count ?? queryDto?.count ?? 10;
+    const count = Number(rawCount) || 10;
+    const result = await this.eventSeederService.seedEvents(count);
+    return plainToInstance(SeedEventsResponseDto, result, {
+      excludeExtraneousValues: true,
+    });
   }
 }
