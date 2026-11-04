@@ -36,6 +36,7 @@ import { EventStatusCronService } from '../services/event-status-cron.service';
 import { EventSeederService } from '../services/event-seeder.service';
 import { SeedEventsRequestDto } from '../dto/seed-events.request.dto';
 import { SeedEventsResponseDto } from '../dto/seed-events.response.dto';
+import { AdminKeyGuard } from '@common/guards/admin-key.guard';
 
 @ApiTags('Events')
 @Controller('events')
@@ -46,7 +47,7 @@ export class EventsController {
     private readonly redisService: RedisService,
     private readonly eventStatusCronService: EventStatusCronService,
     private readonly eventSeederService: EventSeederService,
-  ) {}
+  ) { }
 
   @Get('featured')
   @HttpCode(HttpStatus.OK)
@@ -263,17 +264,22 @@ export class EventsController {
   }
 
   @Post('admin/sync-expired-status')
+  @UseGuards(AdminKeyGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Ejecutar manualmente la sincronización de shows y eventos vencidos (Cron de 1:00 AM)' })
+  @ApiOperation({ summary: 'Ejecutar manualmente la sincronización de shows y eventos vencidos (Cron de 1:00 AM) [Requiere x-admin-key o admin]' })
   @ApiResponse({ status: 200, description: 'Sincronización manual ejecutada exitosamente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
   async syncExpiredStatus() {
     return this.eventStatusCronService.syncExpiredShowsAndEvents();
   }
 
   @Post('admin/seed')
+  @UseGuards(AdminKeyGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Carga masiva de eventos de prueba (definir cantidad por query o body)',
+    summary: 'Carga masiva de eventos de prueba (definir cantidad por query o body) [Requiere x-admin-key o admin]',
     description: 'Genera N eventos de prueba completos (con funciones pasadas, de hoy y futuras, zonas, preventas y fotos). Sincroniza MeiliSearch y purga Redis.',
   })
   @ApiResponse({
@@ -281,6 +287,7 @@ export class EventsController {
     description: 'Eventos generados exitosamente con sus relaciones completas',
     type: SeedEventsResponseDto,
   })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
   async seedEvents(
     @Query() queryDto: SeedEventsRequestDto,
     @Body() bodyDto?: SeedEventsRequestDto,

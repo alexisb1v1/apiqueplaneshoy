@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { EventsModule } from './modules/events/events.module';
@@ -11,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MediaModule } from './modules/media/media.module';
 import { SearchModule } from './modules/search/search.module';
 import { RedisModule } from './modules/redis/redis.module';
+import { ThrottlerStorageRedisService } from './modules/redis/throttler-storage-redis.service';
 
 @Module({
   imports: [
@@ -18,6 +21,21 @@ import { RedisModule } from './modules/redis/redis.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    RedisModule,
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [ThrottlerStorageRedisService],
+      useFactory: (storage: ThrottlerStorageRedisService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: 60000, // 60 segundos
+            limit: 60, // 60 peticiones por minuto por IP en endpoints de catálogo y navegación
+          },
+        ],
+        storage,
+      }),
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -41,6 +59,12 @@ import { RedisModule } from './modules/redis/redis.module';
     RedisModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule { }

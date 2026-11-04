@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -26,6 +27,14 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
+
+  const cookieParserMiddleware =
+    typeof cookieParser === 'function'
+      ? cookieParser
+      : (cookieParser as any).default;
+  if (typeof cookieParserMiddleware === 'function') {
+    app.use(cookieParserMiddleware());
+  }
 
   app.setGlobalPrefix('api');
 

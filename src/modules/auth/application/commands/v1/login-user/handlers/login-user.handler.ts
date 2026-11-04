@@ -19,7 +19,7 @@ export class LoginUserHandler implements ICommandHandler<LoginUserCommand> {
     private readonly passwordHasher: PasswordHasher,
     @Inject('TokenService')
     private readonly tokenService: TokenService,
-  ) {}
+  ) { }
 
   /**
    * Autentica a un usuario verificando sus credenciales de acceso.
@@ -69,6 +69,11 @@ export class LoginUserHandler implements ICommandHandler<LoginUserCommand> {
       createdAt: user.createdAt,
     };
 
-    return ok(new LoginUserResponseDto(token, userDto));
+    const refreshToken = await this.tokenService.generateRefreshToken({
+      userId: user.id,
+      publicUuid: user.publicUuid,
+    });
+
+    return ok(new LoginUserResponseDto(token, userDto, 'Inicio de sesión exitoso', refreshToken, 900));
   }
 }

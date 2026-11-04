@@ -96,12 +96,19 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
         createdAt: savedUser.createdAt,
       };
 
+      const refreshToken = await this.tokenService.generateRefreshToken({
+        userId: savedUser.id,
+        publicUuid: savedUser.publicUuid,
+      });
+
       return ok(
         new RegisterUserResponseDto(
           token,
           userDto,
           'Cuenta creada. Revisa tu correo electrónico para confirmar tu cuenta.',
           verificationToken,
+          refreshToken,
+          900,
         ),
       );
     } catch {

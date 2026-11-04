@@ -45,11 +45,17 @@ export class AuthUserDto {
 }
 
 export class RegisterUserResponseDto {
-  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', description: 'Access Token JWT (Vigencia 15 min)' })
   token: string;
 
-  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', description: 'Alias de Access Token' })
   accessToken: string;
+
+  @ApiProperty({ example: '4.a1b2c3d4.e5f6g7h8...', required: false, description: 'Refresh Token rotativo de larga duración (30 días)' })
+  refreshToken?: string;
+
+  @ApiProperty({ example: 900, description: 'Segundos de vigencia del Access Token (15 minutos = 900s)' })
+  expiresInSeconds: number;
 
   @ApiProperty({ type: () => AuthUserDto })
   user: AuthUserDto;
@@ -72,9 +78,13 @@ export class RegisterUserResponseDto {
     userDto: AuthUserDto,
     message = 'Cuenta creada. Revisa tu correo para verificar tu cuenta.',
     verificationToken?: string,
+    refreshToken?: string,
+    expiresInSeconds = 900,
   ) {
     this.token = token;
     this.accessToken = token;
+    this.refreshToken = refreshToken;
+    this.expiresInSeconds = expiresInSeconds;
     this.user = userDto;
     this.userProfile = userDto;
     this.message = message;

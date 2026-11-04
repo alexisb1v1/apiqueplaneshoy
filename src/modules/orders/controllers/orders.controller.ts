@@ -66,6 +66,12 @@ export class OrdersController {
       authenticatedUserId = Number(req.user.id);
     }
 
+    if (!authenticatedUserId) {
+      throw new UnauthorizedException(
+        'Debes iniciar sesión con tu cuenta para poder comprar y emitir tus entradas oficiales.',
+      );
+    }
+
     const result = await this.commandBus.execute(
       new SimulateOrderCheckoutCommand(body, authenticatedUserId),
     );

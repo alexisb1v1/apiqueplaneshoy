@@ -12,6 +12,7 @@ import { VerifyEmailController } from './interfaces/http/v1/verify-email/verify-
 import { ResendVerificationController } from './interfaces/http/v1/resend-verification/resend-verification.controller';
 import { UpdateProfileController } from './interfaces/http/v1/update-profile/update-profile.controller';
 import { BecomeOrganizerController } from './interfaces/http/v1/become-organizer/become-organizer.controller';
+import { RefreshTokenController } from './interfaces/http/v1/refresh-token/refresh-token.controller';
 
 import { RegisterUserHandler } from './application/commands/v1/register-user/handlers/register-user.handler';
 import { LoginUserHandler } from './application/commands/v1/login-user/handlers/login-user.handler';
@@ -20,6 +21,7 @@ import { VerifyEmailHandler } from './application/commands/v1/verify-email/handl
 import { ResendVerificationHandler } from './application/commands/v1/resend-verification/handlers/resend-verification.handler';
 import { UpdateProfileHandler } from './application/commands/v1/update-profile/handlers/update-profile.handler';
 import { BecomeOrganizerHandler } from './application/commands/v1/become-organizer/handlers/become-organizer.handler';
+import { RefreshTokenHandler } from './application/commands/v1/refresh-token/handlers/refresh-token.handler';
 
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 import { JwtTokenAdapter } from './infrastructure/adapters/jwt-token.adapter';
@@ -33,6 +35,7 @@ const CommandHandlers = [
   ResendVerificationHandler,
   UpdateProfileHandler,
   BecomeOrganizerHandler,
+  RefreshTokenHandler,
 ];
 const QueryHandlers = [GetCurrentUserHandler];
 const Controllers = [
@@ -43,6 +46,7 @@ const Controllers = [
   GetCurrentUserController,
   UpdateProfileController,
   BecomeOrganizerController,
+  RefreshTokenController,
 ];
 
 @Module({
@@ -55,7 +59,7 @@ const Controllers = [
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'qph-secret-jwt-key-2026-secure',
         signOptions: {
-          expiresIn: '7d',
+          expiresIn: '15m',
         },
       }),
     }),
@@ -89,4 +93,4 @@ const Controllers = [
     JwtModule,
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

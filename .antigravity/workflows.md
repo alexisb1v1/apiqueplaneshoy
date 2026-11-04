@@ -77,13 +77,27 @@ sequenceDiagram
 
 ### 2.2 Reglas de Negocio y Endpoints de Autenticación:
 * **Endpoints Oficiales de Auth:**
-  * `POST /api/auth/register`: Registro tradicional con hashing bcrypt y emisión de token criptográfico de verificación (24h).
-  * `POST /api/auth/login`: Autenticación con email/password y retorno de JWT con payload `{ sub, id, email, role, isOrganizer }`.
+  * `POST /api/auth/register`: Registro tradicional con hashing bcrypt, emisión de token criptográfico de verificación (24h), Access Token (15m) y Refresh Token rotativo en Redis (30d).
+  * `POST /api/auth/login`: Autenticación con email/password y retorno de Access Token JWT (15m), Refresh Token rotativo en Redis (30d) y perfil de usuario `{ id, email, role, isOrganizer }`.
+  * `POST /api/auth/refresh-token`: Renovación de tokens sin fricción. Valida el token contra Redis (`qph:auth:refresh:<userId>:<uuid>`) recibido automáticamente vía Cookie `HttpOnly` (o fallback en body), aplica rotación destruyendo el anterior, emite un nuevo par de tokens y actualiza la cookie.
+  * `POST /api/auth/logout`: Cierre de sesión seguro. Invalida y elimina la Cookie `HttpOnly` (`Max-Age=0`).
   * `POST /api/auth/verify-email`: Confirmación de correo mediante token seguro. Actualiza `users.email_verified_at = NOW()`.
   * `POST /api/auth/resend-verification`: Reenvío de enlace de verificación con protección contra spam.
   * `GET /api/auth/me`: Retorna los datos normalizados del usuario autenticado (`AuthUserDto`).
   * `PUT /api/auth/profile`: Actualización de datos de perfil (`name`, `phone`).
   * `POST /api/auth/become-organizer`: Activación de perfil de organizador para cuentas unificadas.
+* **Esquema de Autenticación Dual, Cookie HttpOnly y Token Rotation:**
+  * El **Access Token** tiene una vigencia corta de **15 minutos** para mitigar riesgos de filtración o robo.
+  * El **Refresh Token** se gestiona en **Redis** con un TTL de **30 días** y se transporta exclusivamente mediante **Cookie `HttpOnly; SameSite=Lax; Path=/`** (con bandera `Secure` en producción). Esto previene al 100% el robo por ataques XSS en el navegador, ya que el JavaScript no puede acceder al token.
+  * Cada vez que se usa para renovar la sesión en `POST /api/auth/refresh-token`, se destruye atómicamente el token anterior en Redis y se genera uno nuevo (*Token Rotation*), invalidando cualquier token reutilizado maliciosamente y actualizando la cookie en el navegador.
+  * El cliente HTTP del frontend (`apiClient`) intercepta de forma transparente los códigos `401 Unauthorized`, envía las credenciales mediante `credentials: 'include'` en segundo plano mediante un mutex que sincroniza peticiones concurrentes y reintenta la solicitud sin interrumpir al usuario.
+* **Protección Estricta del Checkout / Compra con JWT:**
+  * Toda compra en `POST /api/orders/simulate-checkout` requiere obligatoriamente que el comprador tenga una sesión JWT válida (`401 Unauthorized` si no existe). No se admiten compras anónimas o sin cuenta.
+  * En el frontend (`purchase-flow-page.tsx`), antes de avanzar al paso de pago o al confirmar la transacción, se verifica la sesión activa. Si el usuario no ha iniciado sesión, se despliega un modal interactivo con redirección preservando las entradas seleccionadas.
+* **Protección Anti-Abuso y Rate Limiting Distribuido (Redis + Throttler):**
+  * Todas las rutas públicas y de consulta están protegidas por un Rate Limiter distribuido en Redis (`ThrottlerStorageRedisService`) con cuota de 60 peticiones/minuto por IP. Las solicitudes excedentes reciben `429 Too Many Requests`.
+* **Protección de Endpoints Administrativos:**
+  * Endpoints como `POST /api/events/admin/seed` y `POST /api/events/admin/sync-expired-status` están protegidos mediante el guard `AdminKeyGuard`, requiriendo el encabezado `x-admin-key` o sesión de usuario con rol `admin`.
 * **Verificación de Email Obligatoria (Plan B):** Un usuario con `email_verified_at IS NULL` puede registrar eventos como borrador (`draft`), pero no puede avanzar al checkout de compra ni publicar eventos (`published`).
 * **Sesión Única:** El mismo JWT autentica al usuario tanto en la tienda de boletos como en el panel administrativo de promotor.
 
@@ -202,20 +216,22 @@ sequenceDiagram
 
 Controla la alta concurrencia mediante doble ventana temporal (10 min en backend vs 5 min en pasarela), valida límites de compra por checkout y por usuario, aplica cupones de descuento y emite tickets firmados criptográficamente.
 
-### 4.0 Enrutamiento Contextual y Entrada al Checkout (Triada de Navegación)
+### 4.0 Enrutamiento Contextual y Entrada al Checkout (Triada de Navegación Segura Anti-IDOR)
 1. **Cartelera Principal / Home:**
    * Si `hasLandingPage = true && slug` $\rightarrow$ Redirige a la landing page dedicada `/e/[slug]`.
-   * De lo contrario $\rightarrow$ Redirige a la ficha técnica oficial `/events/[id]`.
+   * De lo contrario $\rightarrow$ Redirige a la ficha técnica oficial con UUID público opaco `/events/[publicUuid]`, erradicando el tanteo por ID numérico correlativo (OWASP BOLA / IDOR).
 2. **Landing Page Dedicada (`/e/[slug]`):**
-   * Disposición panorámica full-width. Al hacer clic en *"Comprar"* en cualquier localidad, envía directamente a `/checkout?eventId=[id]&zoneId=[zoneId]`.
-3. **Ficha Técnica Oficial (`/events/[id]`):**
-   * Carga dinámica de datos oficiales mediante `GET /events/:identifier` apoyada en caché Redis `qph:events:detail:{identifier}` (15 min).
-   * Al seleccionar una zona o pulsar *"Comprar Entradas"*, deriva a `/checkout?eventId=[id]` con la zona seleccionada.
+   * Disposición panorámica full-width. Al hacer clic en *"Comprar"* en cualquier localidad, envía directamente a `/checkout?eventId=[publicUuid]&zoneId=[zoneId]`.
+3. **Ficha Técnica Oficial (`/events/[publicUuid]`):**
+   * Carga dinámica de datos oficiales mediante `GET /events/:identifier` apoyada en caché Redis `qph:events:detail:{identifier}` (15 min). Acepta `publicUuid` o `slug`.
+   * Al seleccionar una zona o pulsar *"Comprar Entradas"*, deriva a `/checkout?eventId=[publicUuid]` con la zona seleccionada.
 4. **Checkout Inteligente (`/checkout`):**
-   * Lee `searchParams` (`eventId`, `zoneId`), autoselecciona la primera función disponible y preselecciona 1 entrada (`quantity = 1`) en la zona indicada en `zoneId`.
+   * Lee `searchParams` (`eventId`, `zoneId`), donde `eventId` es el `publicUuid` seguro del evento. Autoselecciona la primera función disponible y preselecciona 1 entrada (`quantity = 1`) en la zona indicada en `zoneId`.
+   * **Autenticación Obligatoria:** Para avanzar al paso de pago o confirmar la compra, se valida que el comprador cuente con sesión activa (JWT). Si no la tiene, se despliega el modal interactivo de autenticación que preserva las entradas seleccionadas y vincula la orden a su cuenta.
    * **Simulación de Pasarela y Emisión de Tickets (`POST /api/orders/simulate-checkout`):**
+     * Exige JWT obligatorio de usuario autenticado (`req.user.sub`).
      * Procesa la orden con simulación probabilística (80% éxito, 20% rechazo bancario simulado o forzado).
-     * En caso de éxito (`approved`): crea en transacción atómica la `OrderEntity` (status `paid`), `PaymentEntity` (status `approved`) y emite los `TicketEntity` con tokens QR criptográficos únicos, incrementando `sold_count` en las zonas.
+     * En caso de éxito (`approved`): crea en transacción atómica la `OrderEntity` (status `paid`), `PaymentEntity` (status `approved`) y emite los `TicketEntity` con tokens QR criptográficos únicos asociados al comprador verificado, incrementando `sold_count` en las zonas.
      * En caso de rechazo (`PAYMENT_REJECTED`): devuelve error de negocio para permitir al cliente cambiar de método de pago de inmediato sin perder sus entradas.
 
 ### 4.1 La Doble Ventana de Tiempos

@@ -23,6 +23,7 @@ import { GetEventLandingHandler } from './queries/handlers/get-event-landing.han
 import { GetEventDetailHandler } from './queries/handlers/get-event-detail.handler';
 import { EventStatusCronService } from './services/event-status-cron.service';
 import { EventSeederService } from './services/event-seeder.service';
+import { AdminKeyGuard } from '@common/guards/admin-key.guard';
 
 const CommandHandlers = [CreateEventHandler, PublishEventHandler];
 const QueryHandlers = [
@@ -57,11 +58,13 @@ const QueryHandlers = [
     ...QueryHandlers,
     EventStatusCronService,
     EventSeederService,
+    AdminKeyGuard,
   ],
   exports: [
     TypeOrmModule,
     EventStatusCronService,
     EventSeederService,
+    AdminKeyGuard,
   ],
 })
 export class EventsModule {}
