@@ -37,6 +37,7 @@ import { EventSeederService } from '../services/event-seeder.service';
 import { SeedEventsRequestDto } from '../dto/seed-events.request.dto';
 import { SeedEventsResponseDto } from '../dto/seed-events.response.dto';
 import { AdminKeyGuard } from '@common/guards/admin-key.guard';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Events')
 @Controller('events')
@@ -264,6 +265,7 @@ export class EventsController {
   }
 
   @Post('admin/sync-expired-status')
+  @SkipThrottle()
   @UseGuards(AdminKeyGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
@@ -275,6 +277,7 @@ export class EventsController {
   }
 
   @Post('admin/seed')
+  @SkipThrottle()
   @UseGuards(AdminKeyGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)

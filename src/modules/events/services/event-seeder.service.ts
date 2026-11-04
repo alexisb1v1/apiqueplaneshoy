@@ -311,6 +311,7 @@ export class EventSeederService {
 
     // 1. Obtener o crear organizador de prueba
     const organizer = await this.getOrCreateOrganizer();
+    const currentTotalEvents = await this.eventRepository.count();
 
     const seededEvents: SeededEventSummaryDto[] = [];
     let pastCount = 0;
@@ -320,9 +321,9 @@ export class EventSeederService {
     const baseNow = new Date();
 
     for (let i = 0; i < validCount; i++) {
-      const template = EVENT_TEMPLATES[i % EVENT_TEMPLATES.length];
+      const template = EVENT_TEMPLATES[(currentTotalEvents + i) % EVENT_TEMPLATES.length];
       const randomSuffix = Math.random().toString(36).substring(2, 7);
-      const eventNumber = i + 1;
+      const eventNumber = currentTotalEvents + i + 1;
       const eventName = `${template.name} #${eventNumber}`;
       const slug = `${this.slugify(template.name)}-${randomSuffix}`;
 
