@@ -24,13 +24,13 @@ import { ThrottlerStorageRedisService } from './modules/redis/throttler-storage-
     RedisModule,
     ThrottlerModule.forRootAsync({
       imports: [RedisModule],
-      inject: [ThrottlerStorageRedisService],
-      useFactory: (storage: ThrottlerStorageRedisService) => ({
+      inject: [ConfigService, ThrottlerStorageRedisService],
+      useFactory: (configService: ConfigService, storage: ThrottlerStorageRedisService) => ({
         throttlers: [
           {
             name: 'default',
-            ttl: 60000, // 60 segundos
-            limit: 60, // 60 peticiones por minuto por IP en endpoints de catálogo y navegación
+            ttl: Number(configService.get('THROTTLE_TTL')) || 60000, // 60 segundos por defecto
+            limit: Number(configService.get('THROTTLE_LIMIT')) || 60, // 60 peticiones/min por defecto (configurable para pruebas de carga)
           },
         ],
         storage,
