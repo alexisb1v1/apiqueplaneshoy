@@ -12,8 +12,11 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { OrdersController } from '../../controllers/orders.controller';
 import { SimulateOrderCheckoutHandler } from '../../commands/handlers/simulate-order-checkout.handler';
+import { CreateIzipayPaymentHandler } from '../../commands/handlers/create-izipay-payment.handler';
 import { GetMyOrdersHandler } from '../../queries/handlers/get-my-orders.handler';
 import { ValidateCouponHandler } from '../../queries/handlers/validate-coupon.handler';
+import { IzipayService } from '../services/izipay.service';
+import { IzipayIpnProcessor } from '../services/izipay-ipn.processor';
 
 @Module({
   imports: [
@@ -31,7 +34,14 @@ import { ValidateCouponHandler } from '../../queries/handlers/validate-coupon.ha
     ]),
   ],
   controllers: [OrdersController],
-  providers: [SimulateOrderCheckoutHandler, GetMyOrdersHandler, ValidateCouponHandler],
-  exports: [TypeOrmModule],
+  providers: [
+    SimulateOrderCheckoutHandler,
+    CreateIzipayPaymentHandler,
+    GetMyOrdersHandler,
+    ValidateCouponHandler,
+    IzipayService,
+    IzipayIpnProcessor,
+  ],
+  exports: [TypeOrmModule, IzipayService, IzipayIpnProcessor],
 })
 export class OrdersModule {}

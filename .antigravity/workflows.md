@@ -280,31 +280,50 @@ sequenceDiagram
         Web-->>Cliente: Despliega badge verde y desglose con descuento reflejado
     end
 
-    Cliente->>Web: Selecciona medio de pago y hace clic en "Confirmar y Pagar"
-    Web->>API: POST /api/orders/simulate-checkout { eventId, showId, items, paymentMethod, couponCode, customerEmail, customerName }
-    activate API
-    API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
-    API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
+    Cliente->>Web: Selecciona medio de pago ("Tarjeta" o "Yape") y confirma
+    
+    alt Pago Oficial Izipay (SmartForm Pop-in + Webhook IPN)
+        Web->>API: POST /api/orders/izipay/create-payment { eventId, showId, items, paymentMethod, couponCode }
+        activate API
+        API->>DB: 1. Valida aforo, límites y cupón con bloqueo pesimista
+        API->>DB: 2. INSERT INTO orders (status='pending', expires_at=NOW()+10min) y bloquea stock en zonas (locked_count)
+        API->>API: 3. Llama a Izipay V4/Charge/CreatePayment (Basic Auth: ShopId + ClavePrivada)
+        API-->>Web: 201 Created { formToken, publicKey, orderId, orderCode, totalAmount }
+        deactivate API
 
-    opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
-        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
-        Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions si dos usuarios canjean al mismo milisegundo.
-        alt Cupón Expirado, Inactivo o Cupo Agotado Concurrente
-            API->>DB: ROLLBACK TRANSACTION
-            API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
-            Web-->>Cliente: Alerta y desvincula el cupón para reintentar el pago
-        else Cupón Válido y Vigente
-            API->>API: Recalcula y aplica discountAmount
-            API->>DB: UPDATE coupons SET used_count = used_count + 1, is_active = (CASE WHEN usage_type='single_use' OR (usage_type='reusable' AND max_uses IS NOT NULL AND used_count + 1 >= max_uses) THEN false ELSE is_active END)
+        Web->>Web: Inicializa SDK Krypton y abre Izipay Pop-in Modal sobre el checkout
+        Cliente->>Web: Ingresa datos en el modal seguro de Izipay
+        Web->>API: Izipay procesa la transacción criptográfica
+
+        par Notificación Servidor a Servidor (IPN Obligatoria con HMAC-SHA256)
+            API->>API: POST /api/orders/izipay/ipn { 'kr-answer', 'kr-hash' }
+            Note over API: Valida firma HMAC-SHA256 con IZIPAY_HMAC_SHA256_KEY.<br/>Garantiza Idempotencia: Si orden ya pagada ➔ 200 OK sin duplicar.<br/>Si pending y orderStatus=='PAID' ➔ order.status='paid', emite tickets Ed25519, actualiza cupones y sold_count.
+            API-->>API: 200 OK { status: 'SUCCESS' }
+        and Notificación Inmediata al Navegador
+            Web->>Web: KR.onSubmit captura éxito preliminar y avanza a Paso 3 (top: 0)
         end
-    end
 
-    API->>DB: 2. INSERT INTO orders (user_id, coupon_id, subtotal_tickets, discount_amount, total_amount, status='paid')
-    API->>DB: 3. INSERT INTO payments (order_id, payment_method, amount=final_total, status='approved', tx_code)
-    API->>DB: 4. Emite tickets con firma criptográfica Ed25519 e incrementa sold_count en zonas
-    API->>DB: COMMIT TRANSACTION EN POSTGRESQL
-    API-->>Web: 200 OK SimulateOrderCheckoutResponseDto { success: true, orderId, subtotal, discountAmount, couponCode, totalAmount, tickets }
-    deactivate API
+    else Simulación Directa / Otros Medios
+        Web->>API: POST /api/orders/simulate-checkout { eventId, showId, items, paymentMethod, couponCode }
+        activate API
+        API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
+        API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
+        opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
+            API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
+            Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions.
+            alt Cupón Expirado o Inactivo
+                API->>DB: ROLLBACK TRANSACTION
+                API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
+            else Cupón Válido y Vigente
+                API->>API: Recalcula y aplica discountAmount
+                API->>DB: UPDATE coupons SET used_count = used_count + 1
+            end
+        end
+        API->>DB: 2. INSERT INTO orders (status='paid'), INSERT INTO payments (status='approved'), INSERT tickets
+        API->>DB: COMMIT TRANSACTION EN POSTGRESQL
+        API-->>Web: 200 OK SimulateOrderCheckoutResponseDto
+        deactivate API
+    end
 
     else Orden Expirada Tardíamente (CANDADO 3: status == 'expired')
         Note over API,Gateway: La reserva de 10 min venció y el stock ya se liberó.<br/>¡CERO SOBREVENTA! El backend no genera boletos.

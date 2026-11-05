@@ -17,10 +17,15 @@ import { SimulateOrderCheckoutResponseDto } from '../dto/simulate-order-checkout
 import { UserOrderResponseDto } from '../dto/user-order.response.dto';
 import { ValidateCouponRequestDto } from '../dto/validate-coupon.request.dto';
 import { ValidateCouponResponseDto } from '../dto/validate-coupon.response.dto';
+import { CreateIzipayPaymentRequestDto } from '../dto/create-izipay-payment.request.dto';
+import { CreateIzipayPaymentResponseDto } from '../dto/create-izipay-payment.response.dto';
+import { IzipayIpnDto } from '../dto/izipay-ipn.dto';
 import { SimulateOrderCheckoutCommand } from '../commands/impl/simulate-order-checkout.command';
+import { CreateIzipayPaymentCommand } from '../commands/impl/create-izipay-payment.command';
 import { GetMyOrdersQuery } from '../queries/impl/get-my-orders.query';
 import { ValidateCouponQuery } from '../queries/impl/validate-coupon.query';
 import { matchResult } from '@common/http/match-result';
+import { IzipayIpnProcessor } from '../infrastructure/services/izipay-ipn.processor';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -30,6 +35,7 @@ export class OrdersController {
     private readonly queryBus: QueryBus,
     @Inject('TokenService')
     private readonly tokenService: TokenService,
+    private readonly izipayIpnProcessor: IzipayIpnProcessor,
   ) {}
 
   @Post('validate-coupon')
@@ -161,6 +167,83 @@ export class OrdersController {
     }
 
     return this.queryBus.execute(new GetMyOrdersQuery(authenticatedUserId));
+  }
+
+  @Post('izipay/create-payment')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary:
+      'Inicializar una orden de compra para la pasarela Izipay y generar el formToken para el formulario Pop-in',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'formToken generado exitosamente para incrustar el modal de Izipay',
+    type: CreateIzipayPaymentResponseDto,
+  })
+  async createIzipayPayment(
+    @Body() body: CreateIzipayPaymentRequestDto,
+    @Req() req: any,
+  ): Promise<CreateIzipayPaymentResponseDto> {
+    let authenticatedUserId: number | undefined = undefined;
+
+    const authHeader = req.headers?.authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const payload = this.tokenService.verifyToken(token);
+      if (payload && payload.id) {
+        authenticatedUserId = Number(payload.id);
+      }
+    }
+
+    if (!authenticatedUserId && req.user?.id) {
+      authenticatedUserId = Number(req.user.id);
+    }
+
+    if (!authenticatedUserId) {
+      throw new UnauthorizedException(
+        'Debes iniciar sesión con tu cuenta para poder procesar tu pago con Izipay.',
+      );
+    }
+
+    const result = await this.commandBus.execute(
+      new CreateIzipayPaymentCommand(body, authenticatedUserId),
+    );
+
+    return matchResult(result, (data) => data, {
+      INVALID_INPUT: 'No hay aforo suficiente disponible para las zonas seleccionadas.',
+      TICKET_LIMIT_EXCEEDED:
+        'Has superado el límite de entradas permitido para este evento o compra.',
+      COUPON_INVALID_OR_EXPIRED:
+        'El cupón de descuento ya no se encuentra disponible o ha expirado.',
+      NOT_FOUND: 'El evento, función o zona seleccionada no existen o no están vigentes.',
+    });
+  }
+
+  @Post('izipay/ipn')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Webhook IPN (Instant Payment Notification) de Izipay para confirmar transacciones Servidor a Servidor con firma HMAC-SHA256',
+  })
+  async handleIzipayIpn(@Body() body: any, @Req() req: any): Promise<any> {
+    const payload = body || req.body || {};
+    const krAnswer = payload['kr-answer'] || payload.krAnswer;
+    const krHash = payload['kr-hash'] || payload.krHash;
+
+    const result = await this.izipayIpnProcessor.processIpn(krAnswer, krHash);
+    if (!result.success) {
+      return {
+        status: 'ERROR',
+        message: result.message,
+      };
+    }
+
+    return {
+      status: 'SUCCESS',
+      message: 'IPN processed successfully',
+      orderId: result.orderId,
+    };
   }
 }
 
