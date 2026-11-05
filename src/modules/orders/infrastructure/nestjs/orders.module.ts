@@ -13,6 +13,7 @@ import { UserEntity } from '@users/domain/entities/user.entity';
 import { OrdersController } from '../../controllers/orders.controller';
 import { SimulateOrderCheckoutHandler } from '../../commands/handlers/simulate-order-checkout.handler';
 import { GetMyOrdersHandler } from '../../queries/handlers/get-my-orders.handler';
+import { ValidateCouponHandler } from '../../queries/handlers/validate-coupon.handler';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { GetMyOrdersHandler } from '../../queries/handlers/get-my-orders.handler
     ]),
   ],
   controllers: [OrdersController],
-  providers: [SimulateOrderCheckoutHandler, GetMyOrdersHandler],
+  providers: [SimulateOrderCheckoutHandler, GetMyOrdersHandler, ValidateCouponHandler],
   exports: [TypeOrmModule],
 })
 export class OrdersModule {}

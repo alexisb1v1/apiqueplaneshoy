@@ -13,6 +13,7 @@ import {
 import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { PaymentEntity } from '@orders/domain/entities/payment.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
+import { CouponEntity } from '@orders/domain/entities/coupon.entity';
 import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ShowEntity } from '@events/domain/entities/show.entity';
 import { EventEntity } from '@events/domain/entities/event.entity';
@@ -232,14 +233,111 @@ export class SimulateOrderCheckoutHandler
           });
         }
 
+        // 2.3.5 Doble Check Atómico de Cupón de Descuento (Validación en Transacción con Bloqueo)
+        let discountAmount = 0.0;
+        let appliedCoupon: CouponEntity | null = null;
+
+        if (dto.couponCode && dto.couponCode.trim()) {
+          const normalizedCode = dto.couponCode.trim().toUpperCase();
+
+          // Bloqueo pesimista de escritura (SELECT FOR UPDATE) para prevenir colisiones concurrentes
+          appliedCoupon = await queryRunner.manager
+            .createQueryBuilder(CouponEntity, 'c')
+            .setLock('pessimistic_write')
+            .where('c.eventId = :eventId', { eventId: event.id })
+            .andWhere('UPPER(c.code) = :code', { code: normalizedCode })
+            .getOne();
+
+          if (!appliedCoupon) {
+            this.logger.warn(`[Doble Check Cupón] Cupón '${normalizedCode}' no existe para el evento ${event.id}.`);
+            await queryRunner.rollbackTransaction();
+            return err('COUPON_INVALID_OR_EXPIRED');
+          }
+
+          if (!appliedCoupon.isActive) {
+            this.logger.warn(`[Doble Check Cupón] Cupón '${normalizedCode}' se encuentra inactivo.`);
+            await queryRunner.rollbackTransaction();
+            return err('COUPON_INVALID_OR_EXPIRED');
+          }
+
+          // Caso 3: Vigencia por fecha y hora
+          if (appliedCoupon.startsAt && now < new Date(appliedCoupon.startsAt)) {
+            this.logger.warn(`[Doble Check Cupón] Cupón '${normalizedCode}' aún no inicia vigencia.`);
+            await queryRunner.rollbackTransaction();
+            return err('COUPON_INVALID_OR_EXPIRED');
+          }
+          if (appliedCoupon.expiresAt && now > new Date(appliedCoupon.expiresAt)) {
+            this.logger.warn(`[Doble Check Cupón] Cupón '${normalizedCode}' expiró el ${appliedCoupon.expiresAt}.`);
+            await queryRunner.rollbackTransaction();
+            return err('COUPON_INVALID_OR_EXPIRED');
+          }
+
+          // Caso 1: De una sola vida (single_use)
+          if (appliedCoupon.usageType === 'single_use' && Number(appliedCoupon.usedCount) >= 1) {
+            this.logger.warn(`[Doble Check Cupón] Cupón de un solo uso '${normalizedCode}' ya fue utilizado.`);
+            await queryRunner.rollbackTransaction();
+            return err('COUPON_INVALID_OR_EXPIRED');
+          }
+
+          // Caso 2: Reusable N veces (reusable con max_uses)
+          if (
+            appliedCoupon.usageType === 'reusable' &&
+            appliedCoupon.maxUses !== null &&
+            Number(appliedCoupon.usedCount) >= Number(appliedCoupon.maxUses)
+          ) {
+            this.logger.warn(`[Doble Check Cupón] Cupón '${normalizedCode}' alcanzó su cupo máximo de ${appliedCoupon.maxUses} canjes.`);
+            await queryRunner.rollbackTransaction();
+            return err('COUPON_INVALID_OR_EXPIRED');
+          }
+
+          // Validación de monto mínimo de orden
+          if (appliedCoupon.minOrderAmount !== null && subtotal < Number(appliedCoupon.minOrderAmount)) {
+            this.logger.warn(`[Doble Check Cupón] Subtotal ${subtotal} no alcanza monto mínimo ${appliedCoupon.minOrderAmount}.`);
+            await queryRunner.rollbackTransaction();
+            return err('INVALID_INPUT');
+          }
+
+          // Cálculo del descuento según tipo (% o soles)
+          const discountVal = Number(appliedCoupon.discountValue) || 0;
+          if (appliedCoupon.discountType === 'percentage') {
+            discountAmount = Math.round((subtotal * (discountVal / 100)) * 100) / 100;
+          } else {
+            discountAmount = Math.min(subtotal, discountVal);
+          }
+
+          // Actualización atómica del ciclo de vida del cupón
+          appliedCoupon.usedCount = Number(appliedCoupon.usedCount) + 1;
+
+          // Regla de invalidación:
+          // Si es single_use: se apaga de inmediato
+          if (appliedCoupon.usageType === 'single_use') {
+            appliedCoupon.isActive = false;
+          } else if (
+            appliedCoupon.usageType === 'reusable' &&
+            appliedCoupon.maxUses !== null &&
+            Number(appliedCoupon.usedCount) >= Number(appliedCoupon.maxUses)
+          ) {
+            // Si es reusable y llegó a N usos: se auto-invalida
+            appliedCoupon.isActive = false;
+          }
+
+          await queryRunner.manager.save(CouponEntity, appliedCoupon);
+          this.logger.log(
+            `[Doble Check Cupón Exitoso] Código '${normalizedCode}' aplicado: -S/. ${discountAmount.toFixed(2)}. Usos: ${appliedCoupon.usedCount}. Activo: ${appliedCoupon.isActive}`,
+          );
+        }
+
+        const finalTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+
         // 2.4 Crear Orden
         const order = queryRunner.manager.create(OrderEntity, {
           userId: user.id,
+          couponId: appliedCoupon ? appliedCoupon.id : null,
           status: 'paid',
           subtotalTickets: subtotal,
           totalServiceFee: 0.0,
-          discountAmount: 0.0,
-          totalAmount: subtotal,
+          discountAmount: discountAmount,
+          totalAmount: finalTotal,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         });
 
@@ -250,7 +348,7 @@ export class SimulateOrderCheckoutHandler
         const payment = queryRunner.manager.create(PaymentEntity, {
           orderId: savedOrder.id,
           paymentMethod: dto.paymentMethod,
-          amount: subtotal,
+          amount: finalTotal,
           status: 'approved',
           externalTransactionId: externalTx,
           gatewayResponse: {
@@ -309,7 +407,7 @@ export class SimulateOrderCheckoutHandler
         await queryRunner.commitTransaction();
 
         this.logger.log(
-          `[Orden Completada] Orden #${savedOrder.id} (${savedOrder.publicUuid}) pagada con éxito con ${dto.paymentMethod}. Total: S/. ${subtotal.toFixed(2)}. ${issuedTickets.length} tickets emitidos.`,
+          `[Orden Completada] Orden #${savedOrder.id} (${savedOrder.publicUuid}) pagada con éxito con ${dto.paymentMethod}. Total: S/. ${finalTotal.toFixed(2)}. ${issuedTickets.length} tickets emitidos.`,
         );
 
         const responseDto = plainToInstance(
@@ -321,7 +419,9 @@ export class SimulateOrderCheckoutHandler
             orderPublicUuid: savedOrder.publicUuid,
             status: 'paid',
             subtotal,
-            totalAmount: subtotal,
+            discountAmount,
+            couponCode: appliedCoupon ? appliedCoupon.code.toUpperCase() : null,
+            totalAmount: finalTotal,
             paymentMethod: dto.paymentMethod,
             txCode: externalTx,
             message: '¡Pago simulado procesado exitosamente por la pasarela de pagos!',

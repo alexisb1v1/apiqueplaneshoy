@@ -268,42 +268,43 @@ sequenceDiagram
 
     Web->>Cliente: Muestra pantalla de checkout con resumen de compra
 
-    opt Aplicación de Cupón de Descuento
-        Cliente->>Web: Ingresa código de cupón (ej: "INFLUENCERJUAN")
-        Web->>API: POST /api/orders/:order_token/apply-coupon { code: 'INFLUENCERJUAN' }
+    opt Validación Interactiva de Cupón de Descuento (Paso 1 y Paso 2 en Frontend)
+        Cliente->>Web: Ingresa código de cupón (ej: "CYBER2026")
+        Web->>API: POST /api/orders/validate-coupon { eventId, code: 'CYBER2026', subtotal }
         activate API
-        API->>DB: Valida cupón: event_id, is_active=true, starts_at <= now() <= expires_at
-        API->>DB: Valida tipo: si single_use (used_count==0), si reusable (used_count < max_uses)
-        API->>DB: Valida min_order_amount <= subtotal_tickets
-        API->>API: Calcula discount_amount (% o monto fijo)
-        API->>DB: UPDATE orders SET coupon_id = :id, discount_amount = :disc, total_amount = (subtotal + fees - disc)
-        API-->>Web: 200 OK { discount_amount, new_total_amount, coupon_code }
+        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:code)
+        API->>API: Evalúa Matriz de 6 Casos (Ciclo de Vida x Tipo de Descuento):
+        Note over API: 1. single_use: Valida used_count < 1<br/>2. reusable: Valida used_count < max_uses (si max_uses != null)<br/>3. vigencia: Valida starts_at <= NOW() <= expires_at<br/>4. Reglas base: is_active == true y subtotal >= min_order_amount<br/>5. Tipo Porcentaje: subtotal * (discount_value / 100)<br/>6. Tipo Monto Fijo: min(subtotal, discount_value) con piso cero
+        API-->>Web: 200 OK { code, discountType, discountValue, discountAmount, newTotal, message }
         deactivate API
-        Web-->>Cliente: Muestra desglose actualizado con descuento aplicado
+        Web-->>Cliente: Despliega badge verde y desglose con descuento reflejado
     end
 
-    Cliente->>Web: Ingresa tarjeta y confirma pago en la pasarela
-    Web->>Gateway: Procesa cobro seguro (sesión válida por 5 minutos)
-    Gateway-->>API: Webhook: Transacción Procesada (con payload crudo)
-
+    Cliente->>Web: Selecciona medio de pago y hace clic en "Confirmar y Pagar"
+    Web->>API: POST /api/orders/simulate-checkout { eventId, showId, items, paymentMethod, couponCode, customerEmail, customerName }
     activate API
-    API->>DB: SELECT * FROM orders WHERE id = :order_id FOR UPDATE
-    
-    alt Orden Válida y Vigente (status == 'pending' y now() <= expires_at)
-        API->>DB: INSERT INTO payments (status='approved', gateway_response=JSONB)
-        API->>DB: UPDATE orders SET status='paid'
-        API->>DB: UPDATE zones SET locked_count = locked_count - :qty, sold_count = sold_count + :qty
-        opt Si compró en Preventa
-            API->>DB: UPDATE zone_pricing_tiers SET locked_count = locked_count - :qty, sold_count = sold_count + :qty WHERE id = :tier_id
+    API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
+    API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
+
+    opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
+        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
+        Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions si dos usuarios canjean al mismo milisegundo.
+        alt Cupón Expirado, Inactivo o Cupo Agotado Concurrente
+            API->>DB: ROLLBACK TRANSACTION
+            API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
+            Web-->>Cliente: Alerta y desvincula el cupón para reintentar el pago
+        else Cupón Válido y Vigente
+            API->>API: Recalcula y aplica discountAmount
+            API->>DB: UPDATE coupons SET used_count = used_count + 1, is_active = (CASE WHEN usage_type='single_use' OR (usage_type='reusable' AND max_uses IS NOT NULL AND used_count + 1 >= max_uses) THEN false ELSE is_active END)
         end
-        opt Si orden tenía cupón
-            API->>DB: UPDATE coupons SET used_count = used_count + 1 WHERE id = :coupon_id
-        end
-        API->>API: Firma criptográfica Ed25519: ticket_uuid + signing_private_key
-        API->>DB: UPDATE tickets SET status='sold', paid_base_price=tarifa_congelada, pricing_tier_id=:tier_id, qr_code=token_firmado
-        API-->>Gateway: 200 OK (Webhook recibido)
-        API->>Cliente: Envía correo con tickets PDF y códigos QR firmados
-        Web-->>Cliente: Pantalla de éxito con QR y botón "Agregar a Billetera"
+    end
+
+    API->>DB: 2. INSERT INTO orders (user_id, coupon_id, subtotal_tickets, discount_amount, total_amount, status='paid')
+    API->>DB: 3. INSERT INTO payments (order_id, payment_method, amount=final_total, status='approved', tx_code)
+    API->>DB: 4. Emite tickets con firma criptográfica Ed25519 e incrementa sold_count en zonas
+    API->>DB: COMMIT TRANSACTION EN POSTGRESQL
+    API-->>Web: 200 OK SimulateOrderCheckoutResponseDto { success: true, orderId, subtotal, discountAmount, couponCode, totalAmount, tickets }
+    deactivate API
 
     else Orden Expirada Tardíamente (CANDADO 3: status == 'expired')
         Note over API,Gateway: La reserva de 10 min venció y el stock ya se liberó.<br/>¡CERO SOBREVENTA! El backend no genera boletos.

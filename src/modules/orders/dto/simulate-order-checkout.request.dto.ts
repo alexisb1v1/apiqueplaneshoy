@@ -71,6 +71,15 @@ export class SimulateOrderCheckoutRequestDto {
   customerDocument?: string;
 
   @ApiProperty({
+    example: 'PROMOQPH',
+    required: false,
+    description: 'Código de cupón de descuento opcional a aplicar',
+  })
+  @IsOptional()
+  @IsString({ message: 'El cupón debe ser una cadena de texto' })
+  couponCode?: string;
+
+  @ApiProperty({
     example: false,
     required: false,
     description: 'Si es true, fuerza la simulación de rechazo bancario',

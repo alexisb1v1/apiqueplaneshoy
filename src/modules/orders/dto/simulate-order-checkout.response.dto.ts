@@ -59,7 +59,15 @@ export class SimulateOrderCheckoutResponseDto {
   subtotal!: number;
 
   @Expose()
-  @ApiProperty({ example: 110.0 })
+  @ApiProperty({ example: 10.0, description: 'Descuento total aplicado por cupón en soles' })
+  discountAmount!: number;
+
+  @Expose()
+  @ApiProperty({ example: 'PROMOQPH', nullable: true, description: 'Código del cupón canjeado' })
+  couponCode!: string | null;
+
+  @Expose()
+  @ApiProperty({ example: 100.0 })
   totalAmount!: number;
 
   @Expose()

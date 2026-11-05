@@ -15,8 +15,11 @@ import { TokenService } from '@auth/domain/ports/token-service.port';
 import { SimulateOrderCheckoutRequestDto } from '../dto/simulate-order-checkout.request.dto';
 import { SimulateOrderCheckoutResponseDto } from '../dto/simulate-order-checkout.response.dto';
 import { UserOrderResponseDto } from '../dto/user-order.response.dto';
+import { ValidateCouponRequestDto } from '../dto/validate-coupon.request.dto';
+import { ValidateCouponResponseDto } from '../dto/validate-coupon.response.dto';
 import { SimulateOrderCheckoutCommand } from '../commands/impl/simulate-order-checkout.command';
 import { GetMyOrdersQuery } from '../queries/impl/get-my-orders.query';
+import { ValidateCouponQuery } from '../queries/impl/validate-coupon.query';
 import { matchResult } from '@common/http/match-result';
 
 @ApiTags('Orders')
@@ -28,6 +31,38 @@ export class OrdersController {
     @Inject('TokenService')
     private readonly tokenService: TokenService,
   ) {}
+
+  @Post('validate-coupon')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Validar un cupón de descuento para un evento y calcular el ahorro según los 6 casos de negocio (% o soles, una sola vida, reusable N veces, o vigente por fecha)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cupón válido y descuento calculado exitosamente',
+    type: ValidateCouponResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Cupón expirado, sin usos disponibles o subtotal insuficiente',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cupón inexistente para este evento',
+  })
+  async validateCoupon(
+    @Body() body: ValidateCouponRequestDto,
+  ): Promise<ValidateCouponResponseDto> {
+    const result = await this.queryBus.execute(new ValidateCouponQuery(body));
+
+    return matchResult(result, (data) => data, {
+      NOT_FOUND: 'El cupón ingresado no existe o no pertenece a este evento.',
+      COUPON_INVALID_OR_EXPIRED:
+        'El cupón no es válido, ha caducado por fecha o ya no cuenta con usos disponibles.',
+      INVALID_INPUT: 'El subtotal actual no cumple con el monto mínimo requerido para este cupón.',
+    });
+  }
 
   @Post('simulate-checkout')
   @ApiBearerAuth()
