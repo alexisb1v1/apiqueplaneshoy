@@ -14,14 +14,14 @@ export class PaymentEntity {
   @Column({ name: 'order_id', type: 'bigint', comment: 'ID de la orden de compra que liquida este pago' })
   orderId: string;
 
-  @Column({ name: 'payment_method', length: 50, comment: 'Método o pasarela utilizada (credit_card, stripe, paypal, yape)' })
+  @Column({ name: 'payment_method', type: 'varchar', length: 50, comment: 'Método o pasarela utilizada (credit_card, stripe, paypal, yape)' })
   paymentMethod: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, comment: 'Monto monetario exacto procesado en esta transacción' })
   amount: number;
 
   @Index()
-  @Column({ length: 50, default: 'pending', comment: 'Estado del pago: pending, approved, rejected, refunded' })
+  @Column({ type: 'varchar', length: 50, default: 'pending', comment: 'Estado del pago: pending, approved, rejected, refunded' })
   status: string;
 
   @Index()

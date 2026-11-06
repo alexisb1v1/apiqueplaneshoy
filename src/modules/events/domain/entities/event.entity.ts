@@ -19,7 +19,7 @@ export class EventEntity {
   publicUuid: string;
 
   @Index({ unique: true })
-  @Column({ length: 150, unique: true, comment: 'Slug alfanumérico amigable único para URL pública del evento y posicionamiento SEO' })
+  @Column({ type: 'varchar', length: 150, unique: true, comment: 'Slug alfanumérico amigable único para URL pública del evento y posicionamiento SEO' })
   slug: string;
 
   @Index()
@@ -35,21 +35,21 @@ export class EventEntity {
   organizerId: number;
 
   @Index()
-  @Column({ length: 255, comment: 'Nombre o título comercial del evento' })
+  @Column({ type: 'varchar', length: 255, comment: 'Nombre o título comercial del evento' })
   name: string;
 
   @Column({ type: 'text', nullable: true, comment: 'Descripción detallada o sinopsis del espectáculo' })
   description: string | null;
 
   @Index()
-  @Column({ length: 50, default: 'CONCERTS', comment: 'Categoría o tipo de evento: CONCERTS, THEATER, SPORTS, FESTIVALS, COMEDY, GASTRONOMY' })
+  @Column({ type: 'varchar', length: 50, default: 'CONCERTS', comment: 'Categoría o tipo de evento: CONCERTS, THEATER, SPORTS, FESTIVALS, COMEDY, GASTRONOMY' })
   category: string;
 
   @Column('text', { array: true, default: '{}', nullable: true, comment: 'Etiquetas o tags de búsqueda del evento' })
   tags: string[] | null;
 
   @Index()
-  @Column({ name: 'age_restriction', length: 50, default: 'ALL_AGES', comment: 'Público objetivo y restricción de edad: ALL_AGES, PLUS_14, PLUS_18' })
+  @Column({ name: 'age_restriction', type: 'varchar', length: 50, default: 'ALL_AGES', comment: 'Público objetivo y restricción de edad: ALL_AGES, PLUS_14, PLUS_18' })
   ageRestriction: string;
 
   @Column({ name: 'terms_and_conditions_url', type: 'varchar', length: 512, nullable: true, comment: 'URL del documento PDF oficial descargable con los términos y bases legales' })
@@ -88,14 +88,14 @@ export class EventEntity {
   @Column({ name: 'user_ticket_limit', type: 'integer', default: 4, comment: 'Límite global por defecto de entradas por usuario en el evento' })
   userTicketLimit: number;
 
-  @Column({ name: 'signing_key_id', length: 64, default: () => 'gen_random_uuid()', comment: 'Identificador del par de llaves criptográficas del evento para rotación y revocación' })
+  @Column({ name: 'signing_key_id', type: 'varchar', length: 64, default: () => 'gen_random_uuid()', comment: 'Identificador del par de llaves criptográficas del evento para rotación y revocación' })
   signingKeyId: string;
 
   @Column({ name: 'signing_public_key', type: 'text', nullable: true, comment: 'Llave pública asimétrica (Ed25519) del evento descargada por los escáneres de puerta para validación offline' })
   signingPublicKey: string | null;
 
   @Index()
-  @Column({ length: 50, default: 'draft', comment: 'Estado del evento: draft, published, paused, cancelled' })
+  @Column({ type: 'varchar', length: 50, default: 'draft', comment: 'Estado del evento: draft, published, paused, cancelled' })
   status: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz', comment: 'Fecha y hora de creación del registro' })

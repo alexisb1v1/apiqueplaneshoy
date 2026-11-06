@@ -19,7 +19,7 @@ export class ZonePricingTierEntity {
   @Column({ name: 'tier_number', type: 'smallint', comment: 'Número ordinal de preventa: 1 para Preventa 1, 2 para Preventa 2, 3 para Preventa 3' })
   tierNumber: number;
 
-  @Column({ length: 100, comment: 'Nombre comercial de la fase (ej: Preventa 1 - Early Bird, Preventa 2 - Fans)' })
+  @Column({ type: 'varchar', length: 100, comment: 'Nombre comercial de la fase (ej: Preventa 1 - Early Bird, Preventa 2 - Fans)' })
   name: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, comment: 'Precio con descuento promocional aplicable a esta fase' })

@@ -23,7 +23,7 @@ export class OrderEntity {
   couponId: string | null;
 
   @Index()
-  @Column({ length: 50, default: 'pending', comment: 'Estado de la orden: pending, paid, expired, cancelled, refunded' })
+  @Column({ type: 'varchar', length: 50, default: 'pending', comment: 'Estado de la orden: pending, paid, expired, cancelled, refunded' })
   status: string;
 
   @Column({ name: 'subtotal_tickets', type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Suma de los precios base de los tickets reservados' })

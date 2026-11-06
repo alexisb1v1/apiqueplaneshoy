@@ -14,11 +14,11 @@ export class UserEntity {
   @Column({ type: 'uuid', name: 'public_uuid', default: () => 'gen_random_uuid()', comment: 'Identificador público UUID para perfiles y APIs' })
   publicUuid: string;
 
-  @Column({ length: 100, comment: 'Nombre completo o razón social del usuario' })
+  @Column({ type: 'varchar', length: 100, comment: 'Nombre completo o razón social del usuario' })
   name: string;
 
   @Index({ unique: true })
-  @Column({ length: 150, unique: true, comment: 'Correo electrónico único utilizado para login y notificaciones' })
+  @Column({ type: 'varchar', length: 150, unique: true, comment: 'Correo electrónico único utilizado para login y notificaciones' })
   email: string;
 
   @Column({ name: 'email_verified_at', type: 'timestamptz', nullable: true, comment: 'Fecha y hora en que el usuario confirmó su correo electrónico (null si está pendiente de verificación)' })
@@ -28,7 +28,7 @@ export class UserEntity {
   passwordHash: string | null;
 
   @Index()
-  @Column({ length: 50, default: 'customer', comment: 'Rol del usuario en la plataforma: customer, admin' })
+  @Column({ type: 'varchar', length: 50, default: 'customer', comment: 'Rol del usuario en la plataforma: customer, admin' })
   role: string;
 
   @Index()

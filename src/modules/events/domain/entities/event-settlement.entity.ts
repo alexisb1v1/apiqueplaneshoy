@@ -20,7 +20,7 @@ export class EventSettlementEntity {
   organizerId: number;
 
   @Index()
-  @Column({ length: 50, default: 'requested', comment: 'Estado de la liquidación: requested, in_review, approved, paid, rejected' })
+  @Column({ type: 'varchar', length: 50, default: 'requested', comment: 'Estado de la liquidación: requested, in_review, approved, paid, rejected' })
   status: string;
 
   @Column({ name: 'total_tickets_sold', type: 'integer', comment: 'Cantidad total de boletos efectivamente vendidos en el evento' })

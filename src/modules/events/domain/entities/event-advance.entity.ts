@@ -23,7 +23,7 @@ export class EventAdvanceEntity {
   amount: number;
 
   @Index()
-  @Column({ length: 50, default: 'requested', comment: 'Estado del adelanto: requested, in_review, approved, paid, rejected' })
+  @Column({ type: 'varchar', length: 50, default: 'requested', comment: 'Estado del adelanto: requested, in_review, approved, paid, rejected' })
   status: string;
 
   @Column({ name: 'bank_name', type: 'varchar', length: 100, nullable: true, comment: 'Nombre de la entidad bancaria de destino (ej: BCP, BBVA, Interbank)' })

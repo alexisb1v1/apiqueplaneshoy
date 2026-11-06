@@ -16,13 +16,13 @@ export class ZoneEntity {
   @Column({ name: 'event_id', type: 'bigint', comment: 'ID del evento al que pertenece esta configuración de zona' })
   eventId: string;
 
-  @Column({ length: 100, comment: 'Nombre comercial de la localidad o sector (ej: VIP, General, Box)' })
+  @Column({ type: 'varchar', length: 100, comment: 'Nombre comercial de la localidad o sector (ej: VIP, General, Box)' })
   name: string;
 
   @Column({ type: 'varchar', length: 150, nullable: true, comment: 'Título comercial destacado (ej: Experiencia VIP Box, Primera Fila)' })
   title: string | null;
 
-  @Column({ length: 7, default: '#3B82F6', comment: 'Color hexadecimal distintivo de la zona (ej: #EF4444 para VIP, #10B981 para General)' })
+  @Column({ type: 'varchar', length: 7, default: '#3B82F6', comment: 'Color hexadecimal distintivo de la zona (ej: #EF4444 para VIP, #10B981 para General)' })
   color: string;
 
   @Column({ type: 'text', nullable: true, comment: 'Descripción de la ubicación física en el recinto y beneficios incluidos' })

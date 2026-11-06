@@ -48,7 +48,7 @@ export class TicketEntity {
   qrCode: string | null;
 
   @Index()
-  @Column({ length: 50, default: 'available', comment: 'Estado del ticket: available, locked, sold, used, cancelled' })
+  @Column({ type: 'varchar', length: 50, default: 'available', comment: 'Estado del ticket: available, locked, sold, used, cancelled' })
   status: string;
 
   @Column({ name: 'locked_until', type: 'timestamptz', nullable: true, comment: 'Marca de tiempo hasta la que el ticket está retenido durante la compra (10 min)' })

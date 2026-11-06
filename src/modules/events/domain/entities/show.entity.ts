@@ -30,7 +30,7 @@ export class ShowEntity {
   durationHours: number | null;
 
   @Index()
-  @Column({ length: 50, default: 'scheduled', comment: 'Estado del show: scheduled, ongoing, completed, cancelled' })
+  @Column({ type: 'varchar', length: 50, default: 'scheduled', comment: 'Estado del show: scheduled, ongoing, completed, cancelled' })
   status: string;
 
   // Relaciones

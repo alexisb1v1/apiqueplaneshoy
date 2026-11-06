@@ -22,16 +22,16 @@ export class CouponEntity {
   organizerId: number;
 
   @Index()
-  @Column({ length: 50, comment: 'Código alfanumérico que escribe el comprador (ej: INFLUENCER10, CYBER20)' })
+  @Column({ type: 'varchar', length: 50, comment: 'Código alfanumérico que escribe el comprador (ej: INFLUENCER10, CYBER20)' })
   code: string;
 
-  @Column({ name: 'discount_type', length: 20, comment: 'Tipo de descuento: percentage (% de rebaja) o fixed (monto fijo en soles)' })
+  @Column({ name: 'discount_type', type: 'varchar', length: 20, comment: 'Tipo de descuento: percentage (% de rebaja) o fixed (monto fijo en soles)' })
   discountType: string;
 
   @Column({ name: 'discount_value', type: 'decimal', precision: 10, scale: 2, comment: 'Magnitud del descuento (ej: 15.00 para 15% o 20.00 para S/ 20.00)' })
   discountValue: number;
 
-  @Column({ name: 'usage_type', length: 20, default: 'single_use', comment: 'Modalidad de uso: single_use (de 1 solo uso) o reusable (múltiples canjes)' })
+  @Column({ name: 'usage_type', type: 'varchar', length: 20, default: 'single_use', comment: 'Modalidad de uso: single_use (de 1 solo uso) o reusable (múltiples canjes)' })
   usageType: string;
 
   @Column({ name: 'max_uses', type: 'integer', nullable: true, comment: 'Límite máximo total de canjes permitidos en la plataforma (null si es ilimitado)' })
