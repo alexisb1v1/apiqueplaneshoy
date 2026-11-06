@@ -1,25 +1,36 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
 import { EventEntity } from './event.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 
 @Entity('shows')
+@Index(['eventId', 'startTime'])
 export class ShowEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: string; // Mapeado a string en TS para evitar overflow de bigint
+  @PrimaryGeneratedColumn({ type: 'bigint', comment: 'Identificador único interno autoincremental de la función' })
+  id: string;
 
-  @Column({ type: 'uuid', name: 'public_uuid', default: () => 'gen_random_uuid()' })
+  @Index({ unique: true })
+  @Column({ type: 'uuid', name: 'public_uuid', default: () => 'gen_random_uuid()', comment: 'Identificador público UUID de la función para el cliente' })
   publicUuid: string;
 
-  @Column({ name: 'event_id', type: 'bigint' })
+  @Index()
+  @Column({ name: 'event_id', type: 'bigint', comment: 'ID del evento al que pertenece esta función' })
   eventId: string;
 
-  @Column({ name: 'start_time', type: 'timestamptz' })
+  @Column({ type: 'varchar', length: 150, nullable: true, comment: 'Nombre o título de la función (ej: Noche de Apertura)' })
+  name: string | null;
+
+  @Index()
+  @Column({ name: 'start_time', type: 'timestamptz', comment: 'Fecha y hora exacta de inicio de la función o apertura de puertas' })
   startTime: Date;
 
-  @Column({ name: 'end_time', type: 'timestamptz', nullable: true })
-  endTime: Date | null;
+  @Column({ name: 'sales_end_at', type: 'timestamptz', nullable: true, comment: 'Fecha y hora límite de venta de entradas para esta función (si es null, cierra en start_time)' })
+  salesEndAt: Date | null;
 
-  @Column({ length: 50, default: 'scheduled' })
+  @Column({ name: 'duration_hours', type: 'integer', nullable: true, default: 2, comment: 'Duración estimada del evento en horas (1, 2, 3, etc.)' })
+  durationHours: number | null;
+
+  @Index()
+  @Column({ type: 'varchar', length: 50, default: 'scheduled', comment: 'Estado del show: scheduled, ongoing, completed, cancelled' })
   status: string;
 
   // Relaciones
