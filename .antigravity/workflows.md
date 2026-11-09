@@ -810,5 +810,86 @@ sequenceDiagram
   * Cupón de Monto Fijo: `VIP20-[SUFIJO]` (S/ 20.00 de rebaja directa con compra mínima de S/ 60.00).
 * **Teaser de YouTube en Landing Pages:** Los eventos con `hasLandingPage = true` configuran un enlace oficial de YouTube en `landingConfig.header.videoTeaserUrl`, habilitando en el frontend el botón flotante de reproducción y el modal `VideoTeaserModal`.
 
+---
+
+## 13. Flujo 13: Lista de Favoritos (Persistencia y Sincronización)
+
+Permite a los usuarios marcar/desmarcar eventos como favoritos desde tarjetas o páginas de detalle, sincronizando en tiempo real la colección personal del usuario con la base de datos `user_favorite_events`.
+
+### 13.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Usuario as Usuario
+    participant Web as Frontend Next.js (Card / Detalle)
+    participant Store as Hook useFavorites & EventBus
+    participant API as Backend NestJS (UsersModule)
+    participant DB as PostgreSQL (user_favorite_events)
+
+    Usuario->>Web: Clic en el corazón (favorite)
+    alt Usuario no autenticado
+        Web->>Usuario: Redirige a /login?redirect=/events/...
+    else Usuario autenticado
+        Web->>Store: Optimistic Update inmediato
+        Store-->>Web: Alterna estado visual (corazón relleno/vacío)
+        Web->>API: POST /api/users/favorites/:eventId/toggle
+        API->>DB: SELECT * FROM user_favorite_events WHERE user_id AND event_id
+        alt Ya existía
+            API->>DB: DELETE FROM user_favorite_events
+            API-->>Web: 200 OK { isFavorite: false }
+        else No existía
+            API->>DB: INSERT INTO user_favorite_events (user_id, event_id)
+            API-->>Web: 200 OK { isFavorite: true }
+        end
+        Store->>Web: window.dispatchEvent('qph:favorites-updated')
+    end
+```
+
+---
+
+## 14. Flujo 14: Restablecimiento de Contraseña (Password Reset con Token Temporal)
+
+Flujo seguro en 2 pasos para recuperar el acceso a la cuenta con tokens encriptados con caducidad (10-15 min) y rate limiting anti-fuerza bruta.
+
+### 14.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Usuario as Usuario
+    participant Web as Web (Recuperar / Restablecer)
+    participant API as Backend NestJS (AuthModule)
+    participant Redis as Redis (TTL 15 min)
+    participant Mail as Servicio de Email (SMTP/Resend)
+    participant DB as PostgreSQL (users)
+
+    Note over Usuario,Mail: Paso 1: Solicitud de Restablecimiento
+    Usuario->>Web: Ingresa correo en /forgot-password
+    Web->>API: POST /api/auth/forgot-password { email } (Rate Limited)
+    API->>DB: Verifica si el correo existe
+    opt Correo registrado
+        API->>Redis: SETEX pwd_reset:<token> 900 <userId>
+        API->>Mail: Envía correo con enlace /reset-password?token=<token>
+    end
+    API-->>Web: 200 OK (Respuesta opaca para evitar enumeración de correos)
+
+    Note over Usuario,DB: Paso 2: Cambio de Contraseña
+    Usuario->>Web: Clic en link del correo -> abre /reset-password?token=...
+    Usuario->>Web: Ingresa nueva contraseña y confirma
+    Web->>API: POST /api/auth/reset-password { token, newPassword }
+    API->>Redis: GET pwd_reset:<token>
+    alt Token válido
+        API->>DB: UPDATE users SET password_hash = bcrypt(newPassword)
+        API->>Redis: DEL pwd_reset:<token>
+        API->>Mail: Envía correo de confirmación "Tu contraseña ha sido cambiada"
+        API-->>Web: 200 OK
+        Web-->>Usuario: Mensaje de éxito y redirección a /login
+    else Token inválido o expirado
+        API-->>Web: 400 Bad Request { message: "Token inválido o expirado" }
+    end
+```
+
+
 
 

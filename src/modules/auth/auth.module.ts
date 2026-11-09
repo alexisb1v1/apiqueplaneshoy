@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -13,6 +13,9 @@ import { ResendVerificationController } from './interfaces/http/v1/resend-verifi
 import { UpdateProfileController } from './interfaces/http/v1/update-profile/update-profile.controller';
 import { BecomeOrganizerController } from './interfaces/http/v1/become-organizer/become-organizer.controller';
 import { RefreshTokenController } from './interfaces/http/v1/refresh-token/refresh-token.controller';
+import { ForgotPasswordController } from './interfaces/http/v1/forgot-password/forgot-password.controller';
+import { VerifyResetTokenController } from './interfaces/http/v1/verify-reset-token/verify-reset-token.controller';
+import { ResetPasswordController } from './interfaces/http/v1/reset-password/reset-password.controller';
 
 import { RegisterUserHandler } from './application/commands/v1/register-user/handlers/register-user.handler';
 import { LoginUserHandler } from './application/commands/v1/login-user/handlers/login-user.handler';
@@ -22,6 +25,9 @@ import { ResendVerificationHandler } from './application/commands/v1/resend-veri
 import { UpdateProfileHandler } from './application/commands/v1/update-profile/handlers/update-profile.handler';
 import { BecomeOrganizerHandler } from './application/commands/v1/become-organizer/handlers/become-organizer.handler';
 import { RefreshTokenHandler } from './application/commands/v1/refresh-token/handlers/refresh-token.handler';
+import { ForgotPasswordHandler } from './application/commands/v1/forgot-password/handlers/forgot-password.handler';
+import { VerifyResetTokenHandler } from './application/queries/v1/verify-reset-token/handlers/verify-reset-token.handler';
+import { ResetPasswordHandler } from './application/commands/v1/reset-password/handlers/reset-password.handler';
 
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 import { JwtTokenAdapter } from './infrastructure/adapters/jwt-token.adapter';
@@ -36,8 +42,13 @@ const CommandHandlers = [
   UpdateProfileHandler,
   BecomeOrganizerHandler,
   RefreshTokenHandler,
+  ForgotPasswordHandler,
+  ResetPasswordHandler,
 ];
-const QueryHandlers = [GetCurrentUserHandler];
+const QueryHandlers = [
+  GetCurrentUserHandler,
+  VerifyResetTokenHandler,
+];
 const Controllers = [
   RegisterUserController,
   LoginUserController,
@@ -47,12 +58,15 @@ const Controllers = [
   UpdateProfileController,
   BecomeOrganizerController,
   RefreshTokenController,
+  ForgotPasswordController,
+  VerifyResetTokenController,
+  ResetPasswordController,
 ];
 
 @Module({
   imports: [
     CqrsModule,
-    UsersModule,
+    forwardRef(() => UsersModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
