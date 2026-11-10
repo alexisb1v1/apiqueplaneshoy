@@ -75,12 +75,8 @@ export class EventZoneDto {
   isSoldOut!: boolean;
 
   @Expose()
-  @ApiProperty({ example: 6 })
+  @ApiProperty({ example: 4 })
   maxTicketsPerOrder!: number;
-
-  @Expose()
-  @ApiProperty({ example: 10 })
-  maxTicketsPerUser!: number;
 }
 
 @Exclude()

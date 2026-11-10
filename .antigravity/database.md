@@ -133,7 +133,6 @@ erDiagram
         decimal regular_price "Precio lista taquilla"
         decimal service_fee "Comision ticketera"
         int max_tickets_per_order "Maximo por orden"
-        int max_tickets_per_user "Limite por usuario"
         timestamptz sales_start_at "Inicio de venta"
     }
 
@@ -318,7 +317,7 @@ erDiagram
 * **`google_maps_url`** (`varchar(512)`, NULL): Enlace directo a Google Maps para navegación interactiva o Waze.
 * **`entry_requirements`** (`text`, NULL): Requisitos de acceso (documentos, objetos prohibidos, vestimenta).
 * **`opening_hours_comment`** (`text`, NULL): Horarios de apertura de puertas y recomendaciones de llegada.
-* **`user_ticket_limit`** (`integer`, default 4): Límite global por defecto de entradas por usuario en el evento (actúa como salvaguarda si la zona no lo especifica).
+* **`user_ticket_limit`** (`integer`, default 6): Límite global acumulado de entradas por usuario en todo el evento (Regla 1: Por Evento).
 * **`signing_key_id`** (`varchar(64)`): Identificador del par de llaves criptográficas del evento para rotación y revocación.
 * **`signing_public_key`** (`text`, NULL): Llave pública asimétrica (Ed25519) del evento descargada por los escáneres de puerta para validación offline.
 * **`status`** (`varchar(50)`, INDEX): Estado (`draft`, `published`, `paused`, `completed`, `cancelled`). La transición a `completed` se procesa automáticamente a la 1:00 AM por la tarea Cron programada cuando todas las funciones del evento han culminado.
@@ -351,8 +350,7 @@ erDiagram
 * **`locked_count`** (`integer`, default 0): Cantidad de boletos retenidos temporalmente en sesiones activas de checkout (se incrementa al reservar y se decrementa al pagar o expirar).
 * **`regular_price`** (`decimal(10,2)`): **Precio oficial de venta general de la localidad (precio de lista / taquilla)**. Es el precio que se cobra cuando no hay preventas activas o cuando todas se han agotado, y sirve como precio tachado de referencia durante promociones.
 * **`service_fee`** (`decimal(10,2)`): Cargo por servicio de la ticketera por boleto.
-* **`max_tickets_per_order`** (`integer`, default 6): Cantidad máxima de entradas que un cliente puede comprar en una sola transacción/checkout (el mínimo siempre es 1).
-* **`max_tickets_per_user`** (`integer`, default 10): Límite máximo acumulado de entradas en esta zona que un mismo usuario puede comprar en el evento.
+* **`max_tickets_per_order`** (`integer`, default 4): Cantidad máxima de entradas de esta zona que un cliente puede comprar en una sola transacción/orden (Regla 2: Por Orden).
 * **`sales_start_at`** (`timestamptz`, NULL): Fecha y hora en que inicia la venta de entradas de esta zona.
 * **`created_at`** (`timestamptz`): Fecha de creación.
 
@@ -420,7 +418,7 @@ erDiagram
 * **`discount_amount`** (`decimal(10,2)`, default 0.00): Importe monetario descontado del total de la orden por la aplicación del cupón.
 * **`total_amount`** (`decimal(10,2)`): Total final neto a pagar por el cliente (`subtotal_tickets + total_service_fee - discount_amount`).
 * **`created_at`** (`timestamptz`): Fecha de inicio de la compra.
-* **`expires_at`** (`timestamptz`, INDEX): Hora límite en que expira la reserva si no se paga (10 minutos).
+* **`expires_at`** (`timestamptz`, INDEX): Hora límite en que expira la reserva si no se paga (configurable vía `CULQI_ORDER_EXPIRATION_SECONDS`, por defecto 15 minutos).
 * **Índice Compuesto:** `(status, expires_at)` para el proceso en segundo plano que libera boletos vencidos.
 
 #### Tabla: `tickets`
@@ -436,7 +434,7 @@ erDiagram
 * **`paid_service_fee`** (`decimal(10,2)`, NULL): Comisión congelada al momento de compra.
 * **`qr_code`** (`varchar(255)`, UNIQUE, INDEX): Código único escaneable en puerta con firma digital Ed25519.
 * **`status`** (`varchar(50)`, INDEX): Estado (`available`, `locked`, `sold`, `used`, `cancelled`).
-* **`locked_until`** (`timestamptz`, NULL): Tiempo de retención temporal mientras el usuario paga (10 min).
+* **`locked_until`** (`timestamptz`, NULL): Tiempo de retención temporal mientras el usuario paga en pasarela (por defecto 15 min).
 * **`scanned_at`** (`timestamptz`, NULL): Fecha y hora exacta en que el código QR fue validado y consumido en puerta para control de acceso y prevención de doble ingreso.
 * **Índices Compuestos:**
   * `(show_id, zone_id)`: Para consultar aforo disponible por función y zona.
@@ -622,19 +620,15 @@ La plataforma garantiza total transparencia contable respecto a quién asume los
 
 ---
 
-### 3.7 Control de Cantidades de Boletos (Checkout vs Límite Acumulado)
+### 3.7 Control de Cantidades de Boletos (Por Orden vs Por Evento)
 
 Para evitar la reventa y democratizar el acceso a espectáculos de alta demanda:
 1. **Sin mínimo artificial:** Se elimina `min_tickets_per_order` dado que por naturaleza toda compra requiere al menos 1 ticket.
-2. **Límite por Compra / Checkout (`zones.max_tickets_per_order`):**
-   * Limita cuántos tickets de esa zona puede agregar un usuario al carrito en una única transacción (ej: máximo 4 o 6 entradas por checkout).
-3. **Límite Acumulado por Usuario (`zones.max_tickets_per_user`):**
+2. **Límite por Compra / Orden en Zona (`zones.max_tickets_per_order`):**
+   * Limita cuántos tickets de esa zona puede agregar un usuario al carrito en una única transacción (ej: máximo 4 entradas por orden).
+3. **Límite Acumulado por Usuario en el Evento (`events.user_ticket_limit`):**
    * Impide que un usuario burle el límite realizando múltiples compras sucesivas.
-   * Al reservar, el sistema verifica:
-     $$\sum (\text{Tickets pagados del usuario en la zona}) + \text{Tickets de la orden actual} \le \text{max\_tickets\_per\_user}$$
-   * Si supera el límite, la orden es rechazada con un error descriptivo.
-4. **Techo Global del Evento (`events.user_ticket_limit`):**
-   * Proporciona un tope global para todo el evento combinando todas las zonas.
+   * Al reservar, el sistema verifica que las entradas pagadas previamente por el usuario en todo el evento más las de la orden actual no superen `events.user_ticket_limit` (ej: máximo 6 entradas en todo el evento). Si supera cualquiera de estos dos límites, la orden es rechazada con `TICKET_LIMIT_EXCEEDED`.
 
 ---
 

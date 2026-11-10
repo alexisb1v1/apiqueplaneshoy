@@ -181,7 +181,6 @@ export class CreateEventDto {
     serviceFee?: number;
     benefits?: string;
     maxTicketsPerOrder?: number;
-    maxTicketsPerUser?: number;
     salesStartAt?: string;
     tiers?: Array<{
       tierNumber?: number;

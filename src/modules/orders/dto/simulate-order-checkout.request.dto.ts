@@ -46,14 +46,14 @@ export class SimulateOrderCheckoutRequestDto {
 
   @ApiProperty({
     example: 'yape',
-    enum: ['card', 'yape', 'transfer', 'apple_pay', 'google_pay'],
+    enum: ['card', 'yape', 'transfer', 'cuotealo', 'apple_pay', 'google_pay'],
     description: 'Método de pago simulado',
   })
   @IsNotEmpty({ message: 'El método de pago es obligatorio' })
-  @IsIn(['card', 'yape', 'transfer', 'apple_pay', 'google_pay'], {
+  @IsIn(['card', 'yape', 'transfer', 'cuotealo', 'apple_pay', 'google_pay'], {
     message: 'Método de pago no válido',
   })
-  paymentMethod!: 'card' | 'yape' | 'transfer' | 'apple_pay' | 'google_pay';
+  paymentMethod!: 'card' | 'yape' | 'transfer' | 'cuotealo' | 'apple_pay' | 'google_pay';
 
   @ApiProperty({ example: 'cliente@queplaneshoy.com', required: false })
   @IsOptional()

@@ -96,6 +96,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       const baseForSlug = dto.slug && dto.slug.trim() !== '' ? dto.slug.trim() : dto.title;
       const generatedSlug = slugify(baseForSlug);
 
+      const resolvedEventLimit = Math.max(1, Number(dto.userTicketLimit) || 6);
+
       const event = this.eventRepository.create({
         name: dto.title,
         slug: generatedSlug,
@@ -110,7 +112,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
         coordinates: dto.coordinates || null,
         googleMapsUrl: dto.googleMapsUrl || null,
         ageRestriction: dto.ageRestriction || 'ALL_AGES',
-        userTicketLimit: Number(dto.userTicketLimit) || 4,
+        userTicketLimit: resolvedEventLimit,
         entryRequirements: dto.entryRequirements || null,
         openingHoursComment: dto.openingHoursComment || null,
         termsAndConditionsUrl: dto.termsAndConditionsUrl || null,
@@ -152,6 +154,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       // 2. Guardar Zonas y Preventas Escalonadas (Tiers)
       if (dto.zones && dto.zones.length > 0) {
         for (const z of dto.zones) {
+          const requestedPerOrder = Math.max(1, Number(z.maxTicketsPerOrder) || 4);
           const zone = this.zoneRepository.create({
             eventId: savedEvent.id,
             name: z.name || 'General',
@@ -161,8 +164,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
             regularPrice: Number(z.regularPrice) || 0,
             serviceFee: Number(z.serviceFee) || 0,
             benefits: z.benefits || null,
-            maxTicketsPerOrder: Number(z.maxTicketsPerOrder) || 6,
-            maxTicketsPerUser: Number(z.maxTicketsPerUser) || 10,
+            maxTicketsPerOrder: Math.min(requestedPerOrder, resolvedEventLimit),
             salesStartAt: z.salesStartAt ? new Date(z.salesStartAt) : null,
           });
           const savedZone = await this.zoneRepository.save(zone);

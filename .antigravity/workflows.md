@@ -119,7 +119,7 @@ sequenceDiagram
     participant DB as PostgreSQL (Transacción Atómica)
 
     Org->>Web: Completa el Asistente de Creación en 6 Secciones
-    Note over Org,Web: 1. Ficha General (Nombre, Categoría oficial EVENT_CATEGORIES, Tags de búsqueda text[], Ubigeo INEI 6 dígitos, Recinto, Coordenadas lat/lng vía Mapa Leaflet, Restricción de edad AGE_RESTRICTIONS, Límite entradas usuario, Requisitos acceso, Horarios informativos)<br/>2. Legal y Contenido (Términos URL PDF, FAQs, Landing config con selección de fondo por color sólido o patrón en mosaico repeat: header, body, footer, theme)<br/>3. Shows (nombre, start_time fecha y hora, sales_end_at hora de cierre de ventas, duration_hours en horas enteras)<br/>4. Zonas (Badge con color HEX, nombre, título comercial resaltado, beneficios, aforo, regular_price S/., comisión service_fee, max_tickets_per_order, max_tickets_per_user, sales_start_at)<br/>   + Hasta 3 Preventas por zona (zone_pricing_tiers: tier_number, price, capacity, end_at)<br/>5. Cupones (code, discount_type % o S/., discount_value, usage_type, max_uses, expires_at)<br/>6. Multimedia (carga directa de imágenes para portada, galería, croquis y landing)
+    Note over Org,Web: 1. Ficha General (Nombre, Categoría oficial EVENT_CATEGORIES, Tags de búsqueda text[], Ubigeo INEI 6 dígitos, Recinto, Coordenadas lat/lng vía Mapa Leaflet, Restricción de edad AGE_RESTRICTIONS, Límite entradas usuario, Requisitos acceso, Horarios informativos)<br/>2. Legal y Contenido (Términos URL PDF, FAQs, Landing config con selección de fondo por color sólido o patrón en mosaico repeat: header, body, footer, theme)<br/>3. Shows (nombre, start_time fecha y hora, sales_end_at hora de cierre de ventas, duration_hours en horas enteras)<br/>4. Zonas (Badge con color HEX, nombre, título comercial resaltado, beneficios, aforo, regular_price S/., comisión service_fee, max_tickets_per_order, sales_start_at)<br/>   + Hasta 3 Preventas por zona (zone_pricing_tiers: tier_number, price, capacity, end_at)<br/>5. Cupones (code, discount_type % o S/., discount_value, usage_type, max_uses, expires_at)<br/>6. Multimedia (carga directa de imágenes para portada, galería, croquis y landing)
     
     Web->>API: POST /api/events (CreateEventCommand Payload)
     activate API
@@ -130,7 +130,7 @@ sequenceDiagram
     API->>DB: Inicia Transacción Atómica
     DB->>DB: INSERT INTO events (organizer_id, category, tags, age_restriction, terms_and_conditions_url, faqs, landing_config, ubigeo_code, coordinates, google_maps_url, user_ticket_limit, entry_requirements, opening_hours_comment, signing_key_id, signing_public_key, status='draft')
     DB->>DB: INSERT INTO shows (event_id, name, start_time, sales_end_at, duration_hours)
-    DB->>DB: INSERT INTO zones (event_id, name, title, color, capacity, regular_price, service_fee, benefits, max_tickets_per_order, max_tickets_per_user, sales_start_at)
+    DB->>DB: INSERT INTO zones (event_id, name, title, color, capacity, regular_price, service_fee, benefits, max_tickets_per_order, sales_start_at)
     DB->>DB: INSERT INTO zone_pricing_tiers (zone_id, tier_number, name, price, capacity, end_at)
     opt Cupones iniciales configurados
         DB->>DB: INSERT INTO coupons (event_id, organizer_id, code, discount_type, discount_value, usage_type, max_uses, expires_at)
@@ -158,7 +158,7 @@ sequenceDiagram
 * **Cupones de Descuento:** Selector de vigencia con campos separados de Fecha (`dd/mm/aaaa`) y Hora (`hh:mm`), previniendo desajustes de hidratación SSR y confusiones de zona horaria.
 * **Geolocalización Normalizada:** El distrito se resuelve con el código de 6 dígitos `ubigeo_code` (INEI) y las coordenadas geográficas se almacenan en un único campo `coordinates` (`latitud, longitud`) capturado con el selector de mapa OpenStreetMap / Leaflet.
 * **Términos y Condiciones:** Se gestiona exclusivamente mediante enlace web o documento PDF oficial (`terms_and_conditions_url`).
-* **Control de Boletos:** Se valida `max_tickets_per_order` (máximo por checkout) y `max_tickets_per_user` (límite acumulado en esa zona para el evento).
+* **Control de Boletos:** Se valida `zones.max_tickets_per_order` (máximo por orden en esa zona) y `events.user_ticket_limit` (límite acumulado por usuario en todo el evento).
 
 ### 3.3 Publicación de Eventos y Regla de Oro del Plan B (Email Verification Gate)
 
@@ -228,15 +228,18 @@ Controla la alta concurrencia mediante doble ventana temporal (10 min en backend
 4. **Checkout Inteligente (`/checkout`):**
    * Lee `searchParams` (`eventId`, `zoneId`), donde `eventId` es el `publicUuid` seguro del evento. Autoselecciona la primera función disponible y preselecciona 1 entrada (`quantity = 1`) en la zona indicada en `zoneId`.
    * **Autenticación Obligatoria:** Para avanzar al paso de pago o confirmar la compra, se valida que el comprador cuente con sesión activa (JWT). Si no la tiene, se despliega el modal interactivo de autenticación que preserva las entradas seleccionadas y vincula la orden a su cuenta.
-   * **Simulación de Pasarela y Emisión de Tickets (`POST /api/orders/simulate-checkout`):**
-     * Exige JWT obligatorio de usuario autenticado (`req.user.sub`).
-     * Procesa la orden con simulación probabilística (80% éxito, 20% rechazo bancario simulado o forzado).
-     * En caso de éxito (`approved`): crea en transacción atómica la `OrderEntity` (status `paid`), `PaymentEntity` (status `approved`) y emite los `TicketEntity` con tokens QR criptográficos únicos asociados al comprador verificado, incrementando `sold_count` en las zonas.
-     * En caso de rechazo (`PAYMENT_REJECTED`): devuelve error de negocio para permitir al cliente cambiar de método de pago de inmediato sin perder sus entradas.
+   * **Pasarela Real Culqi Checkout Custom (`/api/orders/culqi/*` y `/api/webhooks/culqi`):**
+     * `POST /api/orders/culqi/prepare` (JWT): reserva atómicamente tickets en estado `locked`, bloquea zonas/preventas (`FOR UPDATE`), evalúa cupón sin quemarlo aún, crea orden `pending` con `expires_at` configurable (`CULQI_ORDER_EXPIRATION_SECONDS`, default 900s) y genera la orden en Culqi API v2 (`POST /v2/orders`) habilitando **Yape / Billeteras QR / Tarjetas / Banca Móvil y Agentes (PagoEfectivo CIP) / Cuotéalo BCP** dentro de **Culqi Checkout Custom** (`https://js.culqi.com/checkout-js`).
+     * `POST /api/orders/culqi/confirm-charge` (JWT + BOLA): ejecuta `POST /v2/charges` con `CULQI_SECRET_KEY`, soporta desafío **3D Secure (`REQUIRES_3DS` -> `Culqi3DS.initAuthentication` -> reenvío con `authentication_3DS`)**, quema el cupón atómicamente (`FOR UPDATE`) y emite tickets `sold` + código QR vía `OrderLifecycleService.finalizePaidOrder` (idempotente).
+     * `GET /api/orders/culqi/status/:orderPublicUuid` (JWT + BOLA): consulta activa contra `GET /v2/orders/:id` para pagos asíncronos (QR Billeteras, PagoEfectivo CIP, Cuotéalo) mientras el frontend realiza polling cada 3s.
+     * `POST /api/orders/culqi/cancel/:orderPublicUuid` (JWT + BOLA): libera el stock bloqueado cuando el usuario cierra el modal de Culqi sin pagar (validando antes que no se haya pagado en Culqi).
+     * `POST /api/webhooks/culqi`: endpoint servidor-a-servidor protegido por Basic Auth (`CULQI_WEBHOOK_USERNAME`/`CULQI_WEBHOOK_PASSWORD`), deduplicación en Redis (`qph:webhook:culqi:*`), verificación activa contra Culqi API v2 (`GET /v2/orders/:id` o `GET /v2/charges/:id`) y finalización idempotente.
+     * `OrderExpirationCronService`: audita cada minuto órdenes `pending` vencidas (`expires_at < NOW()`), verifica estado real en Culqi y libera stock `locked` en zonas y tiers.
+   * **Simulación de Pasarela (`POST /api/orders/simulate-checkout`):** Se mantiene disponible para pruebas internas de carga con `k6`.
 
 ### 4.1 La Doble Ventana de Tiempos
-* **10 Minutos (Reserva de Inventario en Backend):** `locked_until = now() + 10 min`. El sistema retiene los boletos en la base de datos con bloqueo atómico (`SELECT FOR UPDATE`).
-* **5 Minutos (Sesión Activa en la Pasarela de Pago):** La pasarela bancaria (Niubiz / Culqi / Mercado Pago) expira su formulario de cobro a los 5 minutos de inactividad. Si la tarjeta es rechazada, el cliente aún dispone de los 5 minutos restantes en su reserva para reintentar con otro medio.
+* **15 Minutos (`14:59` en Checkout + `CULQI_ORDER_EXPIRATION_SECONDS=900`):** Ventana persistente en `sessionStorage` del navegador (resiste recargas F5 y redirección de login) acompañada del bloqueo temporal `locked` en PostgreSQL y liberación automática cada 60s vía `OrderExpirationCronService`.
+* **Reintento tras Rechazo Bancario:** Si una tarjeta es rechazada en `/confirm-charge`, los tickets permanecen reservados (`pending`/`locked`) hasta la expiración, permitiendo reintentar con otro medio de pago (Yape, otra tarjeta o PagoEfectivo).
 
 ### 4.2 Diagrama de Secuencia
 
@@ -253,8 +256,8 @@ sequenceDiagram
     Web->>API: POST /api/orders/draft { show_uuid, zone_uuid, quantity: 2 }
     activate API
 
-    API->>DB: 1. Valida límite por compra: total_order_tickets <= event.user_ticket_limit y quantity <= zone.max_tickets_per_order
-    API->>DB: 2. Valida límite acumulado por usuario: (previos_pagados + total_order_tickets) <= event.user_ticket_limit y <= zone.max_tickets_per_user
+    API->>DB: 1. Valida límite por compra: quantity <= zone.max_tickets_per_order
+    API->>DB: 2. Valida límite acumulado por usuario en el evento: (previos_pagados + total_order_tickets) <= event.user_ticket_limit
     Note over API,DB: Si excede cualquiera ➔ Rechaza con 400 Bad Request (TICKET_LIMIT_EXCEEDED)
 
     API->>DB: 3. Determina tarifa vigente de la zona
@@ -280,50 +283,28 @@ sequenceDiagram
         Web-->>Cliente: Despliega badge verde y desglose con descuento reflejado
     end
 
-    Cliente->>Web: Selecciona medio de pago ("Tarjeta" o "Yape") y confirma
+    Cliente->>Web: Selecciona medio de pago ("Tarjeta", "Yape/Plin", etc.) y confirma
     
-    alt Pago Oficial Izipay (SmartForm Pop-in + Webhook IPN)
-        Web->>API: POST /api/orders/izipay/create-payment { eventId, showId, items, paymentMethod, couponCode }
-        activate API
-        API->>DB: 1. Valida aforo, límites y cupón con bloqueo pesimista
-        API->>DB: 2. INSERT INTO orders (status='pending', expires_at=NOW()+10min) y bloquea stock en zonas (locked_count)
-        API->>API: 3. Llama a Izipay V4/Charge/CreatePayment (Basic Auth: ShopId + ClavePrivada)
-        API-->>Web: 201 Created { formToken, publicKey, orderId, orderCode, totalAmount }
-        deactivate API
-
-        Web->>Web: Inicializa SDK Krypton y abre Izipay Pop-in Modal sobre el checkout
-        Cliente->>Web: Ingresa datos en el modal seguro de Izipay
-        Web->>API: Izipay procesa la transacción criptográfica
-
-        par Notificación Servidor a Servidor (IPN Obligatoria con HMAC-SHA256)
-            API->>API: POST /api/orders/izipay/ipn { 'kr-answer', 'kr-hash' }
-            Note over API: Valida firma HMAC-SHA256 con IZIPAY_HMAC_SHA256_KEY.<br/>Garantiza Idempotencia: Si orden ya pagada ➔ 200 OK sin duplicar.<br/>Si pending y orderStatus=='PAID' ➔ order.status='paid', emite tickets Ed25519, actualiza cupones y sold_count.
-            API-->>API: 200 OK { status: 'SUCCESS' }
-        and Notificación Inmediata al Navegador
-            Web->>Web: KR.onSubmit captura éxito preliminar y avanza a Paso 3 (top: 0)
+    Note over Web,API: Integración activa con Culqi Checkout Custom (js.culqi.com/checkout-js) + API v2 (/v2/orders, /v2/charges, Culqi3DS) y Webhooks verificados.
+    Web->>API: POST /api/orders/culqi/prepare { eventId, showId, items, paymentMethod, couponCode }
+    activate API
+    API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
+    API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
+    opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
+        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
+        Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions.
+        alt Cupón Expirado o Inactivo
+            API->>DB: ROLLBACK TRANSACTION
+            API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
+        else Cupón Válido y Vigente
+            API->>API: Recalcula y aplica discountAmount
+            API->>DB: UPDATE coupons SET used_count = used_count + 1
         end
-
-    else Simulación Directa / Otros Medios
-        Web->>API: POST /api/orders/simulate-checkout { eventId, showId, items, paymentMethod, couponCode }
-        activate API
-        API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
-        API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
-        opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
-            API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
-            Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions.
-            alt Cupón Expirado o Inactivo
-                API->>DB: ROLLBACK TRANSACTION
-                API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
-            else Cupón Válido y Vigente
-                API->>API: Recalcula y aplica discountAmount
-                API->>DB: UPDATE coupons SET used_count = used_count + 1
-            end
-        end
-        API->>DB: 2. INSERT INTO orders (status='paid'), INSERT INTO payments (status='approved'), INSERT tickets
-        API->>DB: COMMIT TRANSACTION EN POSTGRESQL
-        API-->>Web: 200 OK SimulateOrderCheckoutResponseDto
-        deactivate API
     end
+    API->>DB: 2. INSERT INTO orders (status='paid'), INSERT INTO payments (status='approved'), INSERT tickets
+    API->>DB: COMMIT TRANSACTION EN POSTGRESQL
+    API-->>Web: 200 OK SimulateOrderCheckoutResponseDto
+    deactivate API
 
     else Orden Expirada Tardíamente (CANDADO 3: status == 'expired')
         Note over API,Gateway: La reserva de 10 min venció y el stock ya se liberó.<br/>¡CERO SOBREVENTA! El backend no genera boletos.

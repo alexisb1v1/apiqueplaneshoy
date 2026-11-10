@@ -102,8 +102,7 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         capacity: cap,
         remainingTickets,
         isSoldOut: remainingTickets <= 0,
-        maxTicketsPerOrder: zone.maxTicketsPerOrder || 6,
-        maxTicketsPerUser: zone.maxTicketsPerUser || 10,
+        maxTicketsPerOrder: zone.maxTicketsPerOrder || 4,
       };
     });
 
@@ -134,7 +133,7 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         zoneMapUrl,
         termsAndConditionsUrl: event.termsAndConditionsUrl,
         ageRestriction: event.ageRestriction,
-        userTicketLimit: event.userTicketLimit || 4,
+        userTicketLimit: event.userTicketLimit || 6,
         openingHoursComment: event.openingHoursComment,
         entryRequirements: event.entryRequirements,
         googleMapsUrl: event.googleMapsUrl,

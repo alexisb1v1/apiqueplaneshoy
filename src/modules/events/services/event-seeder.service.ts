@@ -384,7 +384,7 @@ export class EventSeederService {
         isFeatured,
         hasLandingPage,
         status: 'published',
-        userTicketLimit: 4,
+        userTicketLimit: 6,
         landingConfig: hasLandingPage
           ? {
               theme: {
@@ -452,8 +452,7 @@ export class EventSeederService {
           capacity: z.capacity,
           regularPrice: z.regularPrice,
           serviceFee: Math.round(z.regularPrice * 0.1),
-          maxTicketsPerOrder: 6,
-          maxTicketsPerUser: 10,
+          maxTicketsPerOrder: 4,
         });
         const savedZone = await this.zoneRepository.save(zone);
         totalZones++;

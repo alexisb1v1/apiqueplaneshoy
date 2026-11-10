@@ -5,6 +5,8 @@ import {
   ForbiddenException,
   ConflictException,
   InternalServerErrorException,
+  ServiceUnavailableException,
+  BadGatewayException,
 } from '@nestjs/common';
 import { Result } from 'neverthrow';
 import { AppError } from '../errors/app-errors';
@@ -21,6 +23,9 @@ const DEFAULT_MESSAGES: Record<AppError, string> = {
   TICKET_LIMIT_EXCEEDED: 'Has superado el límite de entradas permitido por compra o por evento para este usuario.',
   COUPON_INVALID_OR_EXPIRED: 'El cupón de descuento no es válido, ha expirado o ya no cuenta con usos disponibles.',
   TOKEN_EXPIRED_OR_INVALID: 'El enlace de recuperación es inválido o ha expirado.',
+  GATEWAY_NOT_CONFIGURED: 'La pasarela de pagos Culqi aún no se encuentra configurada en el servidor.',
+  GATEWAY_ERROR: 'No se pudo establecer comunicación con la pasarela de pagos Culqi. Intenta nuevamente.',
+  ORDER_EXPIRED: 'El tiempo de reserva de tu orden ha expirado y las entradas fueron liberadas.',
 };
 
 export function matchResult<T>(
@@ -31,17 +36,20 @@ export function matchResult<T>(
   return result.match(onSuccess, (error) => {
     const msg = messages?.[error] ?? DEFAULT_MESSAGES[error];
     switch (error) {
-      case 'NOT_FOUND':          throw new NotFoundException(msg);
-      case 'ALREADY_EXISTS':     throw new ConflictException(msg);
-      case 'UNAUTHORIZED':       throw new UnauthorizedException(msg);
+      case 'NOT_FOUND':              throw new NotFoundException(msg);
+      case 'ALREADY_EXISTS':         throw new ConflictException(msg);
+      case 'UNAUTHORIZED':           throw new UnauthorizedException(msg);
       case 'EMAIL_NOT_VERIFIED':
-      case 'FORBIDDEN':          throw new ForbiddenException(msg);
+      case 'FORBIDDEN':              throw new ForbiddenException(msg);
+      case 'GATEWAY_NOT_CONFIGURED': throw new ServiceUnavailableException(msg);
+      case 'GATEWAY_ERROR':          throw new BadGatewayException(msg);
       case 'PAYMENT_REJECTED':
       case 'TICKET_LIMIT_EXCEEDED':
       case 'COUPON_INVALID_OR_EXPIRED':
       case 'TOKEN_EXPIRED_OR_INVALID':
-      case 'INVALID_INPUT':      throw new BadRequestException(msg);
-      default:                   throw new InternalServerErrorException(msg);
+      case 'ORDER_EXPIRED':
+      case 'INVALID_INPUT':          throw new BadRequestException(msg);
+      default:                       throw new InternalServerErrorException(msg);
     }
   });
 }

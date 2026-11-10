@@ -106,18 +106,9 @@ export class SimulateOrderCheckoutHandler
           return err('INVALID_INPUT');
         }
 
-        const eventTicketLimit = Number(event.userTicketLimit) || 4;
+        const eventTicketLimit = Number(event.userTicketLimit) || 6;
 
-        // A. Límite máximo por compra única para el evento
-        if (totalOrderTickets > eventTicketLimit) {
-          this.logger.warn(
-            `[Límite Excedido] Intento de compra de ${totalOrderTickets} entradas supera el límite de ${eventTicketLimit} del evento '${event.name}'.`,
-          );
-          await queryRunner.rollbackTransaction();
-          return err('TICKET_LIMIT_EXCEEDED');
-        }
-
-        // B. Límite acumulado histórico del usuario para este evento
+        // A. Límite global acumulado del usuario para este evento (Regla 1: Por Evento)
         const userBoughtTicketsCount = await queryRunner.manager
           .createQueryBuilder(TicketEntity, 't')
           .innerJoin('t.order', 'o')
@@ -168,32 +159,11 @@ export class SimulateOrderCheckoutHandler
             return err('NOT_FOUND');
           }
 
-          // C. Límite por compra en la zona
-          const maxPerOrder = Number(zone.maxTicketsPerOrder) || 6;
+          // B. Límite por orden en la zona (Regla 2: Por Orden en Pasarela)
+          const maxPerOrder = Number(zone.maxTicketsPerOrder) || 4;
           if (item.quantity > maxPerOrder) {
             this.logger.warn(
               `[Límite Excedido] Cantidad de ${item.quantity} supera el máximo por orden (${maxPerOrder}) para la zona '${zone.name}'.`,
-            );
-            await queryRunner.rollbackTransaction();
-            return err('TICKET_LIMIT_EXCEEDED');
-          }
-
-          // D. Límite acumulado por usuario en la zona
-          const userBoughtInZoneCount = await queryRunner.manager
-            .createQueryBuilder(TicketEntity, 't')
-            .innerJoin('t.order', 'o')
-            .where('t.zoneId = :zoneId', { zoneId: zone.id })
-            .andWhere('o.userId = :userId', { userId: user.id })
-            .andWhere('o.status = :orderStatus', { orderStatus: 'paid' })
-            .andWhere('t.status IN (:...ticketStatuses)', {
-              ticketStatuses: ['sold', 'used', 'locked'],
-            })
-            .getCount();
-
-          const maxPerUserInZone = Number(zone.maxTicketsPerUser) || 10;
-          if (userBoughtInZoneCount + item.quantity > maxPerUserInZone) {
-            this.logger.warn(
-              `[Límite Excedido] Usuario ${user.email} supera el límite de ${maxPerUserInZone} entradas en la zona '${zone.name}' (Posee ${userBoughtInZoneCount}, intenta añadir ${item.quantity}).`,
             );
             await queryRunner.rollbackTransaction();
             return err('TICKET_LIMIT_EXCEEDED');

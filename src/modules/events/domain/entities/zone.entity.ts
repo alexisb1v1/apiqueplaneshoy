@@ -43,11 +43,8 @@ export class ZoneEntity {
   @Column({ name: 'service_fee', type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Cargo o comisión por servicio de ticketera por boleto' })
   serviceFee: number;
 
-  @Column({ name: 'max_tickets_per_order', type: 'integer', default: 6, comment: 'Cantidad máxima de entradas que un cliente puede comprar en una sola transacción/checkout' })
+  @Column({ name: 'max_tickets_per_order', type: 'integer', default: 4, comment: 'Cantidad máxima de entradas que un cliente puede comprar en una sola transacción/orden' })
   maxTicketsPerOrder: number;
-
-  @Column({ name: 'max_tickets_per_user', type: 'integer', default: 10, comment: 'Límite máximo acumulado de entradas en esta zona que un mismo usuario puede comprar en el evento' })
-  maxTicketsPerUser: number;
 
   @Column({ name: 'sales_start_at', type: 'timestamptz', nullable: true, comment: 'Fecha y hora en que inicia la venta de entradas de esta zona' })
   salesStartAt: Date | null;

@@ -85,7 +85,7 @@ export class EventEntity {
   @Column({ name: 'opening_hours_comment', type: 'text', nullable: true, comment: 'Instrucciones y comentarios sobre horarios de apertura de puertas y recomendaciones de llegada' })
   openingHoursComment: string | null;
 
-  @Column({ name: 'user_ticket_limit', type: 'integer', default: 4, comment: 'Límite global por defecto de entradas por usuario en el evento' })
+  @Column({ name: 'user_ticket_limit', type: 'integer', default: 6, comment: 'Límite global acumulado de entradas por usuario en todo el evento' })
   userTicketLimit: number;
 
   @Column({ name: 'signing_key_id', type: 'varchar', length: 64, default: () => 'gen_random_uuid()', comment: 'Identificador del par de llaves criptográficas del evento para rotación y revocación' })
