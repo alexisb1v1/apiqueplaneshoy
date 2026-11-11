@@ -33,20 +33,21 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Mail as Servicio de Email (SMTP/Resend)
 
-    alt Camino A: Autenticación con Redes Sociales (Google / Facebook)
+    alt Camino A: Autenticación con Google OAuth 2.0
         Usuario->>Web: Clic en "Continuar con Google"
-        Web->>OAuth: Redirige a consentimiento OAuth
-        OAuth-->>Web: Devuelve authorization_code
-        Web->>API: POST /api/auth/social-login { provider, code }
-        API->>OAuth: Valida token y obtiene perfil (email verificado)
-        API->>DB: Busca en users por email
+        Web->>API: GET /api/auth/google/url?redirect=...
+        API-->>Web: { url } (con state CSRF almacenado en Redis TTL 10 min)
+        Web->>OAuth: Redirige a consentimiento OAuth de Google
+        OAuth-->>Web: Redirige a /auth/google/callback?code=...&state=...
+        Web->>API: POST /api/auth/google/callback { code, state }
+        API->>OAuth: Intercambia code y consulta perfil verificado de Google
+        API->>DB: Valida social_identities o users.email como llave única
         opt Usuario nuevo
-            API->>DB: INSERT INTO users (email, email_verified_at=NOW(), role='customer', is_organizer=false)
-            API->>DB: INSERT INTO social_identities (provider, provider_id)
+            API->>DB: INSERT INTO users (email, email_verified_at=NOW(), password_hash=NULL, role='customer', is_organizer=false)
         end
-        API-->>Web: 200 OK { access_token, user_profile }
-        Web-->>Usuario: Sesión iniciada y cuenta 100% activa para comprar
-
+        API->>DB: Vincula/asegura registro en social_identities (provider='google', provider_id=sub)
+        API-->>Web: 200 OK { token, user, redirectTo } + Cookie HttpOnly refresh_token
+        Web-->>Usuario: Sesión iniciada y cuenta 100% activa
     else Camino B: Registro Tradicional (Formulario con Correo y Contraseña)
         Usuario->>Web: Ingresa Nombre, Correo y Contraseña
         Web->>API: POST /api/auth/register { name, email, password }
@@ -79,6 +80,8 @@ sequenceDiagram
 * **Endpoints Oficiales de Auth:**
   * `POST /api/auth/register`: Registro tradicional con hashing bcrypt, emisión de token criptográfico de verificación (24h), Access Token (15m) y Refresh Token rotativo en Redis (30d).
   * `POST /api/auth/login`: Autenticación con email/password y retorno de Access Token JWT (15m), Refresh Token rotativo en Redis (30d) y perfil de usuario `{ id, email, role, isOrganizer }`.
+  * `GET /api/auth/google/url`: Genera URL OAuth 2.0 de Google con token `state` anti-CSRF almacenado en Redis (TTL 10 min).
+  * `POST /api/auth/google/callback`: Intercambia el código recibido en `/auth/google/callback`, valida `state` de un solo uso, busca o vincula el usuario usando `users.email` como llave única en `social_identities` y emite JWT + Refresh Token en Cookie `HttpOnly`.
   * `POST /api/auth/refresh-token`: Renovación de tokens sin fricción. Valida el token contra Redis (`qph:auth:refresh:<userId>:<uuid>`) recibido automáticamente vía Cookie `HttpOnly` (o fallback en body), aplica rotación destruyendo el anterior, emite un nuevo par de tokens y actualiza la cookie.
   * `POST /api/auth/logout`: Cierre de sesión seguro. Invalida y elimina la Cookie `HttpOnly` (`Max-Age=0`).
   * `POST /api/auth/verify-email`: Confirmación de correo mediante token seguro. Actualiza `users.email_verified_at = NOW()`.

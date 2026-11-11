@@ -17,6 +17,8 @@ import { ForgotPasswordController } from './interfaces/http/v1/forgot-password/f
 import { VerifyResetTokenController } from './interfaces/http/v1/verify-reset-token/verify-reset-token.controller';
 import { ResetPasswordController } from './interfaces/http/v1/reset-password/reset-password.controller';
 import { ChangePasswordController } from './interfaces/http/v1/change-password/change-password.controller';
+import { GoogleAuthUrlController } from './interfaces/http/v1/google-auth/google-auth-url.controller';
+import { GoogleCallbackController } from './interfaces/http/v1/google-auth/google-callback.controller';
 
 import { RegisterUserHandler } from './application/commands/v1/register-user/handlers/register-user.handler';
 import { LoginUserHandler } from './application/commands/v1/login-user/handlers/login-user.handler';
@@ -30,10 +32,13 @@ import { ForgotPasswordHandler } from './application/commands/v1/forgot-password
 import { VerifyResetTokenHandler } from './application/queries/v1/verify-reset-token/handlers/verify-reset-token.handler';
 import { ResetPasswordHandler } from './application/commands/v1/reset-password/handlers/reset-password.handler';
 import { ChangePasswordHandler } from './application/commands/v1/change-password/handlers/change-password.handler';
+import { GetGoogleAuthUrlHandler } from './application/queries/v1/get-google-auth-url/handlers/get-google-auth-url.handler';
+import { GoogleCallbackHandler } from './application/commands/v1/google-callback/handlers/google-callback.handler';
 
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 import { JwtTokenAdapter } from './infrastructure/adapters/jwt-token.adapter';
 import { ConsoleEmailAdapter } from './infrastructure/adapters/console-email.adapter';
+import { GoogleOAuthService } from './infrastructure/adapters/google-oauth.service';
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
 
 const CommandHandlers = [
@@ -47,10 +52,12 @@ const CommandHandlers = [
   ForgotPasswordHandler,
   ResetPasswordHandler,
   ChangePasswordHandler,
+  GoogleCallbackHandler,
 ];
 const QueryHandlers = [
   GetCurrentUserHandler,
   VerifyResetTokenHandler,
+  GetGoogleAuthUrlHandler,
 ];
 const Controllers = [
   RegisterUserController,
@@ -65,6 +72,8 @@ const Controllers = [
   VerifyResetTokenController,
   ResetPasswordController,
   ChangePasswordController,
+  GoogleAuthUrlController,
+  GoogleCallbackController,
 ];
 
 @Module({
@@ -101,6 +110,7 @@ const Controllers = [
       useClass: ConsoleEmailAdapter,
     },
     ConsoleEmailAdapter,
+    GoogleOAuthService,
     JwtAuthGuard,
   ],
   exports: [
