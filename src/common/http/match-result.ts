@@ -26,6 +26,9 @@ const DEFAULT_MESSAGES: Record<AppError, string> = {
   GATEWAY_NOT_CONFIGURED: 'La pasarela de pagos Culqi aún no se encuentra configurada en el servidor.',
   GATEWAY_ERROR: 'No se pudo establecer comunicación con la pasarela de pagos Culqi. Intenta nuevamente.',
   ORDER_EXPIRED: 'El tiempo de reserva de tu orden ha expirado y las entradas fueron liberadas.',
+  EVENT_NOT_FOUND: 'El evento seleccionado no existe o ya no está disponible para compra.',
+  SHOW_NOT_FOUND: 'La función seleccionada no existe para este evento o no tiene fechas programadas.',
+  ZONE_NOT_FOUND: 'La localidad o zona seleccionada ya no se encuentra disponible. Recarga la página del evento.',
 };
 
 export function matchResult<T>(
@@ -36,6 +39,9 @@ export function matchResult<T>(
   return result.match(onSuccess, (error) => {
     const msg = messages?.[error] ?? DEFAULT_MESSAGES[error];
     switch (error) {
+      case 'EVENT_NOT_FOUND':
+      case 'SHOW_NOT_FOUND':
+      case 'ZONE_NOT_FOUND':
       case 'NOT_FOUND':              throw new NotFoundException(msg);
       case 'ALREADY_EXISTS':         throw new ConflictException(msg);
       case 'UNAUTHORIZED':           throw new UnauthorizedException(msg);

@@ -88,6 +88,7 @@ export class CulqiOrdersController {
         'El cupón vinculado ya expiró o agotó sus canjes disponibles. Retira el cupón e intenta nuevamente.',
       GATEWAY_NOT_CONFIGURED:
         'Las credenciales de Culqi aún no están configuradas en el servidor.',
+      NOT_FOUND: 'La orden pendiente no fue encontrada o ya expiró.',
     });
   }
 
@@ -107,7 +108,9 @@ export class CulqiOrdersController {
       new GetCulqiOrderStatusQuery(orderPublicUuid, Number(req.user?.id)),
     );
 
-    return matchResult(result, (data) => data);
+    return matchResult(result, (data) => data, {
+      NOT_FOUND: 'La orden consultada no fue encontrada.',
+    });
   }
 
   @Post('cancel/:orderPublicUuid')
@@ -125,7 +128,9 @@ export class CulqiOrdersController {
       new CancelPendingCulqiOrderCommand(orderPublicUuid, Number(req.user?.id)),
     );
 
-    return matchResult(result, (data) => data);
+    return matchResult(result, (data) => data, {
+      NOT_FOUND: 'La orden a cancelar no fue encontrada.',
+    });
   }
 }
 

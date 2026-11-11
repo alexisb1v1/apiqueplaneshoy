@@ -9,6 +9,7 @@ import { PrepareCulqiCheckoutResponseDto } from '../../dto/prepare-culqi-checkou
 import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { PaymentEntity } from '@orders/domain/entities/payment.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
+import { ShowEntity } from '@events/domain/entities/show.entity';
 import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ZonePricingTierEntity } from '@events/domain/entities/zone-pricing-tier.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
@@ -93,18 +94,29 @@ export class PrepareCulqiCheckoutHandler
         dto.eventId,
       );
       if (!event) {
+        this.logger.warn(`[Culqi Prepare] Evento no encontrado para eventId='${dto.eventId}'.`);
         await queryRunner.rollbackTransaction();
-        return err('NOT_FOUND');
+        return err('EVENT_NOT_FOUND');
       }
 
-      const show = await this.orderLifecycleService.findShowByIdentifier(
+      let show = await this.orderLifecycleService.findShowByIdentifier(
         queryRunner.manager,
         dto.showId,
         event.id,
       );
+      // Fallback seguro si el cliente conservó el identificador por defecto 'f1'
+      if (!show && (dto.showId === 'f1' || !dto.showId?.trim())) {
+        show = await queryRunner.manager.findOne(ShowEntity, {
+          where: { eventId: event.id },
+          order: { startTime: 'ASC', id: 'ASC' },
+        });
+      }
       if (!show) {
+        this.logger.warn(
+          `[Culqi Prepare] Función no encontrada: showId='${dto.showId}' en evento id=${event.id} (${event.publicUuid}).`,
+        );
         await queryRunner.rollbackTransaction();
-        return err('NOT_FOUND');
+        return err('SHOW_NOT_FOUND');
       }
 
       const totalOrderTickets = (dto.items || []).reduce(
@@ -174,8 +186,11 @@ export class PrepareCulqiCheckoutHandler
         );
 
         if (!zone) {
+          this.logger.warn(
+            `[Culqi Prepare] Zona no encontrada: zoneId='${item.zoneId}' en evento id=${event.id} (${event.publicUuid}).`,
+          );
           await queryRunner.rollbackTransaction();
-          return err('NOT_FOUND');
+          return err('ZONE_NOT_FOUND');
         }
 
         const maxPerOrder = Number(zone.maxTicketsPerOrder) || 4;
