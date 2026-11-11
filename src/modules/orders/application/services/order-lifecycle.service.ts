@@ -488,19 +488,31 @@ export class OrderLifecycleService {
       if (buyer?.email) {
         const showStartTime = firstShow?.startTime ? new Date(firstShow.startTime) : new Date();
         const cityInfo = resolveCityFromUbigeo(event?.ubigeoCode);
-        const eventDateFormatted = new Intl.DateTimeFormat('es-PE', {
+        const rawEventDate = new Intl.DateTimeFormat('es-PE', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
           year: 'numeric',
           timeZone: 'America/Lima',
         }).format(showStartTime);
+        const eventDateFormatted = rawEventDate
+          ? rawEventDate.charAt(0).toUpperCase() + rawEventDate.slice(1)
+          : rawEventDate;
         const eventTimeFormatted = new Intl.DateTimeFormat('es-PE', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: true,
           timeZone: 'America/Lima',
         }).format(showStartTime);
+        const emissionDateFormatted = new Intl.DateTimeFormat('es-PE', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'America/Lima',
+        }).format(new Date());
 
         const discountVal = Number(order.discountAmount || 0);
 
@@ -511,8 +523,12 @@ export class OrderLifecycleService {
             orderCode,
             txCode: input.externalTransactionId,
             eventTitle: event?.name || 'Evento Oficial queplaneshoy',
+            eventSubtitle: event?.category
+              ? `${event.category} · Venta Oficial`
+              : 'Entrada Oficial Garantizada · Qué Planes Hoy',
             eventDateFormatted,
             eventTimeFormatted,
+            emissionDateFormatted,
             venueName: event?.venue || 'Recinto Confirmado',
             venueAddress: event?.address || null,
             city: cityInfo.name || 'Perú',

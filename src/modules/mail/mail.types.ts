@@ -48,8 +48,10 @@ export interface SendOrderTicketsEmailPayload {
   orderCode: string;
   txCode?: string;
   eventTitle: string;
+  eventSubtitle?: string | null;
   eventDateFormatted: string;
   eventTimeFormatted: string;
+  emissionDateFormatted?: string | null;
   venueName: string;
   venueAddress?: string | null;
   city: string;
