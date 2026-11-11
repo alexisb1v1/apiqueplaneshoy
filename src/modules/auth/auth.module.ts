@@ -37,9 +37,9 @@ import { GoogleCallbackHandler } from './application/commands/v1/google-callback
 
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 import { JwtTokenAdapter } from './infrastructure/adapters/jwt-token.adapter';
-import { ConsoleEmailAdapter } from './infrastructure/adapters/console-email.adapter';
 import { GoogleOAuthService } from './infrastructure/adapters/google-oauth.service';
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
+import { MailService } from '@modules/mail/mail.service';
 
 const CommandHandlers = [
   RegisterUserHandler,
@@ -107,9 +107,8 @@ const Controllers = [
     JwtTokenAdapter,
     {
       provide: 'EmailService',
-      useClass: ConsoleEmailAdapter,
+      useExisting: MailService,
     },
-    ConsoleEmailAdapter,
     GoogleOAuthService,
     JwtAuthGuard,
   ],

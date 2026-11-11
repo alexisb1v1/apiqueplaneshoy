@@ -878,6 +878,20 @@ sequenceDiagram
 - Protegido con `JwtAuthGuard` y limitador `@Throttle` (máx. 5 intentos cada 15 min).
 - Valida mediante `ChangePasswordHandler` que el usuario autenticado posea contraseña local (`password_hash`), compara `oldPassword` con bcrypt (`INVALID_CURRENT_PASSWORD` → HTTP 400 si no coincide), exige que `newPassword` sea distinta a la actual (mín. 6 caracteres), actualiza `users.password_hash` y envía notificación informativa por correo.
 
+---
+
+## 15. Servicio Transaccional de Correos (`MailModule` + Resend API)
+
+Módulo global (`@Global()`) ubicado en `src/modules/mail/` encargado de despachar los correos transaccionales de la plataforma mediante la API REST oficial de **Resend** (`POST https://api.resend.com/emails`) con timeout explícito (`RESEND_TIMEOUT_MS`, default `5000ms`), fallback controlado a consola local cuando `RESEND_API_KEY` no está configurada (sin imprimir enlaces/tokens en producción) y sanitización HTML estricta en `mail-template.builder.ts`.
+
+* **Métodos implementados en `MailService`:**
+  * `sendEmail(input)`: envío genérico tipado con HTML, texto alternativo, `reply_to`, `tags` y soporte para adjuntos Base64 (`attachments`).
+  * `sendVerificationEmail`: verificación de correo electrónico en registro/reenvío (`AuthModule`).
+  * `sendPasswordResetEmail`: recuperación de contraseña de un solo uso con vigencia de 15 minutos (`AuthModule`).
+  * `sendPasswordChangedNotificationEmail`: alerta informativa cuando se actualiza o restablece la contraseña (`AuthModule`).
+  * `sendOrderTicketsEmail`: plantilla preparada con listado dinámico de entradas emitidas, resumen de pago/cupón y acceso directo al visor QR/PDF (`/profile/tickets`).
+
+
 
 
 
