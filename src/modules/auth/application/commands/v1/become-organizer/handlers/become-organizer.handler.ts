@@ -9,6 +9,7 @@ import {
 import { UserRepository } from '@users/domain/repositories/user.repository';
 import { TokenService } from '@auth/domain/ports/token-service.port';
 import { AppError } from '@common/errors/app-errors';
+import { MailService } from '@modules/mail/mail.service';
 
 @Injectable()
 @CommandHandler(BecomeOrganizerCommand)
@@ -18,6 +19,7 @@ export class BecomeOrganizerHandler implements ICommandHandler<BecomeOrganizerCo
     private readonly userRepository: UserRepository,
     @Inject('TokenService')
     private readonly tokenService: TokenService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -51,6 +53,17 @@ export class BecomeOrganizerHandler implements ICommandHandler<BecomeOrganizerCo
 
     try {
       const savedUser = await this.userRepository.save(user);
+
+      // Notificación no bloqueante de activación de perfil organizador
+      this.mailService
+        .sendOrganizerActivatedEmail({
+          to: savedUser.email,
+          name: savedUser.name,
+          organizerName: savedUser.organizerName || savedUser.name,
+          documentType: savedUser.organizerDocumentType || 'RUC',
+          documentNumber: savedUser.organizerDocumentNumber || '-',
+        })
+        .catch(() => {});
 
       const token = this.tokenService.generateToken({
         sub: savedUser.publicUuid,

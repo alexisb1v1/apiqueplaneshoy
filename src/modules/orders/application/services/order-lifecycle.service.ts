@@ -11,6 +11,9 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { ShowEntity } from '@events/domain/entities/show.entity';
 import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ZonePricingTierEntity } from '@events/domain/entities/zone-pricing-tier.entity';
+import { UserEntity } from '@users/domain/entities/user.entity';
+import { resolveCityFromUbigeo } from '@events/constants/event-constants';
+import { MailService } from '@modules/mail/mail.service';
 import {
   IssuedTicketResponseDto,
   SimulateOrderCheckoutResponseDto,
@@ -35,7 +38,10 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export class OrderLifecycleService {
   private readonly logger = new Logger(OrderLifecycleService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
+  ) {}
 
   /**
    * Resuelve un evento por ID numérico, UUID público o slug.
@@ -463,18 +469,77 @@ export class OrderLifecycleService {
         }
       }
 
+      const firstShow = showsCache.values().next().value as ShowEntity | undefined;
+      const [event, buyer] = await Promise.all([
+        firstShow?.eventId
+          ? queryRunner.manager.findOne(EventEntity, { where: { id: firstShow.eventId } })
+          : Promise.resolve(null),
+        queryRunner.manager.findOne(UserEntity, { where: { id: order.userId } }),
+      ]);
+
       await queryRunner.commitTransaction();
 
       this.logger.log(
         `[Culqi Orden Confirmada] Orden #${order.id} (${order.publicUuid}) pagada. Tx: ${input.externalTransactionId}. Total: S/. ${Number(order.totalAmount).toFixed(2)}. ${issuedTickets.length} boletos emitidos.`,
       );
 
+      const orderCode = `#QPH-${String(order.id).padStart(6, '0')}`;
+
+      if (buyer?.email) {
+        const showStartTime = firstShow?.startTime ? new Date(firstShow.startTime) : new Date();
+        const cityInfo = resolveCityFromUbigeo(event?.ubigeoCode);
+        const eventDateFormatted = new Intl.DateTimeFormat('es-PE', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'America/Lima',
+        }).format(showStartTime);
+        const eventTimeFormatted = new Intl.DateTimeFormat('es-PE', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'America/Lima',
+        }).format(showStartTime);
+
+        const discountVal = Number(order.discountAmount || 0);
+
+        void this.mailService
+          .sendOrderTicketsEmail({
+            to: buyer.email,
+            customerName: buyer.name || buyer.email,
+            orderCode,
+            txCode: input.externalTransactionId,
+            eventTitle: event?.name || 'Evento Oficial queplaneshoy',
+            eventDateFormatted,
+            eventTimeFormatted,
+            venueName: event?.venue || 'Recinto Confirmado',
+            venueAddress: event?.address || null,
+            city: cityInfo.name || 'Perú',
+            totalAmountFormatted: `S/. ${Number(order.totalAmount).toFixed(2)}`,
+            couponCode,
+            discountAmountFormatted: discountVal > 0 ? `S/. ${discountVal.toFixed(2)}` : null,
+            tickets: issuedTickets.map((t) => ({
+              ticketCode: `QPH-TCK-${t.ticketUuid.substring(0, 8).toUpperCase()}`,
+              zoneName: t.zoneName,
+              tierName: t.tierName,
+              unitPriceFormatted: `S/. ${t.unitPrice.toFixed(2)}`,
+              qrPayload: t.qrPayload,
+            })),
+          })
+          .catch((mailErr) => {
+            this.logger.warn(
+              `[Culqi Correo Tickets] No se pudo enviar correo de entradas para orden ${orderCode}: ${(mailErr as Error).message}`,
+            );
+          });
+      }
+
       const responseDto = plainToInstance(
         SimulateOrderCheckoutResponseDto,
         {
           success: true,
           orderId: order.id,
-          orderCode: `#QPH-${String(order.id).padStart(6, '0')}`,
+          orderCode,
           orderPublicUuid: order.publicUuid,
           status: 'paid',
           subtotal: Number(order.subtotalTickets),

@@ -884,12 +884,17 @@ sequenceDiagram
 
 Módulo global (`@Global()`) ubicado en `src/modules/mail/` encargado de despachar los correos transaccionales de la plataforma mediante la API REST oficial de **Resend** (`POST https://api.resend.com/emails`) con timeout explícito (`RESEND_TIMEOUT_MS`, default `5000ms`), fallback controlado a consola local cuando `RESEND_API_KEY` no está configurada (sin imprimir enlaces/tokens en producción) y sanitización HTML estricta en `mail-template.builder.ts`.
 
-* **Métodos implementados en `MailService`:**
-  * `sendEmail(input)`: envío genérico tipado con HTML, texto alternativo, `reply_to`, `tags` y soporte para adjuntos Base64 (`attachments`).
+* **Métodos y plantillas implementados en `MailService` (`TicketPdfService` + `mail-template.builder.ts`):**
+  * `sendEmail(input)`: envío genérico tipado con HTML, texto alternativo, `reply_to`, `tags` y soporte para adjuntos Base64 (`attachments`) e imágenes inline (`content_id` / `cid:`).
   * `sendVerificationEmail`: verificación de correo electrónico en registro/reenvío (`AuthModule`).
+  * `sendWelcomeGoogleEmail`: bienvenida automática para usuarios nuevos registrados por primera vez mediante Google OAuth (`GoogleCallbackHandler`).
   * `sendPasswordResetEmail`: recuperación de contraseña de un solo uso con vigencia de 15 minutos (`AuthModule`).
   * `sendPasswordChangedNotificationEmail`: alerta informativa cuando se actualiza o restablece la contraseña (`AuthModule`).
-  * `sendOrderTicketsEmail`: plantilla preparada con listado dinámico de entradas emitidas, resumen de pago/cupón y acceso directo al visor QR/PDF (`/profile/tickets`).
+  * `sendOrderTicketsEmail`: disparado automáticamente al pasar una orden a `paid` en `OrderLifecycleService.finalizePaidOrder` (una sola vez); adjunta el documento **PDF oficial (`entradas-#QPH-XXXXXX.pdf`)** generado con `TicketPdfService` (`pdfkit` + `qrcode`), incrusta los QR inline (`cid:`) en el cuerpo HTML (hasta 6 tickets inline) y enlaza al visor web (`/profile/tickets`).
+  * `sendOrganizerActivatedEmail`: confirmación automática al habilitar el perfil comercial de Organizador (`BecomeOrganizerHandler`).
+  * `sendOrganizerKycVerifiedEmail`: plantilla lista para aprobación administrativa KYC de la productora.
+  * `sendEventPublishedEmail`: confirmación automática al promotor cuando publica un evento (`PublishEventHandler`) con el enlace público (`/e/:slug` o `/events/:uuid`).
+  * `sendAdvancePaidEmail` y `sendSettlementPaidEmail`: plantillas listas para notificar desembolsos bancarios de anticipos y cierre contable de liquidación final.
 
 
 

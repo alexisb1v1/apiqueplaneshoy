@@ -14,6 +14,7 @@ import { RedisService } from '@modules/redis/redis.service';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { SocialIdentityEntity } from '@users/domain/entities/social-identity.entity';
 import { AppError } from '@common/errors/app-errors';
+import { MailService } from '@modules/mail/mail.service';
 
 const GOOGLE_STATE_PREFIX = 'qph:oauth:google:state:';
 
@@ -38,6 +39,7 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
     private readonly redisService: RedisService,
     @Inject('TokenService')
     private readonly tokenService: TokenService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -82,6 +84,7 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
 
     try {
       let user: UserEntity | null = null;
+      let isNewUser = false;
 
       // 1. Buscar vinculación social existente por proveedor + ID externo de Google
       const existingIdentity = await queryRunner.manager.findOne(SocialIdentityEntity, {
@@ -128,6 +131,7 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
             isOrganizer: false,
           });
           user = await queryRunner.manager.save(UserEntity, newUser);
+          isNewUser = true;
 
           const newIdentity = queryRunner.manager.create(SocialIdentityEntity, {
             userId: user.id,
@@ -139,6 +143,16 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
       }
 
       await queryRunner.commitTransaction();
+
+      // Solo envía correo de bienvenida cuando se crea una cuenta nueva con Google
+      if (isNewUser) {
+        this.mailService
+          .sendWelcomeGoogleEmail({
+            to: user.email,
+            name: user.name,
+          })
+          .catch(() => {});
+      }
 
       const accessToken = this.tokenService.generateToken({
         sub: user.publicUuid,

@@ -252,7 +252,334 @@ export function buildPasswordChangedEmailContent(params: {
 }
 
 /**
- * Construye el correo transaccional de confirmación de compra y listado de entradas emitidas.
+ * Construye el correo de bienvenida exclusivo para registros nuevos mediante Google OAuth.
+ */
+export function buildWelcomeGoogleEmailContent(params: {
+  name: string;
+  exploreUrl: string;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const safeName = escapeHtml(params.name || 'Usuario');
+  const html = renderBrandedEmailLayout({
+    preheader: 'Tu cuenta en queplaneshoy quedó verificada automáticamente con Google.',
+    badge: 'Bienvenido',
+    title: '¡Bienvenido a queplaneshoy!',
+    greeting: `Hola, ${safeName}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 12px 0;">
+        Tu cuenta quedó creada y verificada automáticamente con <strong>Google</strong>. Ya puedes comprar entradas al instante, guardar tus eventos favoritos o publicar tus propios espectáculos como organizador.
+      </p>
+      <p style="margin: 0;">
+        No necesitas confirmar ningún correo adicional: tu cuenta está 100% activa.
+      </p>
+    `,
+    ctaLabel: 'Explorar cartelera de eventos',
+    ctaUrl: params.exploreUrl,
+    footerNote:
+      'Si más adelante deseas configurar una contraseña local adicional, puedes hacerlo desde la opción "¿Olvidaste tu contraseña?" usando este mismo correo.',
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `¡Bienvenido a queplaneshoy, ${params.name || 'Usuario'}! Tu cuenta fue activada y verificada con Google. Explora los eventos disponibles en: ${params.exploreUrl}`;
+
+  return {
+    subject: '¡Bienvenido a queplaneshoy! Tu cuenta está lista',
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo de confirmación al activar el perfil de Organizador / Productora.
+ */
+export function buildOrganizerActivatedEmailContent(params: {
+  name: string;
+  organizerName: string;
+  documentType: string;
+  documentNumber: string;
+  dashboardUrl: string;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const safeName = escapeHtml(params.name || 'Organizador');
+  const html = renderBrandedEmailLayout({
+    preheader: 'Tu perfil comercial de Organizador ya está habilitado en queplaneshoy.',
+    badge: 'Organizador',
+    title: '¡Perfil de Organizador activado!',
+    greeting: `Hola, ${safeName}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        Habilitamos exitosamente tu perfil de <strong>Organizador / Productora</strong> en queplaneshoy. Ya puedes crear eventos, definir localidades, preventas escalonadas y cupones de descuento.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;">
+        <tr>
+          <td style="padding: 14px 16px;">
+            <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748B; font-weight: 700; text-transform: uppercase;">
+              Datos comerciales registrados
+            </p>
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #0F172A;">
+              ${escapeHtml(params.organizerName)}
+            </p>
+            <p style="margin: 0; font-size: 13px; color: #475569;">
+              Documento: ${escapeHtml(params.documentType)} ${escapeHtml(params.documentNumber)}
+            </p>
+          </td>
+        </tr>
+      </table>
+    `,
+    ctaLabel: 'Ir a mi panel de organizador',
+    ctaUrl: params.dashboardUrl,
+    footerNote:
+      'Tu perfil comercial pasará por validación KYC administrativa para habilitar desembolsos de anticipos y liquidaciones.',
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Hola ${params.name || 'Organizador'}, activaste tu perfil comercial "${params.organizerName}" (${params.documentType} ${params.documentNumber}) en queplaneshoy. Accede a tu panel en: ${params.dashboardUrl}`;
+
+  return {
+    subject: 'Perfil de Organizador activado en queplaneshoy',
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo de aprobación KYC administrativa del perfil Organizador.
+ */
+export function buildOrganizerKycVerifiedEmailContent(params: {
+  name: string;
+  organizerName: string;
+  verifiedAtIso: string;
+  dashboardUrl: string;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const formattedDate = new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'long',
+    timeZone: 'America/Lima',
+  }).format(new Date(params.verifiedAtIso));
+
+  const html = renderBrandedEmailLayout({
+    preheader: 'Tu verificación KYC comercial fue aprobada exitosamente.',
+    badge: 'KYC Aprobado',
+    title: 'Identidad comercial verificada',
+    greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 12px 0;">
+        Tu productora <strong>${escapeHtml(params.organizerName)}</strong> completó satisfactoriamente la verificación KYC el <strong>${escapeHtml(formattedDate)}</strong>.
+      </p>
+      <p style="margin: 0;">
+        Ya tienes habilitada la gestión financiera completa, solicitud de anticipos a cuenta y liquidaciones bancarias oficiales.
+      </p>
+    `,
+    ctaLabel: 'Gestionar mis eventos',
+    ctaUrl: params.dashboardUrl,
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Hola ${params.name || 'Organizador'}, tu verificación KYC para "${params.organizerName}" fue aprobada el ${formattedDate}.`;
+
+  return {
+    subject: 'Verificación KYC aprobada - queplaneshoy',
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo de confirmación cuando un evento pasa a estado publicado en cartelera.
+ */
+export function buildEventPublishedEmailContent(params: {
+  name: string;
+  eventTitle: string;
+  eventPublicUrl: string;
+  venueName?: string | null;
+  city?: string | null;
+  category?: string | null;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const locationLine = [params.venueName, params.city].filter(Boolean).join(', ');
+  const html = renderBrandedEmailLayout({
+    preheader: `Tu evento "${params.eventTitle}" ya está publicado y en venta.`,
+    badge: 'Evento en vivo',
+    title: '¡Tu evento ya está publicado!',
+    greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        Confirmamos que tu evento <strong>${escapeHtml(params.eventTitle)}</strong> ya se encuentra visible en la cartelera pública oficial de <strong>queplaneshoy</strong> con venta habilitada.
+      </p>
+      ${
+        locationLine || params.category
+          ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;">
+               <tr>
+                 <td style="padding: 14px 16px;">
+                   ${params.category ? `<p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #4F46E5; text-transform: uppercase;">${escapeHtml(params.category)}</p>` : ''}
+                   <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #0F172A;">${escapeHtml(params.eventTitle)}</p>
+                   ${locationLine ? `<p style="margin: 0; font-size: 13px; color: #475569;">${escapeHtml(locationLine)}</p>` : ''}
+                 </td>
+               </tr>
+             </table>`
+          : ''
+      }
+    `,
+    ctaLabel: 'Ver página pública del evento',
+    ctaUrl: params.eventPublicUrl,
+    footerNote:
+      'Ya puedes compartir este enlace en tus redes sociales para comenzar a recibir ventas con Culqi Multipago.',
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `¡Tu evento "${params.eventTitle}" ya está publicado en queplaneshoy! Enlace público: ${params.eventPublicUrl}`;
+
+  return {
+    subject: `¡Tu evento "${params.eventTitle}" ya está en vivo!`,
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo de notificación cuando se paga un anticipo financiero al organizador.
+ */
+export function buildAdvancePaidEmailContent(params: {
+  name: string;
+  eventTitle: string;
+  amountFormatted: string;
+  bankName: string;
+  transferReference: string;
+  paidAtIso: string;
+  voucherUrl?: string | null;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const formattedDate = new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'America/Lima',
+  }).format(new Date(params.paidAtIso));
+
+  const html = renderBrandedEmailLayout({
+    preheader: `Transferimos tu anticipo de ${params.amountFormatted} para ${params.eventTitle}.`,
+    badge: 'Finanzas · Anticipo',
+    title: 'Anticipo bancario transferido',
+    greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        Registramos el desembolso de tu anticipo correspondiente al evento <strong>${escapeHtml(params.eventTitle)}</strong>.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;">
+        <tr>
+          <td style="padding: 14px 16px;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; color: #475569;">Monto abonado: <strong style="color: #059669; font-size: 15px;">${escapeHtml(params.amountFormatted)}</strong></p>
+            <p style="margin: 0 0 4px 0; font-size: 13px; color: #475569;">Banco destino: <strong style="color: #0F172A;">${escapeHtml(params.bankName)}</strong></p>
+            <p style="margin: 0 0 4px 0; font-size: 13px; color: #475569;">Nro. de operación: <strong style="color: #0F172A; font-family: monospace;">${escapeHtml(params.transferReference)}</strong></p>
+            <p style="margin: 0; font-size: 12px; color: #64748B;">Fecha de abono: ${escapeHtml(formattedDate)}</p>
+          </td>
+        </tr>
+      </table>
+    `,
+    ctaLabel: params.voucherUrl ? 'Descargar constancia de transferencia' : undefined,
+    ctaUrl: params.voucherUrl || undefined,
+    footerNote:
+      'Este anticipo se descontará automáticamente en el cierre contable de tu liquidación final.',
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Anticipo pagado por ${params.amountFormatted} para "${params.eventTitle}". Banco: ${params.bankName}. Nro. Operación: ${params.transferReference}.`;
+
+  return {
+    subject: `Anticipo pagado (${params.amountFormatted}) - ${params.eventTitle}`,
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo de notificación con el estado de cuenta de liquidación final pagada.
+ */
+export function buildSettlementPaidEmailContent(params: {
+  name: string;
+  eventTitle: string;
+  totalTicketsSold: number;
+  grossAmountFormatted: string;
+  couponsDiscountFormatted: string;
+  platformFeeFormatted: string;
+  gatewayFeeFormatted: string;
+  advancesDeductedFormatted: string;
+  adjustmentsFormatted: string;
+  netPayoutFormatted: string;
+  bankName: string;
+  transferReference: string;
+  paidAtIso: string;
+  voucherUrl?: string | null;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const formattedDate = new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'America/Lima',
+  }).format(new Date(params.paidAtIso));
+
+  const html = renderBrandedEmailLayout({
+    preheader: `Liquidación final transferida (${params.netPayoutFormatted}) por ${params.eventTitle}.`,
+    badge: 'Liquidación Final',
+    title: 'Liquidación final pagada',
+    greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        Completamos la transferencia de tu liquidación final oficial correspondiente al evento <strong>${escapeHtml(params.eventTitle)}</strong> (${params.totalTicketsSold} boletos vendidos).
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; margin-bottom: 14px;">
+        <tr style="background-color: #F1F5F9;">
+          <th align="left" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Concepto</th>
+          <th align="right" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Importe</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">Ventas brutas</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; font-weight: 700; color: #0F172A;">${escapeHtml(params.grossAmountFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Descuento por cupones</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.couponsDiscountFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Comisión plataforma QPH</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.platformFeeFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Comisiones pasarela</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.gatewayFeeFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Anticipos abonados</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.advancesDeductedFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Ajustes</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.adjustmentsFormatted)}</td>
+        </tr>
+        <tr style="background-color: #ECFDF5;">
+          <td style="padding: 10px 12px; font-size: 14px; font-weight: 800; color: #065F46;">Saldo neto transferido</td>
+          <td align="right" style="padding: 10px 12px; font-size: 15px; font-weight: 900; color: #059669;">${escapeHtml(params.netPayoutFormatted)}</td>
+        </tr>
+      </table>
+      <p style="margin: 0; font-size: 12px; color: #475569;">
+        <strong>Banco:</strong> ${escapeHtml(params.bankName)} · <strong>Operación:</strong> <span style="font-family: monospace;">${escapeHtml(params.transferReference)}</span> · ${escapeHtml(formattedDate)}
+      </p>
+    `,
+    ctaLabel: params.voucherUrl ? 'Descargar voucher de liquidación' : undefined,
+    ctaUrl: params.voucherUrl || undefined,
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Liquidación final pagada para "${params.eventTitle}". Neto transferido: ${params.netPayoutFormatted} en ${params.bankName} (Operación: ${params.transferReference}).`;
+
+  return {
+    subject: `Liquidación final pagada (${params.netPayoutFormatted}) - ${params.eventTitle}`,
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo transaccional de confirmación de compra y listado de entradas emitidas (con QR inline opcional + PDF adjunto).
  */
 export function buildOrderTicketsEmailContent(params: {
   customerName: string;
@@ -273,14 +600,21 @@ export function buildOrderTicketsEmailContent(params: {
     .map(
       (ticket) => `
         <tr>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; font-family: monospace; font-size: 12px; font-weight: 700; color: #0F172A;">
-            ${escapeHtml(ticket.ticketCode)}
+          <td style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; vertical-align: middle;">
+            ${
+              ticket.qrImageCid
+                ? `<img src="cid:${escapeHtml(ticket.qrImageCid)}" alt="QR ${escapeHtml(ticket.ticketCode)}" width="76" height="76" style="display: block; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 6px;" />`
+                : ''
+            }
+            <span style="font-family: monospace; font-size: 12px; font-weight: 700; color: #0F172A;">
+              ${escapeHtml(ticket.ticketCode)}
+            </span>
           </td>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">
+          <td style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155; vertical-align: middle;">
             <strong>${escapeHtml(ticket.zoneName)}</strong>
             <span style="display: block; font-size: 11px; color: #64748B;">${escapeHtml(ticket.tierName)}</span>
           </td>
-          <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; font-weight: 700; color: #0F172A;">
+          <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; font-weight: 700; color: #0F172A; vertical-align: middle;">
             ${escapeHtml(ticket.unitPriceFormatted)}
           </td>
         </tr>
@@ -303,7 +637,7 @@ export function buildOrderTicketsEmailContent(params: {
     greeting: `Hola, ${escapeHtml(params.customerName || 'Comprador')}:`,
     bodyHtml: `
       <p style="margin: 0 0 16px 0;">
-        Tu pago fue procesado exitosamente. Ya emitimos tus pases oficiales para <strong>${escapeHtml(params.eventTitle)}</strong>.
+        Tu pago fue procesado exitosamente. Ya emitimos tus pases oficiales para <strong>${escapeHtml(params.eventTitle)}</strong>. También adjuntamos el documento <strong>PDF oficial</strong> con tus códigos QR listos para presentar en puerta.
       </p>
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; margin-bottom: 18px;">
@@ -324,7 +658,7 @@ export function buildOrderTicketsEmailContent(params: {
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; margin-bottom: 16px;">
         <tr style="background-color: #F1F5F9;">
-          <th align="left" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Código</th>
+          <th align="left" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Entrada / QR</th>
           <th align="left" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Zona / Tarifa</th>
           <th align="right" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Precio</th>
         </tr>
@@ -339,14 +673,14 @@ export function buildOrderTicketsEmailContent(params: {
         </tr>
       </table>
     `,
-    ctaLabel: 'Ver códigos QR y descargar PDF',
+    ctaLabel: 'Ver códigos QR en la web',
     ctaUrl: params.ticketsPortalUrl,
     footerNote:
-      'Presenta tus códigos QR digitales desde tu celular o en PDF impreso al ingresar al recinto. Cada código QR es único e intransferible.',
+      'Descarga o guarda el PDF adjunto en tu celular antes de llegar al recinto para acceder incluso sin señal móvil. Cada código QR es único e intransferible.',
     supportEmail: params.supportEmail,
   });
 
-  const text = `¡Compra confirmada! Orden ${params.orderCode} para ${params.eventTitle} (${params.eventDateFormatted} ${params.eventTimeFormatted} en ${params.venueName}). Total pagado: ${params.totalAmountFormatted}. Visualiza tus QR y descarga el PDF aquí: ${params.ticketsPortalUrl}`;
+  const text = `¡Compra confirmada! Orden ${params.orderCode} para ${params.eventTitle} (${params.eventDateFormatted} ${params.eventTimeFormatted} en ${params.venueName}). Total pagado: ${params.totalAmountFormatted}. Tus entradas con QR van adjuntas en PDF y disponibles en: ${params.ticketsPortalUrl}`;
 
   return {
     subject: `Tus entradas para ${params.eventTitle} (${params.orderCode})`,

@@ -1,16 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@auth/domain/ports/email-service.port';
+import { TicketPdfService } from './ticket-pdf.service';
 import {
+  EmailAttachment,
   EmailDeliveryResult,
+  SendAdvancePaidEmailPayload,
   SendEmailInput,
+  SendEventPublishedEmailPayload,
   SendOrderTicketsEmailPayload,
+  SendOrganizerActivatedEmailPayload,
+  SendOrganizerKycVerifiedEmailPayload,
+  SendSettlementPaidEmailPayload,
+  SendWelcomeGoogleEmailPayload,
 } from './mail.types';
 import {
+  buildAdvancePaidEmailContent,
+  buildEventPublishedEmailContent,
   buildOrderTicketsEmailContent,
+  buildOrganizerActivatedEmailContent,
+  buildOrganizerKycVerifiedEmailContent,
   buildPasswordChangedEmailContent,
   buildPasswordResetEmailContent,
+  buildSettlementPaidEmailContent,
   buildVerificationEmailContent,
+  buildWelcomeGoogleEmailContent,
 } from './mail-template.builder';
 
 function isPlaceholderValue(value?: string | null): boolean {
@@ -36,7 +50,10 @@ export class MailService implements EmailService {
   private readonly timeoutMs: number;
   private readonly primaryFrontendUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly ticketPdfService: TicketPdfService,
+  ) {
     this.apiUrl = (
       this.configService.get<string>('RESEND_API_URL') || 'https://api.resend.com/emails'
     )
@@ -112,6 +129,7 @@ export class MailService implements EmailService {
               filename: att.filename,
               content: att.content,
               ...(att.contentType ? { content_type: att.contentType } : {}),
+              ...(att.contentId ? { content_id: att.contentId } : {}),
             })),
           }
         : {}),
@@ -221,11 +239,75 @@ export class MailService implements EmailService {
   }
 
   /**
-   * Envía la confirmación de compra junto con el detalle de boletos y enlace al visor QR/PDF.
+   * Envía la confirmación de compra junto con el detalle de boletos, códigos QR embebidos y PDF oficial adjunto.
    */
   async sendOrderTicketsEmail(payload: SendOrderTicketsEmailPayload): Promise<EmailDeliveryResult> {
     const ticketsPortalUrl =
       payload.ticketsPortalUrl || `${this.primaryFrontendUrl}/profile/tickets`;
+
+    const preparedTickets = payload.tickets.map((t) => ({ ...t }));
+    const attachments: EmailAttachment[] = [...(payload.attachments || [])];
+
+    if (attachments.length === 0 && preparedTickets.some((t) => Boolean(t.qrPayload))) {
+      try {
+        const precomputedQrs = new Map<number, Buffer>();
+        const attachInlineQrs = preparedTickets.length <= 6;
+
+        for (let i = 0; i < preparedTickets.length; i++) {
+          const item = preparedTickets[i];
+          if (!item.qrPayload) continue;
+          const qrBuf = await this.ticketPdfService.generateQrPngBuffer(item.qrPayload);
+          precomputedQrs.set(i, qrBuf);
+
+          if (attachInlineQrs) {
+            const cid = `qph-qr-${i + 1}`;
+            item.qrImageCid = cid;
+            attachments.push({
+              filename: `qr-entrada-${i + 1}.png`,
+              content: qrBuf.toString('base64'),
+              contentType: 'image/png',
+              contentId: cid,
+            });
+          }
+        }
+
+        const pdfBuffer = await this.ticketPdfService.generateTicketsPdfBuffer(
+          {
+            orderCode: payload.orderCode,
+            txCode: payload.txCode || payload.orderCode,
+            eventTitle: payload.eventTitle,
+            eventDateFormatted: payload.eventDateFormatted,
+            eventTimeFormatted: payload.eventTimeFormatted,
+            venueName: payload.venueName,
+            venueAddress: payload.venueAddress,
+            city: payload.city,
+            customerName: payload.customerName,
+            customerEmail: payload.to,
+            totalAmountFormatted: payload.totalAmountFormatted,
+            tickets: preparedTickets.map((item, idx) => ({
+              ticketNumber: idx + 1,
+              ticketCode: item.ticketCode,
+              zoneName: item.zoneName,
+              tierName: item.tierName,
+              unitPriceFormatted: item.unitPriceFormatted,
+              qrPayload: item.qrPayload || item.ticketCode,
+            })),
+          },
+          precomputedQrs,
+        );
+
+        const safeOrderFileSuffix = payload.orderCode.replace(/[^A-Za-z0-9_-]/g, '');
+        attachments.push({
+          filename: `entradas-${safeOrderFileSuffix || 'QPH'}.pdf`,
+          content: pdfBuffer.toString('base64'),
+          contentType: 'application/pdf',
+        });
+      } catch (pdfError) {
+        this.logger.warn(
+          `[MailService] No se pudo generar el PDF/QR adjunto para ${payload.orderCode}: ${(pdfError as Error).message}`,
+        );
+      }
+    }
 
     const content = buildOrderTicketsEmailContent({
       customerName: payload.customerName,
@@ -238,7 +320,7 @@ export class MailService implements EmailService {
       totalAmountFormatted: payload.totalAmountFormatted,
       couponCode: payload.couponCode,
       discountAmountFormatted: payload.discountAmountFormatted,
-      tickets: payload.tickets,
+      tickets: preparedTickets,
       ticketsPortalUrl,
       supportEmail: this.replyTo,
     });
@@ -249,6 +331,164 @@ export class MailService implements EmailService {
       html: content.html,
       text: content.text,
       tags: [{ name: 'template', value: 'order_tickets' }],
+      attachments: attachments.length > 0 ? attachments : undefined,
+    });
+  }
+
+  /**
+   * Envía bienvenida exclusiva para usuarios que crean su cuenta por primera vez con Google OAuth.
+   */
+  async sendWelcomeGoogleEmail(
+    payload: SendWelcomeGoogleEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const exploreUrl = payload.exploreUrl || `${this.primaryFrontendUrl}/events`;
+    const content = buildWelcomeGoogleEmailContent({
+      name: payload.name,
+      exploreUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'welcome_google' }],
+    });
+  }
+
+  /**
+   * Notifica al usuario que activó exitosamente su perfil de Organizador / Productora.
+   */
+  async sendOrganizerActivatedEmail(
+    payload: SendOrganizerActivatedEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const dashboardUrl = payload.dashboardUrl || `${this.primaryFrontendUrl}/organizer/events`;
+    const content = buildOrganizerActivatedEmailContent({
+      name: payload.name,
+      organizerName: payload.organizerName,
+      documentType: payload.documentType,
+      documentNumber: payload.documentNumber,
+      dashboardUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'organizer_activated' }],
+    });
+  }
+
+  /**
+   * Notifica que la verificación KYC comercial de la productora fue aprobada.
+   */
+  async sendOrganizerKycVerifiedEmail(
+    payload: SendOrganizerKycVerifiedEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const dashboardUrl = payload.dashboardUrl || `${this.primaryFrontendUrl}/organizer/events`;
+    const content = buildOrganizerKycVerifiedEmailContent({
+      name: payload.name,
+      organizerName: payload.organizerName,
+      verifiedAtIso: payload.verifiedAtIso || new Date().toISOString(),
+      dashboardUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'organizer_kyc_verified' }],
+    });
+  }
+
+  /**
+   * Notifica al promotor que su evento ya quedó publicado en cartelera pública.
+   */
+  async sendEventPublishedEmail(
+    payload: SendEventPublishedEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const normalizedUrl = payload.eventPublicUrl.startsWith('http')
+      ? payload.eventPublicUrl
+      : `${this.primaryFrontendUrl}${payload.eventPublicUrl.startsWith('/') ? '' : '/'}${payload.eventPublicUrl}`;
+
+    const content = buildEventPublishedEmailContent({
+      name: payload.name,
+      eventTitle: payload.eventTitle,
+      eventPublicUrl: normalizedUrl,
+      venueName: payload.venueName,
+      city: payload.city,
+      category: payload.category,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'event_published' }],
+    });
+  }
+
+  /**
+   * Notifica al organizador el desembolso bancario de un anticipo a cuenta.
+   */
+  async sendAdvancePaidEmail(payload: SendAdvancePaidEmailPayload): Promise<EmailDeliveryResult> {
+    const content = buildAdvancePaidEmailContent({
+      name: payload.name,
+      eventTitle: payload.eventTitle,
+      amountFormatted: payload.amountFormatted,
+      bankName: payload.bankName,
+      transferReference: payload.transferReference,
+      paidAtIso: payload.paidAtIso,
+      voucherUrl: payload.voucherUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'advance_paid' }],
+    });
+  }
+
+  /**
+   * Notifica al organizador el pago y estado de cuenta oficial de la liquidación final.
+   */
+  async sendSettlementPaidEmail(
+    payload: SendSettlementPaidEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const content = buildSettlementPaidEmailContent({
+      name: payload.name,
+      eventTitle: payload.eventTitle,
+      totalTicketsSold: payload.totalTicketsSold,
+      grossAmountFormatted: payload.grossAmountFormatted,
+      couponsDiscountFormatted: payload.couponsDiscountFormatted,
+      platformFeeFormatted: payload.platformFeeFormatted,
+      gatewayFeeFormatted: payload.gatewayFeeFormatted,
+      advancesDeductedFormatted: payload.advancesDeductedFormatted,
+      adjustmentsFormatted: payload.adjustmentsFormatted,
+      netPayoutFormatted: payload.netPayoutFormatted,
+      bankName: payload.bankName,
+      transferReference: payload.transferReference,
+      paidAtIso: payload.paidAtIso,
+      voucherUrl: payload.voucherUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'settlement_paid' }],
     });
   }
 }

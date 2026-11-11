@@ -7,6 +7,7 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { AppError } from '@common/errors/app-errors';
 import { SearchService } from '../../../search/services/search.service';
+import { MailService } from '@modules/mail/mail.service';
 
 @CommandHandler(PublishEventCommand)
 export class PublishEventHandler implements ICommandHandler<PublishEventCommand> {
@@ -16,6 +17,7 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly searchService: SearchService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -86,6 +88,23 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
         hasLandingPage: updatedEvent.hasLandingPage,
         isFeatured: updatedEvent.isFeatured,
       }).catch(() => {});
+
+      // Notificación no bloqueante al organizador confirmando evento publicado en vivo
+      const publicPath =
+        updatedEvent.hasLandingPage && updatedEvent.slug
+          ? `/e/${updatedEvent.slug}`
+          : `/events/${updatedEvent.publicUuid}`;
+
+      this.mailService
+        .sendEventPublishedEmail({
+          to: user.email,
+          name: user.organizerName || user.name,
+          eventTitle: updatedEvent.name,
+          eventPublicUrl: publicPath,
+          venueName: updatedEvent.venue,
+          category: updatedEvent.category,
+        })
+        .catch(() => {});
 
       return ok(updatedEvent);
     } catch {
