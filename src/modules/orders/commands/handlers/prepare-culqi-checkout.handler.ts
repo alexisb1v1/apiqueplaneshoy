@@ -329,6 +329,9 @@ export class PrepareCulqiCheckoutHandler
           qph_order_uuid: savedOrder.publicUuid,
           event_uuid: event.publicUuid,
           user_id: String(user.id),
+          qph_user_id: String(user.id),
+          ...(user.publicUuid ? { qph_user_uuid: user.publicUuid } : {}),
+          ...(user.email ? { qph_user_email: user.email.slice(0, 100) } : {}),
         },
       });
 

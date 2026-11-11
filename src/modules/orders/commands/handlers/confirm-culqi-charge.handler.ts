@@ -185,6 +185,9 @@ export class ConfirmCulqiChargeHandler
       metadata: {
         qph_order_id: String(order.id),
         qph_order_uuid: order.publicUuid,
+        qph_user_id: String(order.userId),
+        ...(order.user?.publicUuid ? { qph_user_uuid: order.user.publicUuid } : {}),
+        ...(order.user?.email ? { qph_user_email: order.user.email.slice(0, 100) } : {}),
         ...(culqiOrderId ? { culqi_order_id: culqiOrderId } : {}),
       },
     });
