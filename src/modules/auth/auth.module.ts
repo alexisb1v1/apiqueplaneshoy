@@ -16,6 +16,7 @@ import { RefreshTokenController } from './interfaces/http/v1/refresh-token/refre
 import { ForgotPasswordController } from './interfaces/http/v1/forgot-password/forgot-password.controller';
 import { VerifyResetTokenController } from './interfaces/http/v1/verify-reset-token/verify-reset-token.controller';
 import { ResetPasswordController } from './interfaces/http/v1/reset-password/reset-password.controller';
+import { ChangePasswordController } from './interfaces/http/v1/change-password/change-password.controller';
 
 import { RegisterUserHandler } from './application/commands/v1/register-user/handlers/register-user.handler';
 import { LoginUserHandler } from './application/commands/v1/login-user/handlers/login-user.handler';
@@ -28,6 +29,7 @@ import { RefreshTokenHandler } from './application/commands/v1/refresh-token/han
 import { ForgotPasswordHandler } from './application/commands/v1/forgot-password/handlers/forgot-password.handler';
 import { VerifyResetTokenHandler } from './application/queries/v1/verify-reset-token/handlers/verify-reset-token.handler';
 import { ResetPasswordHandler } from './application/commands/v1/reset-password/handlers/reset-password.handler';
+import { ChangePasswordHandler } from './application/commands/v1/change-password/handlers/change-password.handler';
 
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 import { JwtTokenAdapter } from './infrastructure/adapters/jwt-token.adapter';
@@ -44,6 +46,7 @@ const CommandHandlers = [
   RefreshTokenHandler,
   ForgotPasswordHandler,
   ResetPasswordHandler,
+  ChangePasswordHandler,
 ];
 const QueryHandlers = [
   GetCurrentUserHandler,
@@ -61,6 +64,7 @@ const Controllers = [
   ForgotPasswordController,
   VerifyResetTokenController,
   ResetPasswordController,
+  ChangePasswordController,
 ];
 
 @Module({

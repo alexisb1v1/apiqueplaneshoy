@@ -871,6 +871,11 @@ sequenceDiagram
     end
 ```
 
+### 14.2 Cambio de Contraseña Autenticado (`POST /api/auth/change-password`)
+- Protegido con `JwtAuthGuard` y limitador `@Throttle` (máx. 5 intentos cada 15 min).
+- Valida mediante `ChangePasswordHandler` que el usuario autenticado posea contraseña local (`password_hash`), compara `oldPassword` con bcrypt (`INVALID_CURRENT_PASSWORD` → HTTP 400 si no coincide), exige que `newPassword` sea distinta a la actual (mín. 6 caracteres), actualiza `users.password_hash` y envía notificación informativa por correo.
+
+
 
 
 

@@ -19,6 +19,7 @@ const DEFAULT_MESSAGES: Record<AppError, string> = {
   INVALID_INPUT: 'Datos de entrada inválidos',
   INTERNAL_ERROR: 'Error interno del servidor',
   EMAIL_NOT_VERIFIED: 'Debes confirmar tu correo electrónico antes de realizar esta acción',
+  INVALID_CURRENT_PASSWORD: 'La contraseña actual ingresada es incorrecta.',
   PAYMENT_REJECTED: 'Transacción rechazada por la pasarela de pagos. Fondos insuficientes o tarjeta declinada.',
   TICKET_LIMIT_EXCEEDED: 'Has superado el límite de entradas permitido por compra o por evento para este usuario.',
   COUPON_INVALID_OR_EXPIRED: 'El cupón de descuento no es válido, ha expirado o ya no cuenta con usos disponibles.',
@@ -54,6 +55,7 @@ export function matchResult<T>(
       case 'COUPON_INVALID_OR_EXPIRED':
       case 'TOKEN_EXPIRED_OR_INVALID':
       case 'ORDER_EXPIRED':
+      case 'INVALID_CURRENT_PASSWORD':
       case 'INVALID_INPUT':          throw new BadRequestException(msg);
       default:                       throw new InternalServerErrorException(msg);
     }
