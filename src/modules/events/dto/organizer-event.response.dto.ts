@@ -122,6 +122,10 @@ export class OrganizerEventResponseDto {
   status!: string;
 
   @Expose()
+  @ApiProperty({ example: 'Falta adjuntar permiso municipal', nullable: true })
+  observationReason!: string | null;
+
+  @Expose()
   @ApiProperty({ example: false })
   isSoldOut!: boolean;
 

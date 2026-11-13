@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, IsIn } from 'class-validator';
 
 export class GetOrganizerEventsRequestDto {
   @ApiPropertyOptional({
@@ -19,5 +19,15 @@ export class GetOrganizerEventsRequestDto {
   @IsString()
   @MaxLength(120)
   q?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtro por rango temporal: 3m (últimos 3 meses), 6m (últimos 6 meses), 12m (último año), all (histórico)',
+    example: '3m',
+    default: '3m',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['3m', '6m', '12m', 'all'])
+  period?: '3m' | '6m' | '12m' | 'all';
 }
 

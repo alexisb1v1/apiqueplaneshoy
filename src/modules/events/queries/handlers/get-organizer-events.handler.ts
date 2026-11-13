@@ -1,7 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, MoreThanOrEqual, Repository } from 'typeorm';
 import { ok, err, Result } from 'neverthrow';
 import { plainToInstance } from 'class-transformer';
 import { AppError } from '../../../../common/errors/app-errors';
@@ -65,8 +65,22 @@ export class GetOrganizerEventsHandler
     }
 
     try {
+      // Cálculo de fecha de corte para el filtro de período (3m por defecto para evitar sobrecarga)
+      const periodParam = query.period || '3m';
+      let minCreatedAt: Date | null = null;
+      if (periodParam !== 'all') {
+        const months = periodParam === '12m' ? 12 : periodParam === '6m' ? 6 : 3;
+        minCreatedAt = new Date();
+        minCreatedAt.setMonth(minCreatedAt.getMonth() - months);
+      }
+
+      const whereCondition: any = { organizerId: user.id };
+      if (minCreatedAt) {
+        whereCondition.createdAt = MoreThanOrEqual(minCreatedAt);
+      }
+
       const events = await this.eventRepository.find({
-        where: { organizerId: user.id },
+        where: whereCondition,
         relations: {
           images: true,
           shows: true,
@@ -304,6 +318,10 @@ export class GetOrganizerEventsHandler
       } else {
         statusLabel = 'En Venta';
       }
+    } else if (event.status === 'observed') {
+      statusLabel = 'Observado';
+    } else if (event.status === 'in_review') {
+      statusLabel = 'En Revisión';
     } else if (event.status === 'completed') {
       statusLabel = 'Finalizado';
     } else if (event.status === 'paused') {
@@ -349,6 +367,7 @@ export class GetOrganizerEventsHandler
         name: event.name,
         category: event.category || 'CONCERTS',
         status: event.status,
+        observationReason: event.observationReason || null,
         isSoldOut,
         statusLabel,
         hasLandingPage: Boolean(event.hasLandingPage),

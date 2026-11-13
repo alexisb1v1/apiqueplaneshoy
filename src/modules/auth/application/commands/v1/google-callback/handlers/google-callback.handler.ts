@@ -125,6 +125,7 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
           const newUser = queryRunner.manager.create(UserEntity, {
             name: googleProfile.name.slice(0, 100),
             email: normalizedEmail,
+            username: normalizedEmail,
             emailVerifiedAt: new Date(),
             passwordHash: null,
             role: 'customer',

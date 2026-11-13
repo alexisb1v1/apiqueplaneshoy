@@ -67,44 +67,50 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
     }
 
     try {
-      event.status = 'published';
+      // Si el rol es admin, aprueba y publica directamente.
+      // Si el rol es promotor/organizador, pasa a 'in_review' para moderación en el Backoffice.
+      event.status = user.role === 'admin' ? 'published' : 'in_review';
       const updatedEvent = await this.eventRepository.save(event);
 
-      // Sincronizar en Meilisearch para búsqueda instantánea
-      this.searchService.indexEvent({
-        id: updatedEvent.id.toString(),
-        publicUuid: updatedEvent.publicUuid,
-        title: updatedEvent.name,
-        slug: updatedEvent.slug,
-        description: updatedEvent.description,
-        category: updatedEvent.category,
-        tags: updatedEvent.tags || [],
-        venue: updatedEvent.venue,
-        address: updatedEvent.address,
-        ubigeoCode: updatedEvent.ubigeoCode,
-        status: updatedEvent.status,
-        minPrice: 0,
-        date: updatedEvent.createdAt ? updatedEvent.createdAt.toISOString() : new Date().toISOString(),
-        hasLandingPage: updatedEvent.hasLandingPage,
-        isFeatured: updatedEvent.isFeatured,
-      }).catch(() => {});
+      // Solo sincronizar en Meilisearch si pasa a published
+      if (updatedEvent.status === 'published') {
+        this.searchService.indexEvent({
+          id: updatedEvent.id.toString(),
+          publicUuid: updatedEvent.publicUuid,
+          title: updatedEvent.name,
+          slug: updatedEvent.slug,
+          description: updatedEvent.description,
+          category: updatedEvent.category,
+          tags: updatedEvent.tags || [],
+          venue: updatedEvent.venue,
+          address: updatedEvent.address,
+          ubigeoCode: updatedEvent.ubigeoCode,
+          status: updatedEvent.status,
+          minPrice: 0,
+          date: updatedEvent.createdAt ? updatedEvent.createdAt.toISOString() : new Date().toISOString(),
+          hasLandingPage: updatedEvent.hasLandingPage,
+          isFeatured: updatedEvent.isFeatured,
+        }).catch(() => {});
+      }
 
-      // Notificación no bloqueante al organizador confirmando evento publicado en vivo
+      // Notificación al organizador
       const publicPath =
         updatedEvent.hasLandingPage && updatedEvent.slug
           ? `/e/${updatedEvent.slug}`
           : `/events/${updatedEvent.publicUuid}`;
 
-      this.mailService
-        .sendEventPublishedEmail({
-          to: user.email,
-          name: user.organizerName || user.name,
-          eventTitle: updatedEvent.name,
-          eventPublicUrl: publicPath,
-          venueName: updatedEvent.venue,
-          category: updatedEvent.category,
-        })
-        .catch(() => {});
+      if (updatedEvent.status === 'published') {
+        this.mailService
+          .sendEventPublishedEmail({
+            to: user.email,
+            name: user.organizerName || user.name,
+            eventTitle: updatedEvent.name,
+            eventPublicUrl: publicPath,
+            venueName: updatedEvent.venue,
+            category: updatedEvent.category,
+          })
+          .catch(() => {});
+      }
 
       return ok(updatedEvent);
     } catch {

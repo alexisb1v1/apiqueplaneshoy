@@ -12,11 +12,17 @@ import { ToggleFavoriteHandler } from '@users/application/commands/v1/toggle-fav
 import { RemoveFavoriteHandler } from '@users/application/commands/v1/remove-favorite/handlers/remove-favorite.handler';
 import { GetUserFavoritesHandler } from '@users/application/queries/v1/get-user-favorites/handlers/get-user-favorites.handler';
 import { GetUserFavoriteIdsHandler } from '@users/application/queries/v1/get-user-favorite-ids/handlers/get-user-favorite-ids.handler';
+import { ListUsersHandler } from '@users/application/queries/v1/list-users/handlers/list-users.handler';
 import { UserFavoritesController } from '@users/interfaces/http/v1/favorites/user-favorites.controller';
+import { ListUsersController } from '@users/interfaces/http/v1/list-users/list-users.controller';
 import { AuthModule } from '@auth/auth.module';
 
 const CommandHandlers = [ToggleFavoriteHandler, RemoveFavoriteHandler];
-const QueryHandlers = [GetUserFavoritesHandler, GetUserFavoriteIdsHandler];
+const QueryHandlers = [
+  GetUserFavoritesHandler,
+  GetUserFavoriteIdsHandler,
+  ListUsersHandler,
+];
 
 @Module({
   imports: [
@@ -30,7 +36,7 @@ const QueryHandlers = [GetUserFavoritesHandler, GetUserFavoriteIdsHandler];
       EventEntity,
     ]),
   ],
-  controllers: [UserFavoritesController],
+  controllers: [UserFavoritesController, ListUsersController],
   providers: [
     {
       provide: 'UserRepository',
@@ -53,4 +59,4 @@ const QueryHandlers = [GetUserFavoritesHandler, GetUserFavoriteIdsHandler];
     TypeormUserFavoriteRepository,
   ],
 })
-export class UsersModule {}
+export class UsersModule { }

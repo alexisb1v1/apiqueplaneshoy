@@ -52,6 +52,7 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
       const savedUser = await this.userRepository.save({
         name,
         email,
+        username: email.toLowerCase().trim(),
         passwordHash,
         role: 'customer',
         isOrganizer: false,

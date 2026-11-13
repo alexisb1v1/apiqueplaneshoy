@@ -1,16 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsIn } from 'class-validator';
 import { Transform } from 'class-transformer';
+
+export type LoginOrigin = 'web' | 'backoffice';
 
 export class LoginUserRequestDto {
   @ApiProperty({
-    description: 'Correo electrónico registrado del usuario',
-    example: 'alexis@queplaneshoy.com',
+    description: 'Nombre de usuario registrado (o correo en usuarios web legacy)',
+    example: 'abasilio',
   })
   @Transform(({ value }) => value?.trim().toLowerCase())
-  @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })
-  @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })
-  email: string;
+  @IsString({ message: 'El nombre de usuario debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El nombre de usuario es obligatorio' })
+  username: string;
 
   @ApiProperty({
     description: 'Contraseña de la cuenta',
@@ -19,4 +21,14 @@ export class LoginUserRequestDto {
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   password: string;
+
+  @ApiPropertyOptional({
+    description: 'Origen de la solicitud de autenticación: web (portal cliente) o backoffice (consola administrativa)',
+    example: 'web',
+    enum: ['web', 'backoffice'],
+    default: 'web',
+  })
+  @IsOptional()
+  @IsIn(['web', 'backoffice'], { message: 'El origen debe ser web o backoffice' })
+  origin?: LoginOrigin = 'web';
 }

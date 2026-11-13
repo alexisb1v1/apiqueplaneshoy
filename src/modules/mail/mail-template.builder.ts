@@ -44,7 +44,7 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
       ? `
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 26px 0 18px 0;">
           <tr>
-            <td align="center" bgcolor="#4F46E5" style="border-radius: 12px;">
+            <td align="center" bgcolor="#F43F5E" style="border-radius: 12px;">
               <a href="${escapeHtml(safeCtaUrl)}" target="_blank" rel="noopener noreferrer"
                  style="display: inline-block; padding: 14px 26px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #FFFFFF; text-decoration: none; border-radius: 12px;">
                 ${escapeHtml(params.ctaLabel)}
@@ -54,7 +54,7 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
         </table>
         <p style="margin: 0 0 18px 0; font-size: 12px; line-height: 1.5; color: #64748B; word-break: break-all;">
           Si el botón no funciona, copia y pega este enlace en tu navegador:<br />
-          <a href="${escapeHtml(safeCtaUrl)}" target="_blank" rel="noopener noreferrer" style="color: #4F46E5; text-decoration: underline;">
+          <a href="${escapeHtml(safeCtaUrl)}" target="_blank" rel="noopener noreferrer" style="color: #F43F5E; text-decoration: underline;">
             ${escapeHtml(safeCtaUrl)}
           </a>
         </p>
@@ -82,11 +82,11 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td align="left" valign="middle">
-                      <span style="display: inline-block; background-color: #4F46E5; color: #FFFFFF; font-weight: 900; font-size: 13px; letter-spacing: -0.5px; padding: 6px 10px; border-radius: 8px; vertical-align: middle;">
+                      <span style="display: inline-block; background-color: #F43F5E; color: #FFFFFF; font-weight: 900; font-size: 13px; letter-spacing: -0.5px; padding: 6px 10px; border-radius: 8px; vertical-align: middle;">
                         QPH
                       </span>
                       <span style="margin-left: 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #FFFFFF; vertical-align: middle;">
-                        queplanes<span style="color: #818CF8;">hoy</span>
+                        queplanes<span style="color: #F43F5E;">hoy</span>
                       </span>
                     </td>
                     <td align="right" valign="middle">
@@ -124,7 +124,7 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
             <tr>
               <td style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 18px 28px; text-align: center;">
                 <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748B;">
-                  ¿Necesitas ayuda? Escríbenos a <a href="mailto:${safeSupportEmail}" style="color: #4F46E5; text-decoration: none; font-weight: 600;">${safeSupportEmail}</a>
+                  ¿Necesitas ayuda? Escríbenos a <a href="mailto:${safeSupportEmail}" style="color: #F43F5E; text-decoration: none; font-weight: 600;">${safeSupportEmail}</a>
                 </p>
                 <p style="margin: 0; font-size: 11px; color: #94A3B8;">
                   © 2026 queplaneshoy. Boletería oficial con verificación criptográfica.

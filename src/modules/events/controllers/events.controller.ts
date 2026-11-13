@@ -42,9 +42,17 @@ import { matchResult } from '@common/http/match-result';
 import { plainToInstance } from 'class-transformer';
 import { EventStatusCronService } from '../services/event-status-cron.service';
 import { EventSeederService } from '../services/event-seeder.service';
+import { EventEntity } from '../domain/entities/event.entity';
 import { SeedEventsRequestDto } from '../dto/seed-events.request.dto';
 import { SeedEventsResponseDto } from '../dto/seed-events.response.dto';
+import { ListEventApprovalsQueryDto } from '../dto/list-event-approvals.query.dto';
+import { ListEventApprovalsResponseDto } from '../dto/list-event-approvals.response.dto';
+import { ObserveEventDto } from '../dto/observe-event.dto';
+import { ListEventApprovalsQuery } from '../queries/impl/list-event-approvals.query';
+import { ApproveEventCommand } from '../commands/impl/approve-event.command';
+import { ObserveEventCommand } from '../commands/impl/observe-event.command';
 import { AdminKeyGuard } from '@common/guards/admin-key.guard';
+import { RolesAdminGuard } from '@common/guards/roles-admin.guard';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Events')
@@ -228,7 +236,7 @@ export class EventsController {
   ): Promise<OrganizerEventResponseDto[]> {
     const publicUuid = req.user?.sub as string;
     const result = await this.queryBus.execute(
-      new GetOrganizerEventsQuery(publicUuid, filters.status, filters.q),
+      new GetOrganizerEventsQuery(publicUuid, filters.status, filters.q, filters.period),
     );
     return matchResult(result, (events) => events);
   }
@@ -257,6 +265,92 @@ export class EventsController {
       new GetOrganizerEventForEditQuery(publicUuid, identifier),
     );
     return matchResult(result, (event) => event);
+  }
+
+  // =========================================================================
+  // ENDPOINTS DE MODERACIÓN Y APROBACIÓN DE EVENTOS (EXCLUSIVO BACKOFFICE)
+  // DEBEN ESTAR ANTES DE @Get(':identifier') PARA EVITAR CAPTURA WILDCARD
+  // =========================================================================
+
+  @Get('approvals')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Listar eventos para moderación de forma ligera y paginada (Backoffice)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista ligera de eventos para aprobación',
+    type: ListEventApprovalsResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Token de autenticación faltante o inválido' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
+  async listEventApprovals(
+    @Query() queryDto: ListEventApprovalsQueryDto,
+  ): Promise<ListEventApprovalsResponseDto> {
+    const result = await this.queryBus.execute(new ListEventApprovalsQuery(queryDto));
+    return matchResult(result, (data: ListEventApprovalsResponseDto) => data, {
+      FORBIDDEN: 'Acceso no permitido',
+      INTERNAL_ERROR: 'Error al consultar aprobaciones de eventos',
+    });
+  }
+
+  @Post(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Aprobar y publicar un evento desde el Backoffice',
+  })
+  @ApiResponse({ status: 200, description: 'Evento aprobado y publicado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async approveEvent(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const adminUser = req.user?.email || (req.user?.sub as string) || 'admin';
+    const result = await this.commandBus.execute(new ApproveEventCommand(id, adminUser));
+    return matchResult(
+      result,
+      (event: EventEntity) => ({
+        message: 'Evento aprobado y publicado exitosamente',
+        eventId: event.id,
+        status: event.status,
+      }),
+      {
+        NOT_FOUND: 'Evento no encontrado',
+        INTERNAL_ERROR: 'Error al aprobar el evento',
+      },
+    );
+  }
+
+  @Post(':id/observe')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Observar un evento para que el promotor corrija detalles',
+  })
+  @ApiResponse({ status: 200, description: 'Evento observado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async observeEvent(
+    @Param('id') id: string,
+    @Body() dto: ObserveEventDto,
+  ) {
+    const result = await this.commandBus.execute(new ObserveEventCommand(id, dto?.reason));
+    return matchResult(
+      result,
+      (event: EventEntity) => ({
+        message: 'Evento observado exitosamente',
+        eventId: event.id,
+        status: event.status,
+      }),
+      {
+        NOT_FOUND: 'Evento no encontrado',
+        INTERNAL_ERROR: 'Error al observar el evento',
+      },
+    );
   }
 
   @Get(':identifier')

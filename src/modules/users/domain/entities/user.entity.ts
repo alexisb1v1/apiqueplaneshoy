@@ -19,8 +19,12 @@ export class UserEntity {
   name: string;
 
   @Index({ unique: true })
-  @Column({ type: 'varchar', length: 150, unique: true, comment: 'Correo electrónico único utilizado para login y notificaciones' })
+  @Column({ type: 'varchar', length: 150, unique: true, comment: 'Correo electrónico único utilizado para notificaciones' })
   email: string;
+
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 100, unique: true, comment: 'Nombre de usuario único utilizado para login en la plataforma y backoffice' })
+  username: string;
 
   @Column({ name: 'email_verified_at', type: 'timestamptz', nullable: true, comment: 'Fecha y hora en que el usuario confirmó su correo electrónico (null si está pendiente de verificación)' })
   emailVerifiedAt: Date | null;

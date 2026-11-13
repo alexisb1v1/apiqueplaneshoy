@@ -109,6 +109,25 @@ export class EventEntity {
   @Column({ type: 'varchar', length: 50, default: 'draft', comment: 'Estado del evento: draft, published, paused, cancelled' })
   status: string;
 
+  @Column({ name: 'observation_reason', type: 'text', nullable: true, comment: 'Motivo o detalle de observación del evento registrado por la administración en el Backoffice' })
+  observationReason: string | null;
+
+  @Column({ name: 'ticketera_fee_snapshot', type: 'jsonb', nullable: true, comment: 'Snapshot inmutable de comisiones y tarifas pactadas por zona congeladas al momento de aprobar el evento (published)' })
+  ticketeraFeeSnapshot: {
+    approvedAt: string;
+    approvedBy?: string;
+    rulesVersion: string;
+    feeRules: Record<string, any>;
+    zones: Array<{
+      zoneId: string;
+      zoneName: string;
+      regularPrice: number;
+      serviceFee: number;
+      feeIncluded: boolean;
+      capacity: number;
+    }>;
+  } | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz', comment: 'Fecha y hora de creación del registro' })
   createdAt: Date;
 

@@ -24,19 +24,29 @@ export class LoginUserHandler implements ICommandHandler<LoginUserCommand> {
   /**
    * Autentica a un usuario verificando sus credenciales de acceso.
    *
-   * @param command - Datos de login del usuario: email y password.
+   * @param command - Datos de login del usuario: username y password.
    * @returns Result con `LoginUserResponseDto` en caso exitoso, o `AppError` en caso de error.
    *
-   * @throws UNAUTHORIZED si el correo no existe o la contraseña no coincide.
+   * @throws UNAUTHORIZED si el usuario no existe o la contraseña no coincide.
    */
   async execute(
     command: LoginUserCommand,
   ): Promise<Result<LoginUserResponseDto, AppError>> {
-    const { email, password } = command.dto;
+    const { username, password, origin = 'web' } = command.dto;
 
-    const user = await this.userRepository.findByEmail(email);
+    const user = await this.userRepository.findByUsername(username);
     if (!user || !user.passwordHash) {
       return err('UNAUTHORIZED');
+    }
+
+    // Regla de segregación de accesos por columna 'role':
+    // 1. Acceso a Backoffice requiere obligatoriamente que role sea 'admin'.
+    // 2. Acceso a Web pública requiere que role no sea 'admin' (usuarios 'customer' / organizadores).
+    if (origin === 'backoffice' && user.role !== 'admin') {
+      return err('FORBIDDEN');
+    }
+    if (origin === 'web' && user.role === 'admin') {
+      return err('FORBIDDEN');
     }
 
     const isPasswordValid = await this.passwordHasher.compare(password, user.passwordHash);

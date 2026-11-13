@@ -18,6 +18,8 @@ import { EventsController } from './controllers/events.controller';
 import { CreateEventHandler } from './commands/handlers/create-event.handler';
 import { UpdateEventHandler } from './commands/handlers/update-event.handler';
 import { PublishEventHandler } from './commands/handlers/publish-event.handler';
+import { ApproveEventHandler } from './commands/handlers/approve-event.handler';
+import { ObserveEventHandler } from './commands/handlers/observe-event.handler';
 import { GetFeaturedEventsHandler } from './queries/handlers/get-featured-events.handler';
 import { GetUpcomingEventsHandler } from './queries/handlers/get-upcoming-events.handler';
 import { GetWeeklyFeaturedEventsHandler } from './queries/handlers/get-weekly-featured-events.handler';
@@ -26,11 +28,18 @@ import { GetEventLandingHandler } from './queries/handlers/get-event-landing.han
 import { GetEventDetailHandler } from './queries/handlers/get-event-detail.handler';
 import { GetOrganizerEventsHandler } from './queries/handlers/get-organizer-events.handler';
 import { GetOrganizerEventForEditHandler } from './queries/handlers/get-organizer-event-for-edit.handler';
+import { ListEventApprovalsHandler } from './queries/handlers/list-event-approvals.handler';
 import { EventStatusCronService } from './services/event-status-cron.service';
 import { EventSeederService } from './services/event-seeder.service';
 import { AdminKeyGuard } from '@common/guards/admin-key.guard';
 
-const CommandHandlers = [CreateEventHandler, UpdateEventHandler, PublishEventHandler];
+const CommandHandlers = [
+  CreateEventHandler,
+  UpdateEventHandler,
+  PublishEventHandler,
+  ApproveEventHandler,
+  ObserveEventHandler,
+];
 const QueryHandlers = [
   GetFeaturedEventsHandler,
   GetUpcomingEventsHandler,
@@ -40,6 +49,7 @@ const QueryHandlers = [
   GetEventDetailHandler,
   GetOrganizerEventsHandler,
   GetOrganizerEventForEditHandler,
+  ListEventApprovalsHandler,
 ];
 
 @Module({

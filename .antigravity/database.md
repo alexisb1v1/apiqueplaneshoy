@@ -42,10 +42,11 @@ erDiagram
         int id PK
         uuid public_uuid UK "Identificador publico"
         varchar name "Nombre completo"
-        varchar email UK "Email unico"
+        varchar email UK "Email unico para notificaciones"
+        varchar username UK "Usuario unico para login en plataforma y backoffice"
         timestamptz email_verified_at "Email verificado"
         varchar password_hash "Bcrypt hash"
-        varchar role "customer o admin"
+        varchar role "customer o admin (admin accede a Backoffice)"
         boolean is_organizer "Perfil promotor"
         varchar organizer_name "Nombre comercial"
         varchar organizer_document_type "DNI RUC CE"
@@ -118,7 +119,9 @@ erDiagram
         int user_ticket_limit "Limite boletos usuario"
         varchar signing_key_id "ID llaves"
         text signing_public_key "Llave publica Ed25519"
-        varchar status "draft published"
+        varchar status "draft in_review published observed paused cancelled"
+        text observation_reason "Motivo o feedback de observacion"
+        jsonb ticketera_fee_snapshot "Snapshot de comisiones y tarifas"
         timestamptz created_at "Fecha creacion"
     }
 
@@ -368,9 +371,15 @@ erDiagram
 * **`user_ticket_limit`** (`integer`, default 6): Límite global acumulado de entradas por usuario en todo el evento (Regla 1: Por Evento).
 * **`signing_key_id`** (`varchar(64)`): Identificador del par de llaves criptográficas del evento para rotación y revocación.
 * **`signing_public_key`** (`text`, NULL): Llave pública asimétrica (Ed25519) del evento descargada por los escáneres de puerta para validación offline.
-* **`status`** (`varchar(50)`, INDEX): Estado (`draft`, `published`, `paused`, `completed`, `cancelled`). La transición a `completed` se procesa automáticamente a la 1:00 AM por la tarea Cron programada cuando todas las funciones del evento han culminado.
+* **`status`** (`varchar(50)`, INDEX): Estado (`draft`, `in_review`, `published`, `observed`, `paused`, `completed`, `cancelled`). La transición a `completed` se procesa automáticamente a la 1:00 AM por la tarea Cron programada cuando todas las funciones del evento han culminado.
+* **`observation_reason`** (`text`, NULL): Motivo o feedback emitido por la administración desde el Backoffice cuando el evento pasa a `observed`.
+* **`ticketera_fee_snapshot`** (`jsonb`, NULL): Snapshot inmutable de la regla matriz de comisiones `QPH_FEE_RULES` y las tarifas pactadas por cada zona al momento de aprobar y publicar el evento (`published`).
 * **`created_at`** (`timestamptz`): Fecha de creación del registro.
-* **Índices:** `is_featured` (para cartelera destacada), `status`, `category`, `age_restriction`, `has_landing_page`, `organizer_id` e Índice Compuesto `(status, name)` para optimizar el buscador público de eventos.
+* **Índices de Optimización:**
+  * `(status, created_at DESC)`: B-Tree para el listado paginado y filtros del Backoffice.
+  * `idx_events_name_gin_trgm`: GIN con `pg_trgm` sobre `LOWER(name)`.
+  * `idx_events_venue_gin_trgm`: GIN con `pg_trgm` sobre `LOWER(venue)`.
+  * `is_featured`, `status`, `category`, `age_restriction`, `has_landing_page`, `organizer_id`.
 
 #### Tabla: `shows`
 *Funciones u horarios específicos de un evento (permite fechas múltiples).*
