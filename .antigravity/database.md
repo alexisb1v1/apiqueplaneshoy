@@ -12,6 +12,7 @@ Este documento contiene la arquitectura de datos, diagrama entidad-relación (ER
 erDiagram
     USERS ||--o{ SOCIAL_IDENTITIES : "vincula"
     USERS ||--o{ USER_FAVORITE_EVENTS : "guarda favoritos"
+    USERS ||--o{ ORGANIZER_BANK_ACCOUNTS : "registra cuentas"
     USERS ||--o{ EVENTS : "organiza"
     USERS ||--o{ ORDERS : "compra"
     USERS ||--o{ TICKETS : "posee"
@@ -24,6 +25,7 @@ erDiagram
     EVENTS ||--o{ SHOWS : "programa"
     EVENTS ||--o{ ZONES : "define aforo y precio"
     EVENTS ||--o{ COUPONS : "aplica cupones"
+    EVENTS ||--o{ ORDERS : "recibe ordenes"
     EVENTS ||--o{ EVENT_ADVANCES : "otorga anticipos"
     EVENTS ||--o| EVENT_SETTLEMENTS : "liquida 1 a 1"
 
@@ -69,6 +71,25 @@ erDiagram
         timestamptz created_at "Fecha guardado"
     }
 
+    ORGANIZER_BANK_ACCOUNTS {
+        bigint id PK
+        uuid public_uuid UK "Identificador publico"
+        int user_id FK "Organizador id"
+        varchar bank_name "BCP BBVA Interbank"
+        varchar account_type "savings checking"
+        varchar currency "PEN USD"
+        varchar account_number "Numero cuenta"
+        varchar cci "Codigo CCI 20 digitos"
+        varchar holder_name "Titular o razon social"
+        varchar holder_document_type "DNI RUC CE"
+        varchar holder_document_number "Numero documento"
+        boolean is_default "Cuenta principal"
+        boolean is_active "Estado activo"
+        timestamptz verified_at "Verificacion KYC bancaria"
+        timestamptz created_at "Fecha creacion"
+        timestamptz updated_at "Fecha actualizacion"
+    }
+
     EVENTS {
         bigint id PK
         uuid public_uuid UK "Identificador publico"
@@ -84,6 +105,8 @@ erDiagram
         varchar terms_and_conditions_url "Terminos PDF URL"
         jsonb faqs "Preguntas frecuentes"
         jsonb landing_config "Configuracion landing: header body footer theme con color o patron tile"
+        varchar promo_video_url "URL video promocional"
+        jsonb social_links "Redes sociales oficiales del evento"
         varchar ubigeo_code "Codigo ubigeo INEI 6 digitos"
         varchar venue "Local recinto"
         varchar address "Direccion fisica"
@@ -132,6 +155,7 @@ erDiagram
         int locked_count "Apartados en checkout"
         decimal regular_price "Precio lista taquilla"
         decimal service_fee "Comision ticketera"
+        boolean fee_included "Precio incluye comision"
         int max_tickets_per_order "Maximo por orden"
         timestamptz sales_start_at "Inicio de venta"
     }
@@ -171,6 +195,7 @@ erDiagram
         bigint id PK
         uuid public_uuid UK "Token checkout publico"
         int user_id FK "Comprador id"
+        bigint event_id FK "Evento id"
         bigint coupon_id FK "Cupon aplicado id"
         varchar status "pending paid expired"
         decimal subtotal_tickets "Subtotal boletos"
@@ -203,6 +228,7 @@ erDiagram
         bigint order_id FK "Orden id"
         varchar payment_method "Metodo de pago"
         decimal amount "Monto procesado"
+        decimal gateway_fee_amount "Comision pasarela"
         varchar status "pending approved rejected"
         varchar external_transaction_id "ID pasarela externa"
         jsonb gateway_response "Payload crudo pasarela"
@@ -290,6 +316,25 @@ erDiagram
 * **`created_at`** (`timestamptz`): Fecha y hora en que se agregó a favoritos.
 * **Índice Compuesto Único:** `(user_id, event_id)` para impedir guardar duplicados del mismo evento.
 
+#### Tabla: `organizer_bank_accounts`
+*Cuentas bancarias registradas por los organizadores para recibir adelantos y liquidaciones.*
+* **`id`** (`bigint`, PK): Identificador interno autoincremental de la cuenta bancaria.
+* **`public_uuid`** (`uuid`, UNIQUE, INDEX): Identificador público UUID de la cuenta bancaria.
+* **`user_id`** (`integer`, FK -> `users.id`, INDEX): Usuario organizador propietario.
+* **`bank_name`** (`varchar(100)`): Entidad bancaria (ej: `BCP`, `BBVA`, `Interbank`, `Scotiabank`).
+* **`account_type`** (`varchar(30)`, default `'checking'`): Tipo de cuenta (`savings` o `checking`).
+* **`currency`** (`varchar(10)`, default `'PEN'`): Moneda (`PEN` o `USD`).
+* **`account_number`** (`varchar(50)`): Número de cuenta bancaria local.
+* **`cci`** (`varchar(50)`, NULL): Código de Cuenta Interbancario (CCI de 20 dígitos en Perú).
+* **`holder_name`** (`varchar(150)`): Titular o razón social de la cuenta bancaria.
+* **`holder_document_type`** (`varchar(20)`, NULL): Tipo de documento del titular (`DNI`, `RUC`, `CE`).
+* **`holder_document_number`** (`varchar(20)`, NULL): Número de documento del titular.
+* **`is_default`** (`boolean`, default false, INDEX): Cuenta predeterminada para desembolsos.
+* **`is_active`** (`boolean`, default true): Estado activo de la cuenta.
+* **`verified_at`** (`timestamptz`, NULL): Fecha de verificación administrativa de titularidad bancaria.
+* **`created_at`** (`timestamptz`): Fecha de registro.
+* **`updated_at`** (`timestamptz`): Fecha de última actualización.
+
 ---
 
 ### 2.2 Módulo: Eventos (`events`)
@@ -300,6 +345,7 @@ erDiagram
 * **`public_uuid`** (`uuid`, UNIQUE, INDEX): UUID público para URLs de detalle (`/events/:uuid`), vistas previas secretas y consumo seguro en APIs móviles.
 * **`slug`** (`varchar(150)`, UNIQUE, INDEX): Cadena alfanumérica amigable para la URL pública del evento en el navegador y posicionamiento en Google (ej: `corazon-serrano-pucallpa-2026`).
 * **`has_landing_page`** (`boolean`, default false, INDEX): Indicador de si el evento tiene activada la experiencia de Landing Page inmersiva y personalizada (`true`) o se muestra con la plantilla estándar de cartelera (`false`).
+* **`is_featured`** (`boolean`, default false, INDEX): Indicador de si el evento está seleccionado como destacado (*Featured*) para exhibirse en el Hero Carousel principal y en las secciones destacadas de la portada web y móvil (`GET /api/v1/events/featured`). Indexado para consultas de alto rendimiento y sincronizado con Meilisearch.
 * **`organizer_id`** (`integer`, FK -> `users.id`, INDEX): Usuario responsable del evento (promotor).
 * **`name`** (`varchar(255)`, INDEX): Título comercial del evento.
 * **`category`** (`varchar(50)`, INDEX): Clasificación oficial normalizada por `EVENT_CATEGORIES`: `CONCERTS` (Conciertos 🎵), `THEATER` (Teatro & Musicales 🎭), `SPORTS` (Deportes ⚽), `FESTIVALS` (Festivales 🎪), `COMEDY` (Comedia & Stand Up 🎤), `GASTRONOMY` (Gastronomía 🍔).
@@ -309,6 +355,8 @@ erDiagram
 * **`terms_and_conditions_url`** (`varchar(512)`, NULL): Enlace web o documento PDF oficial descargable con las bases y condiciones legales del evento.
 * **`faqs`** (`jsonb`, NULL): Arreglo estructurado de preguntas frecuentes del evento en formato `[{"question": "...", "answer": "..."}]`.
 * **`landing_config`** (`jsonb`, NULL): Configuración completa de assets y textos para la Landing Page personalizada del evento (incluye `header` con imagen/video teaser y CTA, `body` con banner y 3 atractivos comerciales, `footer` con imagen, redes y auspiciadores, y `theme` con selección de `backgroundType` ('color' o 'pattern'), `backgroundColor` sólido o `backgroundPatternUrl` repetido en mosaico).
+* **`promo_video_url`** (`varchar(512)`, NULL): Enlace web del video promocional o teaser oficial del evento (YouTube, Vimeo o archivo MP4/WebM directo en CDN).
+* **`social_links`** (`jsonb`, NULL): Enlaces a redes sociales oficiales del evento (`{"instagramUrl": "...", "facebookUrl": "...", "tiktokUrl": "..."}`), configurables desde la fase Multimedia & Portada e integrados en el evento y su landing page.
 * **`ubigeo_code`** (`varchar(6)`, NULL): Código de ubigeo oficial INEI de 6 dígitos (departamento, provincia y distrito normalizados según la librería `ubigeo-peru`, eliminando redundancias de texto libre).
 * **`venue`** (`varchar(255)`, NULL): Nombre del local o recinto (ej: "Explanada del Estadio", "Teatro Municipal").
 * **`address`** (`varchar(255)`, NULL): Dirección física exacta.
@@ -322,7 +370,7 @@ erDiagram
 * **`signing_public_key`** (`text`, NULL): Llave pública asimétrica (Ed25519) del evento descargada por los escáneres de puerta para validación offline.
 * **`status`** (`varchar(50)`, INDEX): Estado (`draft`, `published`, `paused`, `completed`, `cancelled`). La transición a `completed` se procesa automáticamente a la 1:00 AM por la tarea Cron programada cuando todas las funciones del evento han culminado.
 * **`created_at`** (`timestamptz`): Fecha de creación del registro.
-* **Índice Compuesto:** `(status, name)` para optimizar el buscador público de eventos.
+* **Índices:** `is_featured` (para cartelera destacada), `status`, `category`, `age_restriction`, `has_landing_page`, `organizer_id` e Índice Compuesto `(status, name)` para optimizar el buscador público de eventos.
 
 #### Tabla: `shows`
 *Funciones u horarios específicos de un evento (permite fechas múltiples).*
@@ -350,6 +398,7 @@ erDiagram
 * **`locked_count`** (`integer`, default 0): Cantidad de boletos retenidos temporalmente en sesiones activas de checkout (se incrementa al reservar y se decrementa al pagar o expirar).
 * **`regular_price`** (`decimal(10,2)`): **Precio oficial de venta general de la localidad (precio de lista / taquilla)**. Es el precio que se cobra cuando no hay preventas activas o cuando todas se han agotado, y sirve como precio tachado de referencia durante promociones.
 * **`service_fee`** (`decimal(10,2)`): Cargo por servicio de la ticketera por boleto.
+* **`fee_included`** (`boolean`, default false): Indica si el precio ingresado incluye la comisión de ticketera (`true` → se descuenta del promotor; `false` → se suma al precio final que paga el comprador).
 * **`max_tickets_per_order`** (`integer`, default 4): Cantidad máxima de entradas de esta zona que un cliente puede comprar en una sola transacción/orden (Regla 2: Por Orden).
 * **`sales_start_at`** (`timestamptz`, NULL): Fecha y hora en que inicia la venta de entradas de esta zona.
 * **`created_at`** (`timestamptz`): Fecha de creación.
@@ -411,6 +460,7 @@ erDiagram
 * **`id`** (`bigint`, PK): Identificador de la orden.
 * **`public_uuid`** (`uuid`, UNIQUE, INDEX): Token de orden compartido con el checkout (`/checkout/:public_uuid`).
 * **`user_id`** (`integer`, FK -> `users.id`, INDEX): Comprador titular.
+* **`event_id`** (`bigint`, FK -> `events.id`, NULL, INDEX): Evento al que corresponde la orden de compra.
 * **`coupon_id`** (`bigint`, FK -> `coupons.id`, NULL, INDEX): Cupón de descuento aplicado a la orden (si corresponde).
 * **`status`** (`varchar(50)`, INDEX): Estado (`pending`, `paid`, `expired`, `cancelled`, `refunded`).
 * **`subtotal_tickets`** (`decimal(10,2)`): Suma de precios base de los tickets adquiridos.
@@ -448,6 +498,7 @@ erDiagram
 * **`order_id`** (`bigint`, FK -> `orders.id`, INDEX): Orden a la que liquida.
 * **`payment_method`** (`varchar(50)`): Método (`credit_card`, `stripe`, `paypal`, `yape`, `niubiz`, `culqi`).
 * **`amount`** (`decimal(10,2)`): Importe procesado.
+* **`gateway_fee_amount`** (`decimal(10,2)`, default 0.00): Comisión cobrada por la pasarela externa en esta transacción.
 * **`status`** (`varchar(50)`, INDEX): Estado (`pending`, `approved`, `rejected`, `refunded`).
 * **`external_transaction_id`** (`varchar(255)`, NULL, INDEX): Referencia de la pasarela externa.
 * **`gateway_response`** (`jsonb`, NULL): Payload y respuesta completa en formato JSON devuelta por la pasarela de pagos para auditoría financiera, trazabilidad de errores bancarios y soporte ante contracargos (*chargebacks*).

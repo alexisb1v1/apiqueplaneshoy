@@ -147,7 +147,16 @@ sequenceDiagram
 ```
 
 ### 3.2 Reglas de Negocio en la Configuración:
-* **Precio Regular de la Zona (`zones.regular_price`):** Es la tarifa de lista oficial en Soles (S/.) y permanece perenne. En las tarjetas de zonas, el nombre del sector se presenta en un **badge con el color HEX** configurado, el título comercial de la zona se resalta visualmente con sus beneficios abajo, y se expone la comisión de ticketera (10%) y el IGV incluido (18%). Se permite duplicar cualquier zona con un solo clic.
+* **Precio Regular de la Zona (`zones.regular_price`):** Es la tarifa de lista oficial en Soles (S/.) y permanece perenne. En las tarjetas de zonas, el nombre del sector se presenta en un **badge con el color HEX** configurado y el título comercial de la zona se resalta visualmente con sus beneficios.
+* **Escala Oficial Automatizada de Comisión QuePlanesHoy:**
+  - **Hasta S/ 50.00:** S/ 6.00 fijos por entrada.
+  - **De S/ 51.00 a S/ 125.00:** S/ 10.00 fijos por entrada.
+  - **A partir de S/ 126.00:** 8% del precio por entrada (`Math.round(precio * 0.08 * 100) / 100`).
+  - **Tarifa Final:** Visualización dinámica en drawer que recalcula el importe final al público según la inclusión o no de la comisión.
+  - **Modal Informativo de Tarifario:** Ventana explicativa disponible en el asistente de creación de zonas.
+  - **Ocultamiento del Input en Creación:** El promotor no edita la comisión; en el drawer de zonas solo ingresa Aforo y Precio Regular.
+  - **Modal de Etapa de Aprobación & Liquidación:** Al pulsar "Publicar Evento", se abre un modal de aprobación donde se desglosan oficialmente las zonas, el precio al comprador, la comisión oficial calculada y la recaudación neta estimada que recibirá el promotor antes de dar el pase a producción.
+  - **Modalidad de Comisión (`zones.fee_included`):** Si está activado, la comisión oficial se descuenta del monto a liquidar al promotor; si está desactivado, la comisión se suma al precio final que abona el comprador.
 * **Preventas Escalonadas (`zone_pricing_tiers`):** Hasta 3 preventas por zona ordenadas por `tier_number ASC`. El precio promocional debe ser estrictamente menor que `regular_price` y la suma de cupos de preventa no puede exceder el `capacity` total de la zona.
 * **Shows y Funciones (`shows`):** Cada función se lista a razón de 1 por fila con un cuadro de calendario (`OCT 15`), hora de inicio, solo hora de cierre de venta de boletos, duración estimada del show en horas enteras (`duration_hours`), aforo asignado y opción de duplicar show con 1 clic.
 * **Multimedia, Galería Oficial y Cloudflare R2:** Organización en 2 filas visuales:
@@ -211,6 +220,10 @@ sequenceDiagram
 ```
 
 * **Control de Autorización (BOLA / OWASP API1):** El endpoint `/api/events/:id/publish` valida que el `organizer_id` del evento coincida obligatoriamente con el usuario autenticado en el token JWT (o rol `admin`).
+* **Edición y Actualización de Borradores (`GET /api/events/organizer/:identifier/edit` y `PUT /api/events/:id`):**
+  * `GET /api/events/organizer/:identifier/edit`: Retorna la estructura editable completa del evento (ficha, ubicación, shows, zonas con pricing tiers, cupones, imágenes de galería, FAQs y landing page), permitiendo a los promotores recuperar borradores pendientes incluso cuando `status = 'draft'`. Protegido estrictamente con `JwtAuthGuard` y validación de propiedad (*Ownership Check*).
+  * `PUT /api/events/:id`: Endpoint atómico para actualizar la información del evento, sincronizar funciones de shows, reemplazar zonas y preventas escalonadas, actualizar cupones e imágenes, e invalidar de forma automática las claves de caché de Redis asociadas (`qph:events:detail:*`, `qph:events:landing:*`, `qph:home:*`).
+  * En el frontend, el acceso se realiza a través de la ruta dinámica `/organizer/events/[id]/edit`, vinculada al botón **"Editar Borrador"** de la lista de eventos (`/organizer/events`).
 * **Experiencia de Usuario (Lazy Authentication):** La ruta `/organizer/events/new` no fuerza redirecciones inmediatas al login, permitiendo a visitantes anónimos probar el creador de espectáculos y asegurando los datos en `localStorage` antes de solicitar el inicio de sesión.
 
 ---
@@ -244,6 +257,38 @@ Controla la alta concurrencia mediante doble ventana temporal (10 min en backend
 * **15 Minutos (`14:59` en Checkout + `CULQI_ORDER_EXPIRATION_SECONDS=900`):** Ventana persistente en `sessionStorage` del navegador (resiste recargas F5 y redirección de login) acompañada del bloqueo temporal `locked` en PostgreSQL y liberación automática cada 60s vía `OrderExpirationCronService`.
 * **Reintento tras Rechazo Bancario:** Si una tarjeta es rechazada en `/confirm-charge`, los tickets permanecen reservados (`pending`/`locked`) hasta la expiración, permitiendo reintentar con otro medio de pago (Yape, otra tarjeta o PagoEfectivo).
 
+```mermaid
+flowchart TD
+    subgraph Frontend["1. Frontend (Navegador Comprador)"]
+        F1["Inicio en Checkout (/checkout)"] --> F2["Cronómetro 15:00 min (sessionStorage)"]
+        F2 -->|"Paso 1 y 2"| F3["Selección de entradas y datos de compra"]
+        F3 -->|"Paso 3"| F4["Apertura Modal Culqi Checkout Custom"]
+    end
+
+    subgraph Backend["2. Backend NestJS & PostgreSQL (Reserva Atómica)"]
+        B1["POST /api/orders/culqi/prepare"] --> B2["Bloqueo atómico: SELECT ... FOR UPDATE"]
+        B2 --> B3["Crea orden: status='pending', expires_at = NOW() + 15 min (900s)"]
+        B3 --> B4["Tickets reservados: status='locked', locked_until = NOW() + 15 min"]
+    end
+
+    subgraph CulqiGateway["3. Pasarela Culqi API v2"]
+        C1["POST /v2/orders (Culqi Order)"] --> C2["Ventana de Pago: Tarjetas / Yape QR / PagoEfectivo CIP"]
+    end
+
+    subgraph WorkerCron["4. Worker de Expiración (OrderExpirationCronService)"]
+        W1["Ejecución periódica cada 60 segundos"] --> W2{"¿Orden pendiente con expires_at < NOW()?"}
+        W2 -->|"Sí y no pagada en Culqi"| W3["Transacción atómica de expiración"]
+        W3 --> W4["orders.status = 'expired'<br/>zones.locked_count -= qty<br/>tiers.locked_count -= qty<br/>tickets.status = 'available'"]
+        W4 --> W5["Stock recuperado y disponible nuevamente en cartelera"]
+        W2 -->|"No vencida o pagada"| W6["Continúa auditoría periódica"]
+    end
+
+    F4 --> B1
+    B3 --> C1
+    F4 -.->|"Cierre manual sin pagar"| B5["POST /api/orders/culqi/cancel/:uuid ➔ Libera stock inmediato"]
+    C2 -.->|"Si vence ventana de 15 min"| W1
+```
+
 ### 4.2 Diagrama de Secuencia
 
 ```mermaid
@@ -253,71 +298,103 @@ sequenceDiagram
     participant Web as Web Clientes (Next.js)
     participant API as Backend NestJS
     participant DB as PostgreSQL
-    participant Gateway as Pasarela (Niubiz/Mercado Pago/Stripe)
+    participant Culqi as Pasarela Culqi (API v2 / Culqi Checkout)
 
     Cliente->>Web: Selecciona Zona y Cantidad (ej: 2 VIP)
-    Web->>API: POST /api/orders/draft { show_uuid, zone_uuid, quantity: 2 }
-    activate API
-
-    API->>DB: 1. Valida límite por compra: quantity <= zone.max_tickets_per_order
-    API->>DB: 2. Valida límite acumulado por usuario en el evento: (previos_pagados + total_order_tickets) <= event.user_ticket_limit
-    Note over API,DB: Si excede cualquiera ➔ Rechaza con 400 Bad Request (TICKET_LIMIT_EXCEEDED)
-
-    API->>DB: 3. Determina tarifa vigente de la zona
-    Note over API,DB: Busca zone_pricing_tiers activos por tier_number ASC.<br/>Si Tier 1 vigente ➔ Cobra tier1.price.<br/>Si no hay tiers vigentes ➔ Cobra zone.regular_price.
-
-    API->>DB: 4. SELECT FOR UPDATE tickets disponibles
-    Note over API,DB: Bloqueo atómico de inventario<br/>status='locked', locked_until=now() + 10 min
-    DB->>DB: INSERT INTO orders (status='pending', expires_at=now() + 10 min, subtotal_tickets, total_amount)
-    API-->>Web: 201 Created { order_token, expires_at, total_amount, gateway_session_limit: 300s }
-    deactivate API
-
     Web->>Cliente: Muestra pantalla de checkout con resumen de compra
 
-    opt Validación Interactiva de Cupón de Descuento (Paso 1 y Paso 2 en Frontend)
+    opt Validación Interactiva de Cupón de Descuento
         Cliente->>Web: Ingresa código de cupón (ej: "CYBER2026")
         Web->>API: POST /api/orders/validate-coupon { eventId, code: 'CYBER2026', subtotal }
         activate API
         API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:code)
-        API->>API: Evalúa Matriz de 6 Casos (Ciclo de Vida x Tipo de Descuento):
-        Note over API: 1. single_use: Valida used_count < 1<br/>2. reusable: Valida used_count < max_uses (si max_uses != null)<br/>3. vigencia: Valida starts_at <= NOW() <= expires_at<br/>4. Reglas base: is_active == true y subtotal >= min_order_amount<br/>5. Tipo Porcentaje: subtotal * (discount_value / 100)<br/>6. Tipo Monto Fijo: min(subtotal, discount_value) con piso cero
-        API-->>Web: 200 OK { code, discountType, discountValue, discountAmount, newTotal, message }
+        API->>API: Evalúa reglas (vigencia, single_use/reusable, min_amount)
+        API-->>Web: 200 OK { code, discountAmount, newTotal }
         deactivate API
-        Web-->>Cliente: Despliega badge verde y desglose con descuento reflejado
+        Web-->>Cliente: Despliega badge verde y total recalculado
     end
 
-    Cliente->>Web: Selecciona medio de pago ("Tarjeta", "Yape/Plin", etc.) y confirma
-    
-    Note over Web,API: Integración activa con Culqi Checkout Custom (js.culqi.com/checkout-js) + API v2 (/v2/orders, /v2/charges, Culqi3DS) y Webhooks verificados.
+    Cliente->>Web: Selecciona medio de pago y confirma ("Pagar Entradas")
     Web->>API: POST /api/orders/culqi/prepare { eventId, showId, items, paymentMethod, couponCode }
     activate API
     API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
-    API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
-    opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
-        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
-        Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions.
-        alt Cupón Expirado o Inactivo
-            API->>DB: ROLLBACK TRANSACTION
-            API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
-        else Cupón Válido y Vigente
-            API->>API: Recalcula y aplica discountAmount
-            API->>DB: UPDATE coupons SET used_count = used_count + 1
-        end
+    API->>DB: 1. SELECT ... FOR UPDATE en zones y zone_pricing_tiers (aforo disponible)
+    API->>DB: 2. Valida límite global (event.user_ticket_limit) y por orden (zone.max_tickets_per_order)
+
+    opt Si incluye cupón (Doble Check Concurrente)
+        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId FOR UPDATE
+        Note over API,DB: Bloqueo pesimista de fila para evitar race conditions
     end
-    API->>DB: 2. INSERT INTO orders (status='paid'), INSERT INTO payments (status='approved'), INSERT tickets
+
+    API->>DB: 3. INSERT INTO orders (status='pending', expires_at = NOW() + 15 min)
+    API->>DB: 4. UPDATE tickets SET status='locked', locked_until = NOW() + 15 min
+    API->>Culqi: POST /v2/orders (Genera orden Culqi con metadata de auditoría)
+    Culqi-->>API: 201 Created { id: 'ord_live_...', payment_code }
     API->>DB: COMMIT TRANSACTION EN POSTGRESQL
-    API-->>Web: 200 OK SimulateOrderCheckoutResponseDto
+    API-->>Web: 201 Created { orderId, orderPublicUuid, culqiOrderId, expiresAt }
     deactivate API
 
-    else Orden Expirada Tardíamente (CANDADO 3: status == 'expired')
-        Note over API,Gateway: La reserva de 10 min venció y el stock ya se liberó.<br/>¡CERO SOBREVENTA! El backend no genera boletos.
-        API->>Gateway: POST /refunds { transaction_id, reason: 'ORDER_EXPIRED_TIMEOUT' }
-        Gateway-->>API: Reembolso confirmado
-        API->>DB: INSERT INTO payments (status='refunded', gateway_response=JSONB)
-        API->>Cliente: Correo: "Tu compra expiró por tiempo. El dinero fue reembolsado a tu tarjeta"
-        API-->>Gateway: 200 OK (Webhook procesado con reembolso)
+    Web->>Culqi: Abre Modal Culqi Checkout Custom (js.culqi.com/checkout-js)
+    Cliente->>Culqi: Ingresa datos de pago (Tarjeta / Yape QR / PagoEfectivo)
+
+    alt Caso A: Pago Inmediato con Tarjeta (Tokenización)
+        Culqi-->>Web: Retorna token { id: 'tkn_live_...' }
+        Web->>API: POST /api/orders/culqi/confirm-charge { orderPublicUuid, token, deviceId }
+        activate API
+        API->>Culqi: POST /v2/charges { amount, currency: 'PEN', source_id: token, metadata }
+        
+        alt Cargo Aprobado en Culqi
+            Culqi-->>API: 201 Created { id: 'chr_live_...', outcome: { type: 'venta_exitosa' } }
+            API->>DB: INICIA TRANSACCIÓN ATÓMICA
+            API->>DB: UPDATE orders SET status='paid'
+            API->>DB: UPDATE tickets SET status='sold', qr_code = :signedQrPayload
+            API->>DB: UPDATE zones SET sold_count = sold_count + :qty, locked_count = locked_count - :qty
+            opt Si tenía cupón
+                API->>DB: UPDATE coupons SET used_count = used_count + 1
+            end
+            API->>DB: INSERT INTO payments (status='approved', external_transaction_id, gateway_response)
+            API->>DB: COMMIT TRANSACTION
+            API->>API: Despacha correo asíncrono con entradas PDF y QR
+            API-->>Web: 200 OK { status: 'PAID', tickets: [...] }
+            Web-->>Cliente: PANTALLA VERDE: ¡Compra Exitosa! Entradas listas en /my-tickets
+        else Desafío 3D Secure Requerido (REQUIRES_3DS)
+            Culqi-->>API: 402 Payment Required { action_code: 'REQUIRES_3DS', parameters: { 3DS: { url } } }
+            API-->>Web: 402 { code: 'REQUIRES_3DS', authUrl }
+            Web->>Culqi: Invoca Culqi3DS.initAuthentication(...)
+            Cliente->>Culqi: Completa autenticación bancaria OTP/3DS
+            Web->>API: Reintenta POST /api/orders/culqi/confirm-charge con authentication_3DS
+        else Cargo Rechazado por Banco (Fondos insuficientes / Bloqueo)
+            Culqi-->>API: 402 Declined { user_message: 'Fondos insuficientes' }
+            API-->>Web: 400 Bad Request { error: 'PAYMENT_DECLINED', message: '...' }
+            Note over Web,Cliente: Los tickets siguen reservados (status='locked').<br/>El usuario puede reintentar con otra tarjeta o Yape dentro de los 15 min.
+        end
+        deactivate API
+
+    else Caso B: Pago Asíncrono (Yape / Billetera QR / PagoEfectivo CIP)
+        Culqi-->>Web: Muestra código CIP / QR de Yape en pantalla
+        Cliente->>Culqi: Paga desde app bancaria o billetera
+        Culqi->>API: POST /api/webhooks/culqi (Webhook servidor a servidor con Basic Auth)
+        activate API
+        API->>Culqi: GET /v2/orders/:id (Verificación activa de autenticidad del pago)
+        alt Pago Verificado en Culqi API
+            API->>DB: Finaliza orden idempotentemente (status='paid', emite tickets QR)
+            API-->>Culqi: 200 OK (Webhook recibido)
+            Web->>API: Polling GET /api/orders/culqi/status/:uuid
+            API-->>Web: 200 OK { status: 'paid' }
+            Web-->>Cliente: Pantalla de Éxito y confirmación inmediata
+        else Webhook Vencido o Inválido
+            API-->>Culqi: 400 Bad Request
+        end
+        deactivate API
+
+    else Caso C: Abandono o Cierre sin Pagar
+        Cliente->>Web: Cierra modal o pulsa "Cancelar Compra"
+        Web->>API: POST /api/orders/culqi/cancel/:orderPublicUuid
+        activate API
+        API->>DB: Libera reserva anticipadamente (tickets='available', locked_count -= qty)
+        API-->>Web: 200 OK { message: 'ORDER_CANCELLED' }
+        deactivate API
     end
-    deactivate API
 ```
 
 ### 4.3 Ciclo de Liberación Dinámica de Stock y Reactivación Automática
@@ -895,6 +972,20 @@ Módulo global (`@Global()`) ubicado en `src/modules/mail/` encargado de despach
   * `sendOrganizerKycVerifiedEmail`: plantilla lista para aprobación administrativa KYC de la productora.
   * `sendEventPublishedEmail`: confirmación automática al promotor cuando publica un evento (`PublishEventHandler`) con el enlace público (`/e/:slug` o `/events/:uuid`).
   * `sendAdvancePaidEmail` y `sendSettlementPaidEmail`: plantillas listas para notificar desembolsos bancarios de anticipos y cierre contable de liquidación final.
+
+---
+
+## 16. Panel del Organizador: Listado Real de Mis Eventos (`GET /api/events/organizer`)
+
+Endpoint protegido con `JwtAuthGuard` en `EventsController` (ubicado antes de `GET /api/events/:identifier` para evitar colisión de rutas) atendido por `GetOrganizerEventsHandler`:
+
+1. **Aislamiento de Propietario (BOLA - OWASP API1):** Filtra estrictamente `events.organizer_id = user.id` resuelto desde el JWT verificado (`req.user.sub`), ignorando cualquier identificador externo.
+2. **Código y Estados Reales:** Genera `eventCode` determinístico (`#EV-${publicUuid.substring(0, 8).toUpperCase()}`) y alinea los estados reales (`draft`, `published`, `paused`, `completed`, `cancelled`, más indicador `isSoldOut` cuando `ticketsSold >= capacity` y preventa activa vigente).
+3. **Métricas Agregadas Parametrizadas (PostgreSQL):**
+   * Suma boletos confirmados (`tickets.status IN ('sold', 'used')`) y `paid_base_price` agrupados por `event_id` y `zone_id` para reflejar el monto real vendido según cada fase de preventa.
+   * Calcula los descuentos de cupones aplicados (`orders.discount_amount` de órdenes `paid`, deduplicando por `order.id`) usando `COALESCE(orders.event_id, shows.event_id)`.
+   * Expone `netSalesRevenue` (`grossRevenue - couponsDiscountAmount`), `targetRevenue` (`SUM(zone.capacity * zone.regularPrice)`), `settlementStatus`, y `draftChecklist` dinámico para borradores.
+
 
 
 

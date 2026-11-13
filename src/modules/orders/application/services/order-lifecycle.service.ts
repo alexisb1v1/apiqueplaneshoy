@@ -13,6 +13,7 @@ import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ZonePricingTierEntity } from '@events/domain/entities/zone-pricing-tier.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
+import { calculatePlatformFee } from './platform-fee.service';
 import { MailService } from '@modules/mail/mail.service';
 import {
   IssuedTicketResponseDto,
@@ -24,11 +25,51 @@ export interface EvaluatedCouponResult {
   discountAmount: number;
 }
 
+export interface ZoneTicketPricingBreakdown {
+  unitBasePrice: number;
+  unitServiceFee: number;
+  unitBuyerPrice: number;
+}
+
+/**
+ * Resuelve el desglose unitario de boleto y comisión QPH según la modalidad de la zona:
+ * - `feeIncluded = true`: el precio ya incluye la comisión (se descuenta al promotor).
+ * - `feeIncluded = false`: la comisión se suma al precio final que paga el comprador.
+ */
+export function resolveZoneTicketPricing(
+  zone: Pick<ZoneEntity, 'regularPrice' | 'serviceFee' | 'feeIncluded'>,
+  tier: Pick<ZonePricingTierEntity, 'price'> | null,
+): ZoneTicketPricingBreakdown {
+  const configuredPrice = Math.max(
+    0,
+    Math.round(Number(tier ? tier.price : zone.regularPrice) * 100) / 100,
+  );
+  // Escala oficial de comisión por entrada aplicada idénticamente a precio regular y preventa:
+  const configuredFee = calculatePlatformFee(configuredPrice);
+
+  if (zone.feeIncluded) {
+    const unitServiceFee = Math.min(configuredFee, configuredPrice);
+    const unitBasePrice = Math.round((configuredPrice - unitServiceFee) * 100) / 100;
+    return {
+      unitBasePrice,
+      unitServiceFee,
+      unitBuyerPrice: configuredPrice,
+    };
+  }
+
+  return {
+    unitBasePrice: configuredPrice,
+    unitServiceFee: configuredFee,
+    unitBuyerPrice: Math.round((configuredPrice + configuredFee) * 100) / 100,
+  };
+}
+
 export interface FinalizePaidOrderInput {
   orderIdOrUuid: string;
   paymentMethod: string;
   externalTransactionId: string;
   gatewayResponse: Record<string, unknown>;
+  gatewayFeeAmount?: number;
   successMessage?: string;
 }
 
@@ -357,10 +398,12 @@ export class OrderLifecycleService {
         ...input.gatewayResponse,
         approvedAt: new Date().toISOString(),
       };
+      const resolvedGatewayFee = this.resolveGatewayFeeAmount(input, mergedGatewayResponse);
 
       if (payment) {
         payment.paymentMethod = input.paymentMethod;
         payment.amount = Number(order.totalAmount);
+        payment.gatewayFeeAmount = resolvedGatewayFee;
         payment.status = 'approved';
         payment.externalTransactionId = input.externalTransactionId;
         payment.gatewayResponse = mergedGatewayResponse;
@@ -370,6 +413,7 @@ export class OrderLifecycleService {
           orderId: order.id,
           paymentMethod: input.paymentMethod,
           amount: Number(order.totalAmount),
+          gatewayFeeAmount: resolvedGatewayFee,
           status: 'approved',
           externalTransactionId: input.externalTransactionId,
           gatewayResponse: mergedGatewayResponse,
@@ -470,6 +514,11 @@ export class OrderLifecycleService {
       }
 
       const firstShow = showsCache.values().next().value as ShowEntity | undefined;
+      if (!order.eventId && firstShow?.eventId) {
+        order.eventId = firstShow.eventId;
+        await queryRunner.manager.save(OrderEntity, order);
+      }
+
       const [event, buyer] = await Promise.all([
         firstShow?.eventId
           ? queryRunner.manager.findOne(EventEntity, { where: { id: firstShow.eventId } })
@@ -633,6 +682,30 @@ export class OrderLifecycleService {
       },
       { excludeExtraneousValues: true },
     );
+  }
+
+  private resolveGatewayFeeAmount(
+    input: FinalizePaidOrderInput,
+    gatewayResponse: Record<string, unknown>,
+  ): number {
+    if (typeof input.gatewayFeeAmount === 'number' && !Number.isNaN(input.gatewayFeeAmount)) {
+      return Math.max(0, Math.round(input.gatewayFeeAmount * 100) / 100);
+    }
+
+    const culqiCharge = gatewayResponse?.culqiCharge as Record<string, any> | undefined;
+    const culqiOrder = gatewayResponse?.culqiOrder as Record<string, any> | undefined;
+
+    const rawCents =
+      culqiCharge?.fee_details?.total_fee ??
+      culqiCharge?.total_fee ??
+      culqiOrder?.total_fee ??
+      null;
+
+    if (typeof rawCents === 'number' && !Number.isNaN(rawCents) && rawCents > 0) {
+      return Math.round((rawCents / 100) * 100) / 100;
+    }
+
+    return 0.0;
   }
 }
 

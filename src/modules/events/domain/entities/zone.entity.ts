@@ -43,6 +43,9 @@ export class ZoneEntity {
   @Column({ name: 'service_fee', type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Cargo o comisión por servicio de ticketera por boleto' })
   serviceFee: number;
 
+  @Column({ name: 'fee_included', type: 'boolean', default: false, comment: 'Si true, la comisión ya está incluida en el precio y se descuenta al promotor; si false, se suma al comprador' })
+  feeIncluded: boolean;
+
   @Column({ name: 'max_tickets_per_order', type: 'integer', default: 4, comment: 'Cantidad máxima de entradas que un cliente puede comprar en una sola transacción/orden' })
   maxTicketsPerOrder: number;
 

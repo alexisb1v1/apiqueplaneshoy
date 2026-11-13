@@ -14,12 +14,17 @@ import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ZonePricingTierEntity } from '@events/domain/entities/zone-pricing-tier.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { CulqiGatewayService } from '@orders/infrastructure/gateways/culqi-gateway.service';
-import { OrderLifecycleService } from '../../application/services/order-lifecycle.service';
+import {
+  OrderLifecycleService,
+  resolveZoneTicketPricing,
+} from '../../application/services/order-lifecycle.service';
 
 interface ResolvedZoneLine {
   zone: ZoneEntity;
   tier: ZonePricingTierEntity | null;
-  unitPrice: number;
+  unitBasePrice: number;
+  unitServiceFee: number;
+  unitBuyerPrice: number;
   quantity: number;
 }
 
@@ -174,7 +179,9 @@ export class PrepareCulqiCheckoutHandler
       }
 
       // Bloquear y validar zonas, preventas y límites por orden (Regla 2: Por Orden)
-      let subtotal = 0;
+      let subtotalTickets = 0;
+      let totalServiceFee = 0;
+      let subtotalBuyer = 0;
       const resolvedLines: ResolvedZoneLine[] = [];
 
       for (const item of dto.items) {
@@ -223,9 +230,7 @@ export class PrepareCulqiCheckoutHandler
               Number(t.soldCount) + Number(t.lockedCount) + item.quantity <= Number(t.capacity),
           ) || null;
 
-        const unitPrice = currentTier
-          ? Number(currentTier.price)
-          : Number(zone.regularPrice);
+        const pricing = resolveZoneTicketPricing(zone, currentTier);
 
         zone.lockedCount = Number(zone.lockedCount) + item.quantity;
         await queryRunner.manager.save(ZoneEntity, zone);
@@ -235,21 +240,29 @@ export class PrepareCulqiCheckoutHandler
           await queryRunner.manager.save(ZonePricingTierEntity, currentTier);
         }
 
-        subtotal += unitPrice * item.quantity;
+        subtotalTickets += pricing.unitBasePrice * item.quantity;
+        totalServiceFee += pricing.unitServiceFee * item.quantity;
+        subtotalBuyer += pricing.unitBuyerPrice * item.quantity;
         resolvedLines.push({
           zone,
           tier: currentTier,
-          unitPrice,
+          unitBasePrice: pricing.unitBasePrice,
+          unitServiceFee: pricing.unitServiceFee,
+          unitBuyerPrice: pricing.unitBuyerPrice,
           quantity: item.quantity,
         });
       }
+
+      subtotalTickets = Math.round(subtotalTickets * 100) / 100;
+      totalServiceFee = Math.round(totalServiceFee * 100) / 100;
+      subtotalBuyer = Math.round(subtotalBuyer * 100) / 100;
 
       // Evaluar cupón sin consumirlo aún (se quema al confirmar pago)
       const couponEval = await this.orderLifecycleService.evaluateCoupon(
         queryRunner.manager,
         event.id,
         dto.couponCode,
-        subtotal,
+        subtotalBuyer,
         { lockForUpdate: false, consumeNow: false },
       );
 
@@ -259,7 +272,7 @@ export class PrepareCulqiCheckoutHandler
       }
 
       const { coupon, discountAmount } = couponEval.value;
-      const finalTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+      const finalTotal = Math.max(0, Math.round((subtotalBuyer - discountAmount) * 100) / 100);
       const amountInCents = Math.round(finalTotal * 100);
 
       // Culqi exige un importe mínimo cobrable (desde S/ 1.00 = 100 céntimos)
@@ -273,10 +286,11 @@ export class PrepareCulqiCheckoutHandler
 
       const order = queryRunner.manager.create(OrderEntity, {
         userId: user.id,
+        eventId: event.id,
         couponId: coupon ? coupon.id : null,
         status: 'pending',
-        subtotalTickets: subtotal,
-        totalServiceFee: 0.0,
+        subtotalTickets,
+        totalServiceFee,
         discountAmount,
         totalAmount: finalTotal,
         expiresAt,
@@ -295,8 +309,8 @@ export class PrepareCulqiCheckoutHandler
               pricingTierId: line.tier ? line.tier.id : null,
               userId: user.id,
               orderId: savedOrder.id,
-              paidBasePrice: line.unitPrice,
-              paidServiceFee: 0.0,
+              paidBasePrice: line.unitBasePrice,
+              paidServiceFee: line.unitServiceFee,
               qrCode: null,
               status: 'locked',
               lockedUntil: expiresAt,

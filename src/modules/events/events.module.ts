@@ -9,11 +9,14 @@ import { ZonePricingTierEntity } from './domain/entities/zone-pricing-tier.entit
 import { EventAdvanceEntity } from './domain/entities/event-advance.entity';
 import { EventSettlementEntity } from './domain/entities/event-settlement.entity';
 import { CouponEntity } from '@orders/domain/entities/coupon.entity';
+import { OrderEntity } from '@orders/domain/entities/order.entity';
+import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { AuthModule } from '@auth/auth.module';
 import { SearchModule } from '../search/search.module';
 import { EventsController } from './controllers/events.controller';
 import { CreateEventHandler } from './commands/handlers/create-event.handler';
+import { UpdateEventHandler } from './commands/handlers/update-event.handler';
 import { PublishEventHandler } from './commands/handlers/publish-event.handler';
 import { GetFeaturedEventsHandler } from './queries/handlers/get-featured-events.handler';
 import { GetUpcomingEventsHandler } from './queries/handlers/get-upcoming-events.handler';
@@ -21,11 +24,13 @@ import { GetWeeklyFeaturedEventsHandler } from './queries/handlers/get-weekly-fe
 import { GetWeekendEventsHandler } from './queries/handlers/get-weekend-events.handler';
 import { GetEventLandingHandler } from './queries/handlers/get-event-landing.handler';
 import { GetEventDetailHandler } from './queries/handlers/get-event-detail.handler';
+import { GetOrganizerEventsHandler } from './queries/handlers/get-organizer-events.handler';
+import { GetOrganizerEventForEditHandler } from './queries/handlers/get-organizer-event-for-edit.handler';
 import { EventStatusCronService } from './services/event-status-cron.service';
 import { EventSeederService } from './services/event-seeder.service';
 import { AdminKeyGuard } from '@common/guards/admin-key.guard';
 
-const CommandHandlers = [CreateEventHandler, PublishEventHandler];
+const CommandHandlers = [CreateEventHandler, UpdateEventHandler, PublishEventHandler];
 const QueryHandlers = [
   GetFeaturedEventsHandler,
   GetUpcomingEventsHandler,
@@ -33,6 +38,8 @@ const QueryHandlers = [
   GetWeekendEventsHandler,
   GetEventLandingHandler,
   GetEventDetailHandler,
+  GetOrganizerEventsHandler,
+  GetOrganizerEventForEditHandler,
 ];
 
 @Module({
@@ -49,6 +56,8 @@ const QueryHandlers = [
       EventAdvanceEntity,
       EventSettlementEntity,
       CouponEntity,
+      OrderEntity,
+      TicketEntity,
       UserEntity,
     ]),
   ],

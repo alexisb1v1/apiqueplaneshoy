@@ -82,6 +82,8 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
         benefits: zone.benefits,
         regularPrice: Number(zone.regularPrice),
         currentPrice,
+        serviceFee: Number(zone.serviceFee) || 0,
+        feeIncluded: Boolean(zone.feeIncluded),
         activeTierName,
         capacity: cap,
         remainingTickets,
@@ -112,7 +114,7 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
         subtitle: rawConfig.header?.subtitle || 'EXPERIENCIA EXCLUSIVA',
         ctaText: rawConfig.header?.ctaText || 'Comprar Entradas Oficiales',
         headerImageUrl: rawConfig.header?.headerImageUrl || banner?.imageUrl || null,
-        videoTeaserUrl: rawConfig.header?.videoTeaserUrl || null,
+        videoTeaserUrl: rawConfig.header?.videoTeaserUrl || event.promoVideoUrl || null,
       },
       body: {
         aboutText: rawConfig.body?.aboutText || event.description || null,
@@ -124,9 +126,9 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
       },
       footer: {
         footerImageUrl: rawConfig.footer?.footerImageUrl || null,
-        tiktokUrl: rawConfig.footer?.tiktokUrl || null,
-        facebookUrl: rawConfig.footer?.facebookUrl || null,
-        instagramUrl: rawConfig.footer?.instagramUrl || null,
+        tiktokUrl: rawConfig.footer?.tiktokUrl || event.socialLinks?.tiktokUrl || null,
+        facebookUrl: rawConfig.footer?.facebookUrl || event.socialLinks?.facebookUrl || null,
+        instagramUrl: rawConfig.footer?.instagramUrl || event.socialLinks?.instagramUrl || null,
       },
     };
 

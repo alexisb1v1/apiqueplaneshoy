@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Delete,
   Body,
   Param,
@@ -14,12 +15,17 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateEventDto } from '../dto/create-event.dto';
+import { UpdateEventDto } from '../dto/update-event.dto';
 import { FeaturedEventResponseDto } from '../dto/featured-event.response.dto';
 import { HomeEventCardResponseDto } from '../dto/home-event-card.response.dto';
 import { EventLandingResponseDto } from '../dto/event-landing.response.dto';
 import { EventDetailResponseDto } from '../dto/event-detail.response.dto';
+import { GetOrganizerEventsRequestDto } from '../dto/get-organizer-events.request.dto';
+import { OrganizerEventResponseDto } from '../dto/organizer-event.response.dto';
+import { OrganizerEventEditResponseDto } from '../dto/organizer-event-edit.response.dto';
 import { PurgeFeaturedCacheResponseDto } from '../dto/purge-featured-cache.response.dto';
 import { CreateEventCommand } from '../commands/impl/create-event.command';
+import { UpdateEventCommand } from '../commands/impl/update-event.command';
 import { PublishEventCommand } from '../commands/impl/publish-event.command';
 import { GetFeaturedEventsQuery } from '../queries/impl/get-featured-events.query';
 import { GetUpcomingEventsQuery } from '../queries/impl/get-upcoming-events.query';
@@ -27,6 +33,8 @@ import { GetWeeklyFeaturedEventsQuery } from '../queries/impl/get-weekly-feature
 import { GetWeekendEventsQuery } from '../queries/impl/get-weekend-events.query';
 import { GetEventLandingQuery } from '../queries/impl/get-event-landing.query';
 import { GetEventDetailQuery } from '../queries/impl/get-event-detail.query';
+import { GetOrganizerEventsQuery } from '../queries/impl/get-organizer-events.query';
+import { GetOrganizerEventForEditQuery } from '../queries/impl/get-organizer-event-for-edit.query';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
 import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
@@ -201,6 +209,56 @@ export class EventsController {
     };
   }
 
+  @Get('organizer')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Listar los eventos creados por el organizador autenticado con métricas reales por zona',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de eventos del promotor con aforos, preventas activas y recaudación en S/.',
+    type: [OrganizerEventResponseDto],
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  async getOrganizerEvents(
+    @Req() req: AuthenticatedRequest,
+    @Query() filters: GetOrganizerEventsRequestDto,
+  ): Promise<OrganizerEventResponseDto[]> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.queryBus.execute(
+      new GetOrganizerEventsQuery(publicUuid, filters.status, filters.q),
+    );
+    return matchResult(result, (events) => events);
+  }
+
+  @Get('organizer/:identifier/edit')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Obtener datos completos de un evento/borrador del organizador para su edición',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estructura editable completa del evento',
+    type: OrganizerEventEditResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'No tienes permiso para editar este evento' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async getOrganizerEventForEdit(
+    @Req() req: AuthenticatedRequest,
+    @Param('identifier') identifier: string,
+  ): Promise<OrganizerEventEditResponseDto> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.queryBus.execute(
+      new GetOrganizerEventForEditQuery(publicUuid, identifier),
+    );
+    return matchResult(result, (event) => event);
+  }
+
   @Get(':identifier')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obtener detalle público completo de un evento por ID, UUID o slug (Caché Redis: qph:events:detail:{identifier})' })
@@ -236,6 +294,28 @@ export class EventsController {
       result,
       (event) => event,
     );
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar un evento o guardar cambios de un borrador existente' })
+  @ApiResponse({ status: 200, description: 'Evento actualizado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado a este evento' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async update(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') eventIdentifier: string,
+    @Body() dto: UpdateEventDto,
+  ) {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.commandBus.execute(
+      new UpdateEventCommand(publicUuid, eventIdentifier, dto),
+    );
+    return matchResult(result, (event) => event);
   }
 
   @Post(':id/publish')

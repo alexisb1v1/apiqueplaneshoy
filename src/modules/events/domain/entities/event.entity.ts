@@ -6,6 +6,7 @@ import { ZoneEntity } from './zone.entity';
 import { EventAdvanceEntity } from './event-advance.entity';
 import { EventSettlementEntity } from './event-settlement.entity';
 import { CouponEntity } from '@orders/domain/entities/coupon.entity';
+import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { UserFavoriteEventEntity } from '@users/domain/entities/user-favorite-event.entity';
 
 @Entity('events')
@@ -60,6 +61,16 @@ export class EventEntity {
 
   @Column({ name: 'landing_config', type: 'jsonb', nullable: true, comment: 'Configuración visual de la landing del evento: colores, tema, imagen cabecera, CTA y croquis de zonas' })
   landingConfig: Record<string, any> | null;
+
+  @Column({ name: 'promo_video_url', type: 'varchar', length: 512, nullable: true, comment: 'URL del video promocional o teaser oficial del evento (YouTube, Vimeo o MP4 directo)' })
+  promoVideoUrl: string | null;
+
+  @Column({ name: 'social_links', type: 'jsonb', nullable: true, comment: 'Enlaces a redes sociales oficiales del evento: { instagramUrl, facebookUrl, tiktokUrl }' })
+  socialLinks: {
+    instagramUrl?: string | null;
+    facebookUrl?: string | null;
+    tiktokUrl?: string | null;
+  } | null;
 
   @Column({ name: 'ubigeo_code', type: 'varchar', length: 6, nullable: true, comment: 'Código de ubigeo INEI de 6 dígitos (dep-prov-distrito)' })
   ubigeoCode: string | null;
@@ -117,6 +128,9 @@ export class EventEntity {
 
   @OneToMany(() => CouponEntity, (coupon) => coupon.event)
   coupons: CouponEntity[];
+
+  @OneToMany(() => OrderEntity, (order) => order.event)
+  orders: OrderEntity[];
 
   @OneToMany(() => EventAdvanceEntity, (advance) => advance.event)
   advances: EventAdvanceEntity[];

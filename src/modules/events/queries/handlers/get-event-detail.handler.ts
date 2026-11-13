@@ -98,6 +98,8 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         benefits: zone.benefits,
         regularPrice: Number(zone.regularPrice),
         currentPrice,
+        serviceFee: Number(zone.serviceFee) || 0,
+        feeIncluded: Boolean(zone.feeIncluded),
         activeTierName,
         capacity: cap,
         remainingTickets,
@@ -139,6 +141,14 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         googleMapsUrl: event.googleMapsUrl,
         coordinates: event.coordinates || null,
         addressReference: event.addressReference || null,
+        promoVideoUrl: event.promoVideoUrl || event.landingConfig?.header?.videoTeaserUrl || null,
+        socialLinks: event.socialLinks || (event.landingConfig?.footer
+          ? {
+              instagramUrl: event.landingConfig.footer.instagramUrl || null,
+              facebookUrl: event.landingConfig.footer.facebookUrl || null,
+              tiktokUrl: event.landingConfig.footer.tiktokUrl || null,
+            }
+          : null),
         shows: mappedShows,
         zones: mappedZones,
       },

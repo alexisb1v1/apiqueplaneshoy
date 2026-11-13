@@ -18,6 +18,7 @@ import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ShowEntity } from '@events/domain/entities/show.entity';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
+import { resolveZoneTicketPricing } from '../../application/services/order-lifecycle.service';
 
 @CommandHandler(SimulateOrderCheckoutCommand)
 export class SimulateOrderCheckoutHandler
@@ -130,9 +131,13 @@ export class SimulateOrderCheckoutHandler
         }
 
         // 2.4 Validar zonas, aforo, límites por zona y calcular montos
+        let subtotalTickets = 0;
+        let totalServiceFee = 0;
         let subtotal = 0;
         const zoneItemsResolved: Array<{
           zone: ZoneEntity;
+          unitBasePrice: number;
+          unitServiceFee: number;
           unitPrice: number;
           tierName: string;
           quantity: number;
@@ -189,19 +194,27 @@ export class SimulateOrderCheckoutHandler
             )
             .sort((a, b) => a.tierNumber - b.tierNumber);
 
-          const currentTier = activeTiers[0];
-          const unitPrice = currentTier ? Number(currentTier.price) : Number(zone.regularPrice);
+          const currentTier = activeTiers[0] || null;
+          const pricing = resolveZoneTicketPricing(zone, currentTier);
           const tierName = currentTier ? currentTier.name : zone.title || zone.name;
 
-          subtotal += unitPrice * item.quantity;
+          subtotalTickets += pricing.unitBasePrice * item.quantity;
+          totalServiceFee += pricing.unitServiceFee * item.quantity;
+          subtotal += pricing.unitBuyerPrice * item.quantity;
 
           zoneItemsResolved.push({
             zone,
-            unitPrice,
+            unitBasePrice: pricing.unitBasePrice,
+            unitServiceFee: pricing.unitServiceFee,
+            unitPrice: pricing.unitBuyerPrice,
             tierName,
             quantity: item.quantity,
           });
         }
+
+        subtotalTickets = Math.round(subtotalTickets * 100) / 100;
+        totalServiceFee = Math.round(totalServiceFee * 100) / 100;
+        subtotal = Math.round(subtotal * 100) / 100;
 
         // 2.3.5 Doble Check Atómico de Cupón de Descuento (Validación en Transacción con Bloqueo)
         let discountAmount = 0.0;
@@ -302,10 +315,11 @@ export class SimulateOrderCheckoutHandler
         // 2.4 Crear Orden
         const order = queryRunner.manager.create(OrderEntity, {
           userId: user.id,
+          eventId: event.id,
           couponId: appliedCoupon ? appliedCoupon.id : null,
           status: 'paid',
-          subtotalTickets: subtotal,
-          totalServiceFee: 0.0,
+          subtotalTickets,
+          totalServiceFee,
           discountAmount: discountAmount,
           totalAmount: finalTotal,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
@@ -319,6 +333,7 @@ export class SimulateOrderCheckoutHandler
           orderId: savedOrder.id,
           paymentMethod: dto.paymentMethod,
           amount: finalTotal,
+          gatewayFeeAmount: 0.0,
           status: 'approved',
           externalTransactionId: externalTx,
           gatewayResponse: {
@@ -347,8 +362,8 @@ export class SimulateOrderCheckoutHandler
               zoneId: resolved.zone.id,
               userId: user.id,
               orderId: savedOrder.id,
-              paidBasePrice: resolved.unitPrice,
-              paidServiceFee: 0.0,
+              paidBasePrice: resolved.unitBasePrice,
+              paidServiceFee: resolved.unitServiceFee,
               qrCode: qrPayload,
               status: 'sold',
             });

@@ -4,6 +4,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { SocialIdentityEntity } from '@users/domain/entities/social-identity.entity';
 import { UserFavoriteEventEntity } from '@users/domain/entities/user-favorite-event.entity';
+import { OrganizerBankAccountEntity } from '@users/domain/entities/organizer-bank-account.entity';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { TypeormUserRepository } from '../persistence/typeorm-user.repository';
 import { TypeormUserFavoriteRepository } from '../persistence/typeorm-user-favorite.repository';
@@ -25,6 +26,7 @@ const QueryHandlers = [GetUserFavoritesHandler, GetUserFavoriteIdsHandler];
       UserEntity,
       SocialIdentityEntity,
       UserFavoriteEventEntity,
+      OrganizerBankAccountEntity,
       EventEntity,
     ]),
   ],

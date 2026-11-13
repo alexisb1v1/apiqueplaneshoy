@@ -153,6 +153,12 @@ export class LandingZoneDto {
   currentPrice!: number;
 
   @Expose()
+  serviceFee!: number;
+
+  @Expose()
+  feeIncluded!: boolean;
+
+  @Expose()
   activeTierName!: string;
 
   @Expose()

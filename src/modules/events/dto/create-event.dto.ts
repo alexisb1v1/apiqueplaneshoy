@@ -158,6 +158,19 @@ export class CreateEventDto {
   @IsOptional()
   readonly landingConfig?: Record<string, any>;
 
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx', description: 'URL de video promocional o teaser (YouTube, Vimeo o MP4 directo)', required: false })
+  @IsString()
+  @IsOptional()
+  readonly promoVideoUrl?: string;
+
+  @ApiProperty({ example: { instagramUrl: 'https://instagram.com/...', facebookUrl: 'https://facebook.com/...', tiktokUrl: 'https://tiktok.com/@...' }, required: false })
+  @IsOptional()
+  readonly socialLinks?: {
+    instagramUrl?: string;
+    facebookUrl?: string;
+    tiktokUrl?: string;
+  };
+
   @ApiProperty({ description: 'Funciones u horarios del evento', required: false })
   @IsArray()
   @IsOptional()
@@ -179,6 +192,7 @@ export class CreateEventDto {
     capacity: number;
     regularPrice: number;
     serviceFee?: number;
+    feeIncluded?: boolean;
     benefits?: string;
     maxTicketsPerOrder?: number;
     salesStartAt?: string;

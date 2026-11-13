@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, Index } from 'typeorm';
 import { SocialIdentityEntity } from './social-identity.entity';
 import { UserFavoriteEventEntity } from './user-favorite-event.entity';
+import { OrganizerBankAccountEntity } from './organizer-bank-account.entity';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
@@ -71,4 +72,7 @@ export class UserEntity {
 
   @OneToMany(() => UserFavoriteEventEntity, (fav) => fav.user)
   favorites: UserFavoriteEventEntity[];
+
+  @OneToMany(() => OrganizerBankAccountEntity, (bankAccount) => bankAccount.user)
+  bankAccounts: OrganizerBankAccountEntity[];
 }
