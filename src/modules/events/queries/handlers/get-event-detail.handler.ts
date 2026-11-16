@@ -69,7 +69,6 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     const zoneMapImage = event.images?.find((img) => img.imageType === 'zone_map');
     const zoneMapUrl =
       zoneMapImage?.imageUrl ||
-      event.landingConfig?.body?.bodyImageUrl ||
       event.landingConfig?.zoneMapUrl ||
       null;
 

@@ -181,8 +181,12 @@ export class EventsController {
     type: EventLandingResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Evento no encontrado o no tiene landing habilitada' })
-  async getLanding(@Param('slug') slug: string): Promise<EventLandingResponseDto> {
-    return this.queryBus.execute(new GetEventLandingQuery(slug));
+  async getLanding(
+    @Param('slug') slug: string,
+    @Query('previewTemp') previewTemp?: string,
+  ): Promise<EventLandingResponseDto> {
+    const isPreview = Boolean(previewTemp);
+    return this.queryBus.execute(new GetEventLandingQuery(slug, isPreview, previewTemp));
   }
 
   @Post('home/cache/purge')

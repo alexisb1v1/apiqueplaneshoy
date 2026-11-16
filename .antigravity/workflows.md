@@ -722,9 +722,13 @@ sequenceDiagram
     Fan->>Web: Ingresa a /e/los-portales-del-huayllabamba
     Web->>Web: Despliega LandingPreloader (Isotipo QPH pulsante)
     Web->>UseCase: execute("los-portales-del-huayllabamba")
-    UseCase->>API: GET /events/landing/los-portales-del-huayllabamba
+    UseCase->>API: GET /events/landing/los-portales-del-huayllabamba?previewTemp={token}
 
-    alt Cache HIT en Redis
+    alt Modo previewTemp activo (Vista Previa de Borradores)
+        API->>DB: SELECT event WHERE slug = :slug (Sin restricción status='published')
+        DB-->>API: Registro completo del evento en borrador o publicado
+        API->>API: Omite caché Redis y marca isPreview = true
+    else Cache HIT en Redis
         API->>Redis: GET qph:events:landing:los-portales-del-huayllabamba
         Redis-->>API: 200 JSON en memoria (< 3ms)
     else Cache MISS o Expirado

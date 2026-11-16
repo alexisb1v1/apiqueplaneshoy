@@ -8,8 +8,8 @@ export class LandingThemeDto {
   primaryColor!: string;
 
   @Expose()
-  @ApiProperty({ example: 'color', enum: ['color', 'pattern'] })
-  backgroundType!: 'color' | 'pattern';
+  @ApiProperty({ example: 'fixed', enum: ['color', 'pattern', 'fixed'] })
+  backgroundType!: 'color' | 'pattern' | 'fixed';
 
   @Expose()
   @ApiProperty({ example: '#18181B' })
@@ -172,6 +172,17 @@ export class LandingZoneDto {
 }
 
 @Exclude()
+export class LandingFaqDto {
+  @Expose()
+  @ApiProperty({ example: '¿A qué hora abren las puertas?' })
+  question!: string;
+
+  @Expose()
+  @ApiProperty({ example: 'Las puertas abrirán 2 horas antes del inicio del show.' })
+  answer!: string;
+}
+
+@Exclude()
 export class EventLandingResponseDto {
   @Expose()
   id!: string;
@@ -204,6 +215,9 @@ export class EventLandingResponseDto {
   bannerUrl!: string | null;
 
   @Expose()
+  zoneMapUrl!: string | null;
+
+  @Expose()
   termsAndConditionsUrl!: string | null;
 
   @Expose()
@@ -220,5 +234,14 @@ export class EventLandingResponseDto {
   @Expose()
   @Type(() => LandingZoneDto)
   zones!: LandingZoneDto[];
+
+  @Expose()
+  @Type(() => LandingFaqDto)
+  @ApiProperty({ type: [LandingFaqDto], required: false })
+  faqs?: LandingFaqDto[];
+
+  @Expose()
+  @ApiProperty({ example: false, required: false })
+  isPreview?: boolean;
 }
 
