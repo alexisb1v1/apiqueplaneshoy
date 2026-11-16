@@ -55,7 +55,38 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
       });
     }
 
-    // 2. Generar llave pública Ed25519 si aún no existe en el evento
+    // 2. Determinar la tarifa mínima y la primera fecha para Meilisearch
+    const validPrices = (zones || [])
+      .map((z) => Number(z.regularPrice))
+      .filter((p) => !isNaN(p) && p > 0);
+    const calculatedMinPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
+
+    let bannerUrl: string | null = null;
+    let firstShowDate: string | null = null;
+
+    try {
+      const eventWithMedia = await this.eventRepository.findOne({
+        where: { id: event.id },
+        relations: { images: true, shows: true },
+      });
+      if (eventWithMedia) {
+        const bannerImg =
+          eventWithMedia.images?.find((img) => img.imageType === 'banner') ||
+          eventWithMedia.images?.[0];
+        bannerUrl = bannerImg?.imageUrl || null;
+
+        const firstShow = (eventWithMedia.shows || []).sort(
+          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        )[0];
+        firstShowDate = firstShow?.startTime
+          ? new Date(firstShow.startTime).toISOString()
+          : null;
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 3. Generar llave pública Ed25519 si aún no existe en el evento
     if (!event.signingPublicKey) {
       try {
         const { publicKey } = crypto.generateKeyPairSync('ed25519');
@@ -95,7 +126,7 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
 
     const updated = await this.eventRepository.save(event);
 
-    // 3. Indexar en Meilisearch
+    // 4. Indexar en Meilisearch con tarifa mínima real y fecha
     await this.searchService
       .indexEvent({
         id: updated.id,
@@ -107,7 +138,9 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
         venue: updated.venue || '',
         address: updated.address || '',
         status: updated.status,
-        minPrice: 0,
+        minPrice: calculatedMinPrice,
+        date: firstShowDate || (updated.createdAt ? updated.createdAt.toISOString() : new Date().toISOString()),
+        bannerUrl: bannerUrl,
         hasLandingPage: updated.hasLandingPage,
         isFeatured: updated.isFeatured,
       })
