@@ -79,7 +79,10 @@ export class MailService implements EmailService {
         : 5000;
 
     const rawFrontendUrls = (
-      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
+      this.configService.get<string>('FRONTEND_URL') ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://queplanhoy.com'
+        : 'https://dev.queplanhoy.com')
     ).trim();
     this.primaryFrontendUrl = rawFrontendUrls.split(',')[0].trim().replace(/\/+$/, '');
   }
