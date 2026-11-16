@@ -66,10 +66,10 @@ export class MailService implements EmailService {
     this.apiKey = (this.configService.get<string>('RESEND_API_KEY') || '').trim();
     this.fromEmail = (
       this.configService.get<string>('RESEND_FROM_EMAIL') ||
-      'queplaneshoy <onboarding@resend.dev>'
+      'queplanhoy <onboarding@resend.dev>'
     ).trim();
     this.replyTo = (
-      this.configService.get<string>('RESEND_REPLY_TO') || 'soporte@queplaneshoy.com'
+      this.configService.get<string>('RESEND_REPLY_TO') || 'contacto@queplanhoy.com'
     ).trim();
 
     const parsedTimeout = Number(this.configService.get<string>('RESEND_TIMEOUT_MS'));

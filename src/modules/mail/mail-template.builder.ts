@@ -37,7 +37,7 @@ export interface RenderedEmailContent {
 
 function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
   const safeCtaUrl = params.ctaUrl ? sanitizeHttpUrl(params.ctaUrl) : null;
-  const safeSupportEmail = escapeHtml(params.supportEmail || 'soporte@queplaneshoy.com');
+  const safeSupportEmail = escapeHtml(params.supportEmail || 'contacto@queplanhoy.com');
 
   const ctaBlock =
     safeCtaUrl && params.ctaLabel
@@ -45,7 +45,7 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 26px 0 18px 0;">
           <tr>
             <td align="center" bgcolor="#F43F5E" style="border-radius: 12px;">
-              <a href="${escapeHtml(safeCtaUrl)}" target="_blank" rel="noopener noreferrer"
+              <a href="${escapeHtml(safeCtaUrl)}" target="_blank" rel="noopen er noreferrer"
                  style="display: inline-block; padding: 14px 26px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #FFFFFF; text-decoration: none; border-radius: 12px;">
                 ${escapeHtml(params.ctaLabel)}
               </a>
@@ -86,7 +86,7 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
                         QPH
                       </span>
                       <span style="margin-left: 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #FFFFFF; vertical-align: middle;">
-                        queplanes<span style="color: #F43F5E;">hoy</span>
+                        queplan<span style="color: #F43F5E;">hoy</span>
                       </span>
                     </td>
                     <td align="right" valign="middle">
@@ -127,7 +127,7 @@ function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
                   ¿Necesitas ayuda? Escríbenos a <a href="mailto:${safeSupportEmail}" style="color: #F43F5E; text-decoration: none; font-weight: 600;">${safeSupportEmail}</a>
                 </p>
                 <p style="margin: 0; font-size: 11px; color: #94A3B8;">
-                  © 2026 queplaneshoy. Boletería oficial con verificación criptográfica.
+                  © 2026 queplanhoy. Boletería oficial con verificación criptográfica.
                 </p>
               </td>
             </tr>
@@ -149,26 +149,26 @@ export function buildVerificationEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Usuario');
   const html = renderBrandedEmailLayout({
-    preheader: 'Confirma tu correo para activar tus compras y eventos en queplaneshoy.',
+    preheader: 'Confirma tu correo para activar tus compras y eventos en queplanhoy.',
     badge: 'Verificación',
     title: 'Confirma tu correo electrónico',
     greeting: `Hola, ${safeName}:`,
     bodyHtml: `
       <p style="margin: 0 0 12px 0;">
-        ¡Gracias por registrarte en <strong>queplaneshoy</strong>! Para proteger tu cuenta y habilitar la compra de entradas y publicación de eventos, confirma tu dirección de correo haciendo clic en el siguiente botón.
+        ¡Gracias por registrarte en <strong>queplanhoy</strong>! Para proteger tu cuenta y habilitar la compra de entradas y publicación de eventos, confirma tu dirección de correo haciendo clic en el siguiente botón.
       </p>
     `,
     ctaLabel: 'Confirmar mi cuenta',
     ctaUrl: params.verificationUrl,
     footerNote:
-      'Este enlace tiene una vigencia de <strong>24 horas</strong>. Si no creaste una cuenta en queplaneshoy, puedes ignorar este mensaje con tranquilidad.',
+      'Este enlace tiene una vigencia de <strong>24 horas</strong>. Si no creaste una cuenta en queplanhoy, puedes ignorar este mensaje con tranquilidad.',
     supportEmail: params.supportEmail,
   });
 
-  const text = `Hola ${params.name || 'Usuario'}, confirma tu cuenta en queplaneshoy ingresando al siguiente enlace (vigencia 24h): ${params.verificationUrl}`;
+  const text = `Hola ${params.name || 'Usuario'}, confirma tu cuenta en queplanhoy ingresando al siguiente enlace (vigencia 24h): ${params.verificationUrl}`;
 
   return {
-    subject: 'Confirma tu cuenta en queplaneshoy',
+    subject: 'Confirma tu cuenta en queplanhoy',
     html,
     text,
   };
@@ -184,13 +184,13 @@ export function buildPasswordResetEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Usuario');
   const html = renderBrandedEmailLayout({
-    preheader: 'Enlace seguro para restablecer tu contraseña en queplaneshoy.',
+    preheader: 'Enlace seguro para restablecer tu contraseña en queplanhoy.',
     badge: 'Seguridad',
     title: 'Restablecer tu contraseña',
     greeting: `Hola, ${safeName}:`,
     bodyHtml: `
       <p style="margin: 0 0 12px 0;">
-        Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong>queplaneshoy</strong>. Haz clic en el botón inferior para crear una nueva contraseña.
+        Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong>queplanhoy</strong>. Haz clic en el botón inferior para crear una nueva contraseña.
       </p>
     `,
     ctaLabel: 'Crear nueva contraseña',
@@ -200,10 +200,10 @@ export function buildPasswordResetEmailContent(params: {
     supportEmail: params.supportEmail,
   });
 
-  const text = `Hola ${params.name || 'Usuario'}, restablece tu contraseña en queplaneshoy mediante este enlace de un solo uso (expira en 15 minutos): ${params.resetUrl}`;
+  const text = `Hola ${params.name || 'Usuario'}, restablece tu contraseña en queplanhoy mediante este enlace de un solo uso (expira en 15 minutos): ${params.resetUrl}`;
 
   return {
-    subject: 'Restablece tu contraseña - queplaneshoy',
+    subject: 'Restablece tu contraseña - queplanhoy',
     html,
     text,
   };
@@ -225,13 +225,13 @@ export function buildPasswordChangedEmailContent(params: {
   }).format(new Date(params.occurredAtIso));
 
   const html = renderBrandedEmailLayout({
-    preheader: 'Tu contraseña en queplaneshoy fue actualizada correctamente.',
+    preheader: 'Tu contraseña en queplanhoy fue actualizada correctamente.',
     badge: 'Aviso de seguridad',
     title: 'Tu contraseña ha sido actualizada',
     greeting: `Hola, ${safeName}:`,
     bodyHtml: `
       <p style="margin: 0 0 12px 0;">
-        Te confirmamos que la contraseña de tu cuenta en <strong>queplaneshoy</strong> fue actualizada exitosamente el <strong>${escapeHtml(formattedDate)}</strong> (hora Perú).
+        Te confirmamos que la contraseña de tu cuenta en <strong>queplanhoy</strong> fue actualizada exitosamente el <strong>${escapeHtml(formattedDate)}</strong> (hora Perú).
       </p>
       <p style="margin: 0;">
         Si realizaste este cambio, no necesitas hacer nada más.
@@ -242,10 +242,10 @@ export function buildPasswordChangedEmailContent(params: {
     supportEmail: params.supportEmail,
   });
 
-  const text = `Hola ${params.name || 'Usuario'}, tu contraseña en queplaneshoy fue actualizada el ${formattedDate}. Si no reconoces este cambio, contáctanos de inmediato.`;
+  const text = `Hola ${params.name || 'Usuario'}, tu contraseña en queplanhoy fue actualizada el ${formattedDate}. Si no reconoces este cambio, contáctanos de inmediato.`;
 
   return {
-    subject: 'Tu contraseña en queplaneshoy fue actualizada',
+    subject: 'Tu contraseña en queplanhoy fue actualizada',
     html,
     text,
   };
@@ -261,9 +261,9 @@ export function buildWelcomeGoogleEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Usuario');
   const html = renderBrandedEmailLayout({
-    preheader: 'Tu cuenta en queplaneshoy quedó verificada automáticamente con Google.',
+    preheader: 'Tu cuenta en queplanhoy quedó verificada automáticamente con Google.',
     badge: 'Bienvenido',
-    title: '¡Bienvenido a queplaneshoy!',
+    title: '¡Bienvenido a queplanhoy!',
     greeting: `Hola, ${safeName}:`,
     bodyHtml: `
       <p style="margin: 0 0 12px 0;">
@@ -280,10 +280,10 @@ export function buildWelcomeGoogleEmailContent(params: {
     supportEmail: params.supportEmail,
   });
 
-  const text = `¡Bienvenido a queplaneshoy, ${params.name || 'Usuario'}! Tu cuenta fue activada y verificada con Google. Explora los eventos disponibles en: ${params.exploreUrl}`;
+  const text = `¡Bienvenido a queplanhoy, ${params.name || 'Usuario'}! Tu cuenta fue activada y verificada con Google. Explora los eventos disponibles en: ${params.exploreUrl}`;
 
   return {
-    subject: '¡Bienvenido a queplaneshoy! Tu cuenta está lista',
+    subject: '¡Bienvenido a queplanhoy! Tu cuenta está lista',
     html,
     text,
   };
@@ -302,13 +302,13 @@ export function buildOrganizerActivatedEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Organizador');
   const html = renderBrandedEmailLayout({
-    preheader: 'Tu perfil comercial de Organizador ya está habilitado en queplaneshoy.',
+    preheader: 'Tu perfil comercial de Organizador ya está habilitado en queplanhoy.',
     badge: 'Organizador',
     title: '¡Perfil de Organizador activado!',
     greeting: `Hola, ${safeName}:`,
     bodyHtml: `
       <p style="margin: 0 0 14px 0;">
-        Habilitamos exitosamente tu perfil de <strong>Organizador / Productora</strong> en queplaneshoy. Ya puedes crear eventos, definir localidades, preventas escalonadas y cupones de descuento.
+        Habilitamos exitosamente tu perfil de <strong>Organizador / Productora</strong> en queplanhoy. Ya puedes crear eventos, definir localidades, preventas escalonadas y cupones de descuento.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;">
         <tr>
@@ -333,10 +333,10 @@ export function buildOrganizerActivatedEmailContent(params: {
     supportEmail: params.supportEmail,
   });
 
-  const text = `Hola ${params.name || 'Organizador'}, activaste tu perfil comercial "${params.organizerName}" (${params.documentType} ${params.documentNumber}) en queplaneshoy. Accede a tu panel en: ${params.dashboardUrl}`;
+  const text = `Hola ${params.name || 'Organizador'}, activaste tu perfil comercial "${params.organizerName}" (${params.documentType} ${params.documentNumber}) en queplanhoy. Accede a tu panel en: ${params.dashboardUrl}`;
 
   return {
-    subject: 'Perfil de Organizador activado en queplaneshoy',
+    subject: 'Perfil de Organizador activado en queplanhoy',
     html,
     text,
   };
@@ -378,7 +378,7 @@ export function buildOrganizerKycVerifiedEmailContent(params: {
   const text = `Hola ${params.name || 'Organizador'}, tu verificación KYC para "${params.organizerName}" fue aprobada el ${formattedDate}.`;
 
   return {
-    subject: 'Verificación KYC aprobada - queplaneshoy',
+    subject: 'Verificación KYC aprobada - queplanhoy',
     html,
     text,
   };
@@ -404,7 +404,7 @@ export function buildEventPublishedEmailContent(params: {
     greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
     bodyHtml: `
       <p style="margin: 0 0 14px 0;">
-        Confirmamos que tu evento <strong>${escapeHtml(params.eventTitle)}</strong> ya se encuentra visible en la cartelera pública oficial de <strong>queplaneshoy</strong> con venta habilitada.
+        Confirmamos que tu evento <strong>${escapeHtml(params.eventTitle)}</strong> ya se encuentra visible en la cartelera pública oficial de <strong>queplanhoy</strong> con venta habilitada.
       </p>
       ${
         locationLine || params.category
@@ -427,7 +427,7 @@ export function buildEventPublishedEmailContent(params: {
     supportEmail: params.supportEmail,
   });
 
-  const text = `¡Tu evento "${params.eventTitle}" ya está publicado en queplaneshoy! Enlace público: ${params.eventPublicUrl}`;
+  const text = `¡Tu evento "${params.eventTitle}" ya está publicado en queplanhoy! Enlace público: ${params.eventPublicUrl}`;
 
   return {
     subject: `¡Tu evento "${params.eventTitle}" ya está en vivo!`,
@@ -504,7 +504,7 @@ export function buildEventObservedEmailContent(params: {
     greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
     bodyHtml: `
       <p style="margin: 0 0 14px 0;">
-        El equipo de moderación de <strong>queplaneshoy</strong> ha revisado tu evento <strong>${escapeHtml(params.eventTitle)}</strong> y se han registrado las siguientes observaciones para que puedas subsanarlas:
+        El equipo de moderación de <strong>queplanhoy</strong> ha revisado tu evento <strong>${escapeHtml(params.eventTitle)}</strong> y se han registrado las siguientes observaciones para que puedas subsanarlas:
       </p>
       <div style="background-color: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 14px 16px; margin: 16px 0; color: #9F1239; font-size: 13px; line-height: 1.5;">
         <strong>Detalle de la observación:</strong><br />
@@ -520,7 +520,7 @@ export function buildEventObservedEmailContent(params: {
     supportEmail: params.supportEmail,
   });
 
-  const text = `Tu evento "${params.eventTitle}" ha sido observado en queplaneshoy. Motivo: ${params.observationReason}. Ingresa a tu panel para corregirlo.`;
+  const text = `Tu evento "${params.eventTitle}" ha sido observado en queplanhoy. Motivo: ${params.observationReason}. Ingresa a tu panel para corregirlo.`;
 
   return {
     subject: `[Acción Requerida] Observaciones en tu evento "${params.eventTitle}"`,
