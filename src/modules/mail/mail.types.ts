@@ -96,6 +96,26 @@ export interface SendEventPublishedEmailPayload {
   category?: string | null;
 }
 
+export interface SendEventSubmittedForReviewEmailPayload {
+  to: string;
+  moderatorName?: string;
+  organizerName: string;
+  organizerEmail: string;
+  eventTitle: string;
+  eventId: string;
+  category?: string | null;
+  venueName?: string | null;
+  reviewUrl?: string;
+}
+
+export interface SendEventObservedEmailPayload {
+  to: string;
+  name: string;
+  eventTitle: string;
+  observationReason: string;
+  editUrl?: string;
+}
+
 export interface SendAdvancePaidEmailPayload {
   to: string;
   name: string;

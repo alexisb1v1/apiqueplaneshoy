@@ -1,6 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { ok, err, Result } from 'neverthrow';
 import { PublishEventCommand } from '@events/commands/impl/publish-event.command';
 import { EventEntity } from '@events/domain/entities/event.entity';
@@ -18,6 +19,7 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
     private readonly userRepository: Repository<UserEntity>,
     private readonly searchService: SearchService,
     private readonly mailService: MailService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -108,6 +110,23 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
             eventPublicUrl: publicPath,
             venueName: updatedEvent.venue,
             category: updatedEvent.category,
+          })
+          .catch(() => {});
+      } else if (updatedEvent.status === 'in_review') {
+        // Enviar notificación al correo de moderación
+        const moderationEmail =
+          this.configService.get<string>('MODERATION_REVIEW_EMAIL') ||
+          'abasilio@queplanhoy.com';
+
+        this.mailService
+          .sendEventSubmittedForReviewEmail({
+            to: moderationEmail,
+            organizerName: user.organizerName || user.name,
+            organizerEmail: user.email,
+            eventTitle: updatedEvent.name,
+            eventId: updatedEvent.id.toString(),
+            category: updatedEvent.category,
+            venueName: updatedEvent.venue,
           })
           .catch(() => {});
       }

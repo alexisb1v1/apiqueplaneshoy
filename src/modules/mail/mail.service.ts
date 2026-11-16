@@ -8,6 +8,8 @@ import {
   SendAdvancePaidEmailPayload,
   SendEmailInput,
   SendEventPublishedEmailPayload,
+  SendEventSubmittedForReviewEmailPayload,
+  SendEventObservedEmailPayload,
   SendOrderTicketsEmailPayload,
   SendOrganizerActivatedEmailPayload,
   SendOrganizerKycVerifiedEmailPayload,
@@ -17,6 +19,8 @@ import {
 import {
   buildAdvancePaidEmailContent,
   buildEventPublishedEmailContent,
+  buildEventSubmittedForReviewEmailContent,
+  buildEventObservedEmailContent,
   buildOrderTicketsEmailContent,
   buildOrganizerActivatedEmailContent,
   buildOrganizerKycVerifiedEmailContent,
@@ -434,6 +438,56 @@ export class MailService implements EmailService {
       html: content.html,
       text: content.text,
       tags: [{ name: 'template', value: 'event_published' }],
+    });
+  }
+
+  /**
+   * Notifica al equipo de moderación / administrador que un evento fue enviado a revisión.
+   */
+  async sendEventSubmittedForReviewEmail(
+    payload: SendEventSubmittedForReviewEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const content = buildEventSubmittedForReviewEmailContent({
+      moderatorName: payload.moderatorName,
+      organizerName: payload.organizerName,
+      organizerEmail: payload.organizerEmail,
+      eventTitle: payload.eventTitle,
+      eventId: payload.eventId,
+      category: payload.category,
+      venueName: payload.venueName,
+      reviewUrl: payload.reviewUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'event_submitted_for_review' }],
+    });
+  }
+
+  /**
+   * Notifica al organizador que su evento ha sido observado.
+   */
+  async sendEventObservedEmail(
+    payload: SendEventObservedEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const content = buildEventObservedEmailContent({
+      name: payload.name,
+      eventTitle: payload.eventTitle,
+      observationReason: payload.observationReason,
+      editUrl: payload.editUrl,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'event_observed' }],
     });
   }
 

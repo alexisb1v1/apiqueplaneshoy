@@ -84,25 +84,71 @@ export class ListEventApprovalsHandler
         e.public_uuid AS "publicUuid",
         e.slug,
         e.name AS "title",
+        e.description,
         e.category,
         e.status,
         e.observation_reason AS "observationReason",
         e.venue,
+        e.address,
+        e.address_reference AS "addressReference",
+        e.google_maps_url AS "googleMapsUrl",
         e.ubigeo_code AS "ubigeoCode",
+        e.age_restriction AS "ageRestriction",
+        e.entry_requirements AS "entryRequirements",
+        e.opening_hours_comment AS "openingHoursComment",
+        e.terms_and_conditions_url AS "termsAndConditionsUrl",
+        e.has_landing_page AS "hasLandingPage",
+        e.faqs,
         e.created_at AS "createdAt",
         COALESCE(u.organizer_name, u.name) AS "organizerName",
         u.organizer_document_number AS "organizerDocumentNumber",
+        u.email AS "organizerEmail",
+        u.organizer_phone AS "organizerPhone",
+        (
+          SELECT i.image_url 
+          FROM event_images i 
+          WHERE i.event_id = e.id AND i.image_type = 'banner' 
+          LIMIT 1
+        ) AS "bannerImageUrl",
         (
           SELECT MIN(s.start_time)
           FROM shows s
           WHERE s.event_id = e.id
         ) AS "firstShowDate",
+        COALESCE(s_agg.shows_json, '[]'::json) AS "showsJson",
+        COALESCE(c_agg.coupons_json, '[]'::json) AS "couponsJson",
         COALESCE(z_agg.total_capacity, 0)::int AS "totalCapacity",
         COALESCE(z_agg.min_price, 0)::numeric(10,2) AS "minPrice",
         COALESCE(z_agg.max_price, 0)::numeric(10,2) AS "maxPrice",
         COALESCE(z_agg.zones_json, '[]'::json) AS "zonesJson"
       FROM events e
       INNER JOIN users u ON u.id = e.organizer_id
+      LEFT JOIN LATERAL (
+        SELECT 
+          json_agg(
+            json_build_object(
+              'id', s.id::text,
+              'name', s.name,
+              'startTime', s.start_time,
+              'durationHours', s.duration_hours
+            ) ORDER BY s.start_time ASC
+          ) AS shows_json
+        FROM shows s
+        WHERE s.event_id = e.id
+      ) s_agg ON true
+      LEFT JOIN LATERAL (
+        SELECT 
+          json_agg(
+            json_build_object(
+              'code', c.code,
+              'discountType', c.discount_type,
+              'discountValue', c.discount_value::float,
+              'maxUses', c.max_uses
+            )
+          ) AS coupons_json
+        FROM coupons c
+        WHERE c.event_id = e.id
+      ) c_agg ON true
       LEFT JOIN LATERAL (
         SELECT 
           SUM(z.capacity) AS total_capacity,
@@ -134,17 +180,32 @@ export class ListEventApprovalsHandler
       item.publicUuid = r.publicUuid;
       item.slug = r.slug;
       item.title = r.title;
+      item.description = r.description || null;
       item.category = r.category;
       item.status = r.status;
       item.venue = r.venue;
+      item.address = r.address || null;
+      item.addressReference = r.addressReference || null;
+      item.googleMapsUrl = r.googleMapsUrl || null;
       item.city = cityData.name;
+      item.ageRestriction = r.ageRestriction || null;
+      item.entryRequirements = r.entryRequirements || null;
+      item.openingHoursComment = r.openingHoursComment || null;
+      item.termsAndConditionsUrl = r.termsAndConditionsUrl || null;
+      item.hasLandingPage = Boolean(r.hasLandingPage);
+      item.bannerImageUrl = r.bannerImageUrl || null;
+      item.faqs = Array.isArray(r.faqs) ? r.faqs : [];
       item.organizerName = r.organizerName;
       item.organizerDocumentNumber = r.organizerDocumentNumber;
+      item.organizerEmail = r.organizerEmail || null;
+      item.organizerPhone = r.organizerPhone || null;
       item.firstShowDate = r.firstShowDate ? new Date(r.firstShowDate).toISOString() : null;
       item.totalCapacity = Number(r.totalCapacity || 0);
       item.minPrice = Number(r.minPrice || 0);
       item.maxPrice = Number(r.maxPrice || 0);
       item.observationReason = r.observationReason || null;
+      item.shows = Array.isArray(r.showsJson) ? r.showsJson : [];
+      item.coupons = Array.isArray(r.couponsJson) ? r.couponsJson : [];
       item.zones = Array.isArray(r.zonesJson) ? r.zonesJson : [];
       item.createdAt = new Date(r.createdAt).toISOString();
       return item;

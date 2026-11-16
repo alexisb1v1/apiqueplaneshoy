@@ -437,6 +437,99 @@ export function buildEventPublishedEmailContent(params: {
 }
 
 /**
+ * Notifica al equipo de operaciones / moderación que un promotor envió un evento a revisión.
+ */
+export function buildEventSubmittedForReviewEmailContent(params: {
+  moderatorName?: string;
+  organizerName: string;
+  organizerEmail: string;
+  eventTitle: string;
+  eventId: string;
+  category?: string | null;
+  venueName?: string | null;
+  reviewUrl?: string;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const html = renderBrandedEmailLayout({
+    preheader: `Nuevo evento enviado a revisión: "${params.eventTitle}"`,
+    badge: 'Moderación requerida',
+    title: 'Nuevo evento enviado a revisión',
+    greeting: `Hola, ${escapeHtml(params.moderatorName || 'Equipo de Moderación')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        El organizador <strong>${escapeHtml(params.organizerName)}</strong> (${escapeHtml(params.organizerEmail)}) ha enviado el evento <strong>${escapeHtml(params.eventTitle)}</strong> (#${escapeHtml(params.eventId)}) a revisión técnica y comercial.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; margin-bottom: 14px;">
+        <tr>
+          <td style="padding: 14px 16px;">
+            ${params.category ? `<p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #4F46E5; text-transform: uppercase;">${escapeHtml(params.category)}</p>` : ''}
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #0F172A;">${escapeHtml(params.eventTitle)}</p>
+            ${params.venueName ? `<p style="margin: 0; font-size: 13px; color: #475569;">Recinto: ${escapeHtml(params.venueName)}</p>` : ''}
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0; font-size: 13px; color: #475569;">
+        Ingresa a la mesa de control de Backoffice para validar tarifarios, aforos, normas salvaguardas y aprobar o retornar observaciones al promotor.
+      </p>
+    `,
+    ctaLabel: 'Revisar Evento en Backoffice',
+    ctaUrl: params.reviewUrl || 'https://backoffice.queplanhoy.com/events/approvals',
+    footerNote: 'Este correo se genera automáticamente al cambiar de estado Borrador a En Revisión.',
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Nuevo evento enviado a revisión: "${params.eventTitle}" por ${params.organizerName}. Revisa el expediente en Backoffice.`;
+
+  return {
+    subject: `[Revisión Requerida] Nuevo evento: "${params.eventTitle}"`,
+    html,
+    text,
+  };
+}
+
+/**
+ * Notifica al organizador que su evento ha sido observado por el equipo de moderación.
+ */
+export function buildEventObservedEmailContent(params: {
+  name: string;
+  eventTitle: string;
+  observationReason: string;
+  editUrl?: string;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const html = renderBrandedEmailLayout({
+    preheader: `Tu evento "${params.eventTitle}" requiere correcciones antes de publicarse.`,
+    badge: 'Acción Requerida',
+    title: 'Observación en la revisión de tu evento',
+    greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        El equipo de moderación de <strong>queplaneshoy</strong> ha revisado tu evento <strong>${escapeHtml(params.eventTitle)}</strong> y se han registrado las siguientes observaciones para que puedas subsanarlas:
+      </p>
+      <div style="background-color: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 14px 16px; margin: 16px 0; color: #9F1239; font-size: 13px; line-height: 1.5;">
+        <strong>Detalle de la observación:</strong><br />
+        ${escapeHtml(params.observationReason)}
+      </div>
+      <p style="margin: 0 0 14px 0; font-size: 13px; color: #475569;">
+        Por favor ingresa a tu panel de organizador, realiza las correcciones solicitadas y vuelve a enviar el evento a revisión.
+      </p>
+    `,
+    ctaLabel: 'Editar y Subsanar Evento',
+    ctaUrl: params.editUrl || 'https://queplanhoy.com/organizer/events',
+    footerNote: 'Si tienes dudas sobre las observaciones, puedes responder a este correo para comunicarte con nuestro equipo.',
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Tu evento "${params.eventTitle}" ha sido observado en queplaneshoy. Motivo: ${params.observationReason}. Ingresa a tu panel para corregirlo.`;
+
+  return {
+    subject: `[Acción Requerida] Observaciones en tu evento "${params.eventTitle}"`,
+    html,
+    text,
+  };
+}
+
+/**
  * Construye el correo de notificación cuando se paga un anticipo financiero al organizador.
  */
 export function buildAdvancePaidEmailContent(params: {

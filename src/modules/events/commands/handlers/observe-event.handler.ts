@@ -4,13 +4,18 @@ import { Repository } from 'typeorm';
 import { ok, err, Result } from 'neverthrow';
 import { ObserveEventCommand } from '../impl/observe-event.command';
 import { EventEntity } from '@events/domain/entities/event.entity';
+import { UserEntity } from '@users/domain/entities/user.entity';
 import { AppError } from '@common/errors/app-errors';
+import { MailService } from '@modules/mail/mail.service';
 
 @CommandHandler(ObserveEventCommand)
 export class ObserveEventHandler implements ICommandHandler<ObserveEventCommand, Result<EventEntity, AppError>> {
   constructor(
     @InjectRepository(EventEntity)
     private readonly eventRepository: Repository<EventEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+    private readonly mailService: MailService,
   ) {}
 
   async execute(command: ObserveEventCommand): Promise<Result<EventEntity, AppError>> {
@@ -41,6 +46,24 @@ export class ObserveEventHandler implements ICommandHandler<ObserveEventCommand,
     }
 
     const updated = await this.eventRepository.save(event);
+
+    // Notificar por correo al organizador con el motivo de la observación
+    if (updated.organizerId && reason) {
+      this.userRepository
+        .findOne({ where: { id: updated.organizerId } })
+        .then((organizer) => {
+          if (!organizer?.email) return;
+
+          return this.mailService.sendEventObservedEmail({
+            to: organizer.email,
+            name: organizer.organizerName || organizer.name,
+            eventTitle: updated.name,
+            observationReason: reason.trim(),
+          });
+        })
+        .catch(() => null);
+    }
+
     return ok(updated);
   }
 }
