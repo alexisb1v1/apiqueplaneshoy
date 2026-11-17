@@ -20,6 +20,16 @@ export class PaymentEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, comment: 'Monto monetario exacto procesado en esta transacción' })
   amount: number;
 
+  @Column({
+    name: 'gateway_fee_amount',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0.0,
+    comment: 'Comisión cobrada por la pasarela de pagos (Culqi) descontada de esta transacción',
+  })
+  gatewayFeeAmount: number;
+
   @Index()
   @Column({ type: 'varchar', length: 50, default: 'pending', comment: 'Estado del pago: pending, approved, rejected, refunded' })
   status: string;

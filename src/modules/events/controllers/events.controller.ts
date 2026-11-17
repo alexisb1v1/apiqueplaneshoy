@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Delete,
   Body,
   Param,
@@ -14,12 +15,17 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateEventDto } from '../dto/create-event.dto';
+import { UpdateEventDto } from '../dto/update-event.dto';
 import { FeaturedEventResponseDto } from '../dto/featured-event.response.dto';
 import { HomeEventCardResponseDto } from '../dto/home-event-card.response.dto';
 import { EventLandingResponseDto } from '../dto/event-landing.response.dto';
 import { EventDetailResponseDto } from '../dto/event-detail.response.dto';
+import { GetOrganizerEventsRequestDto } from '../dto/get-organizer-events.request.dto';
+import { OrganizerEventResponseDto } from '../dto/organizer-event.response.dto';
+import { OrganizerEventEditResponseDto } from '../dto/organizer-event-edit.response.dto';
 import { PurgeFeaturedCacheResponseDto } from '../dto/purge-featured-cache.response.dto';
 import { CreateEventCommand } from '../commands/impl/create-event.command';
+import { UpdateEventCommand } from '../commands/impl/update-event.command';
 import { PublishEventCommand } from '../commands/impl/publish-event.command';
 import { GetFeaturedEventsQuery } from '../queries/impl/get-featured-events.query';
 import { GetUpcomingEventsQuery } from '../queries/impl/get-upcoming-events.query';
@@ -27,6 +33,8 @@ import { GetWeeklyFeaturedEventsQuery } from '../queries/impl/get-weekly-feature
 import { GetWeekendEventsQuery } from '../queries/impl/get-weekend-events.query';
 import { GetEventLandingQuery } from '../queries/impl/get-event-landing.query';
 import { GetEventDetailQuery } from '../queries/impl/get-event-detail.query';
+import { GetOrganizerEventsQuery } from '../queries/impl/get-organizer-events.query';
+import { GetOrganizerEventForEditQuery } from '../queries/impl/get-organizer-event-for-edit.query';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
 import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
@@ -34,9 +42,17 @@ import { matchResult } from '@common/http/match-result';
 import { plainToInstance } from 'class-transformer';
 import { EventStatusCronService } from '../services/event-status-cron.service';
 import { EventSeederService } from '../services/event-seeder.service';
+import { EventEntity } from '../domain/entities/event.entity';
 import { SeedEventsRequestDto } from '../dto/seed-events.request.dto';
 import { SeedEventsResponseDto } from '../dto/seed-events.response.dto';
+import { ListEventApprovalsQueryDto } from '../dto/list-event-approvals.query.dto';
+import { ListEventApprovalsResponseDto } from '../dto/list-event-approvals.response.dto';
+import { ObserveEventDto } from '../dto/observe-event.dto';
+import { ListEventApprovalsQuery } from '../queries/impl/list-event-approvals.query';
+import { ApproveEventCommand } from '../commands/impl/approve-event.command';
+import { ObserveEventCommand } from '../commands/impl/observe-event.command';
 import { AdminKeyGuard } from '@common/guards/admin-key.guard';
+import { RolesAdminGuard } from '@common/guards/roles-admin.guard';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Events')
@@ -165,8 +181,12 @@ export class EventsController {
     type: EventLandingResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Evento no encontrado o no tiene landing habilitada' })
-  async getLanding(@Param('slug') slug: string): Promise<EventLandingResponseDto> {
-    return this.queryBus.execute(new GetEventLandingQuery(slug));
+  async getLanding(
+    @Param('slug') slug: string,
+    @Query('previewTemp') previewTemp?: string,
+  ): Promise<EventLandingResponseDto> {
+    const isPreview = Boolean(previewTemp);
+    return this.queryBus.execute(new GetEventLandingQuery(slug, isPreview, previewTemp));
   }
 
   @Post('home/cache/purge')
@@ -199,6 +219,142 @@ export class EventsController {
       },
       message: 'Todas las secciones de la Home (qph:home:*) fueron invalidadas y precalentadas en Redis exitosamente.',
     };
+  }
+
+  @Get('organizer')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Listar los eventos creados por el organizador autenticado con métricas reales por zona',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de eventos del promotor con aforos, preventas activas y recaudación en S/.',
+    type: [OrganizerEventResponseDto],
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  async getOrganizerEvents(
+    @Req() req: AuthenticatedRequest,
+    @Query() filters: GetOrganizerEventsRequestDto,
+  ): Promise<OrganizerEventResponseDto[]> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.queryBus.execute(
+      new GetOrganizerEventsQuery(publicUuid, filters.status, filters.q, filters.period),
+    );
+    return matchResult(result, (events) => events);
+  }
+
+  @Get('organizer/:identifier/edit')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Obtener datos completos de un evento/borrador del organizador para su edición',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estructura editable completa del evento',
+    type: OrganizerEventEditResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'No tienes permiso para editar este evento' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async getOrganizerEventForEdit(
+    @Req() req: AuthenticatedRequest,
+    @Param('identifier') identifier: string,
+  ): Promise<OrganizerEventEditResponseDto> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.queryBus.execute(
+      new GetOrganizerEventForEditQuery(publicUuid, identifier),
+    );
+    return matchResult(result, (event) => event);
+  }
+
+  // =========================================================================
+  // ENDPOINTS DE MODERACIÓN Y APROBACIÓN DE EVENTOS (EXCLUSIVO BACKOFFICE)
+  // DEBEN ESTAR ANTES DE @Get(':identifier') PARA EVITAR CAPTURA WILDCARD
+  // =========================================================================
+
+  @Get('approvals')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Listar eventos para moderación de forma ligera y paginada (Backoffice)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista ligera de eventos para aprobación',
+    type: ListEventApprovalsResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Token de autenticación faltante o inválido' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
+  async listEventApprovals(
+    @Query() queryDto: ListEventApprovalsQueryDto,
+  ): Promise<ListEventApprovalsResponseDto> {
+    const result = await this.queryBus.execute(new ListEventApprovalsQuery(queryDto));
+    return matchResult(result, (data: ListEventApprovalsResponseDto) => data, {
+      FORBIDDEN: 'Acceso no permitido',
+      INTERNAL_ERROR: 'Error al consultar aprobaciones de eventos',
+    });
+  }
+
+  @Post(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Aprobar y publicar un evento desde el Backoffice',
+  })
+  @ApiResponse({ status: 200, description: 'Evento aprobado y publicado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async approveEvent(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const adminUser = req.user?.email || (req.user?.sub as string) || 'admin';
+    const result = await this.commandBus.execute(new ApproveEventCommand(id, adminUser));
+    return matchResult(
+      result,
+      (event: EventEntity) => ({
+        message: 'Evento aprobado y publicado exitosamente',
+        eventId: event.id,
+        status: event.status,
+      }),
+      {
+        NOT_FOUND: 'Evento no encontrado',
+        INTERNAL_ERROR: 'Error al aprobar el evento',
+      },
+    );
+  }
+
+  @Post(':id/observe')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Observar un evento para que el promotor corrija detalles',
+  })
+  @ApiResponse({ status: 200, description: 'Evento observado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async observeEvent(
+    @Param('id') id: string,
+    @Body() dto: ObserveEventDto,
+  ) {
+    const result = await this.commandBus.execute(new ObserveEventCommand(id, dto?.reason));
+    return matchResult(
+      result,
+      (event: EventEntity) => ({
+        message: 'Evento observado exitosamente',
+        eventId: event.id,
+        status: event.status,
+      }),
+      {
+        NOT_FOUND: 'Evento no encontrado',
+        INTERNAL_ERROR: 'Error al observar el evento',
+      },
+    );
   }
 
   @Get(':identifier')
@@ -236,6 +392,28 @@ export class EventsController {
       result,
       (event) => event,
     );
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar un evento o guardar cambios de un borrador existente' })
+  @ApiResponse({ status: 200, description: 'Evento actualizado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado a este evento' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async update(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') eventIdentifier: string,
+    @Body() dto: UpdateEventDto,
+  ) {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.commandBus.execute(
+      new UpdateEventCommand(publicUuid, eventIdentifier, dto),
+    );
+    return matchResult(result, (event) => event);
   }
 
   @Post(':id/publish')

@@ -69,7 +69,6 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     const zoneMapImage = event.images?.find((img) => img.imageType === 'zone_map');
     const zoneMapUrl =
       zoneMapImage?.imageUrl ||
-      event.landingConfig?.body?.bodyImageUrl ||
       event.landingConfig?.zoneMapUrl ||
       null;
 
@@ -98,12 +97,13 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         benefits: zone.benefits,
         regularPrice: Number(zone.regularPrice),
         currentPrice,
+        serviceFee: Number(zone.serviceFee) || 0,
+        feeIncluded: Boolean(zone.feeIncluded),
         activeTierName,
         capacity: cap,
         remainingTickets,
         isSoldOut: remainingTickets <= 0,
-        maxTicketsPerOrder: zone.maxTicketsPerOrder || 6,
-        maxTicketsPerUser: zone.maxTicketsPerUser || 10,
+        maxTicketsPerOrder: zone.maxTicketsPerOrder || 4,
       };
     });
 
@@ -134,12 +134,20 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         zoneMapUrl,
         termsAndConditionsUrl: event.termsAndConditionsUrl,
         ageRestriction: event.ageRestriction,
-        userTicketLimit: event.userTicketLimit || 4,
+        userTicketLimit: event.userTicketLimit || 6,
         openingHoursComment: event.openingHoursComment,
         entryRequirements: event.entryRequirements,
         googleMapsUrl: event.googleMapsUrl,
         coordinates: event.coordinates || null,
         addressReference: event.addressReference || null,
+        promoVideoUrl: event.promoVideoUrl || event.landingConfig?.header?.videoTeaserUrl || null,
+        socialLinks: event.socialLinks || (event.landingConfig?.footer
+          ? {
+              instagramUrl: event.landingConfig.footer.instagramUrl || null,
+              facebookUrl: event.landingConfig.footer.facebookUrl || null,
+              tiktokUrl: event.landingConfig.footer.tiktokUrl || null,
+            }
+          : null),
         shows: mappedShows,
         zones: mappedZones,
       },

@@ -59,6 +59,14 @@ export class EventZoneDto {
   currentPrice!: number;
 
   @Expose()
+  @ApiProperty({ example: 9.5 })
+  serviceFee!: number;
+
+  @Expose()
+  @ApiProperty({ example: false })
+  feeIncluded!: boolean;
+
+  @Expose()
   @ApiProperty({ example: 'Preventa Early Bird' })
   activeTierName!: string;
 
@@ -75,12 +83,8 @@ export class EventZoneDto {
   isSoldOut!: boolean;
 
   @Expose()
-  @ApiProperty({ example: 6 })
+  @ApiProperty({ example: 4 })
   maxTicketsPerOrder!: number;
-
-  @Expose()
-  @ApiProperty({ example: 10 })
-  maxTicketsPerUser!: number;
 }
 
 @Exclude()
@@ -164,6 +168,21 @@ export class EventDetailResponseDto {
   @Expose()
   @ApiProperty({ example: 'Frente al Real Plaza', nullable: true })
   addressReference!: string | null;
+
+  @Expose()
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx', nullable: true })
+  promoVideoUrl!: string | null;
+
+  @Expose()
+  @ApiProperty({
+    example: { instagramUrl: 'https://instagram.com/...', facebookUrl: 'https://facebook.com/...', tiktokUrl: 'https://tiktok.com/@...' },
+    nullable: true,
+  })
+  socialLinks!: {
+    instagramUrl?: string | null;
+    facebookUrl?: string | null;
+    tiktokUrl?: string | null;
+  } | null;
 
   @Expose()
   @Type(() => EventShowDto)

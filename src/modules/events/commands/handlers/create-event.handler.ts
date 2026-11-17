@@ -11,6 +11,7 @@ import { EventImageEntity } from '@events/domain/entities/event-image.entity';
 import { CouponEntity } from '@orders/domain/entities/coupon.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { AppError } from '@common/errors/app-errors';
+import { calculatePlatformFee } from '@orders/application/services/platform-fee.service';
 
 function slugify(text: string): string {
   const normalized = text
@@ -96,6 +97,56 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       const baseForSlug = dto.slug && dto.slug.trim() !== '' ? dto.slug.trim() : dto.title;
       const generatedSlug = slugify(baseForSlug);
 
+      const resolvedEventLimit = Math.max(1, Number(dto.userTicketLimit) || 6);
+
+      const resolvedPromoVideoUrl =
+        dto.promoVideoUrl?.trim() ||
+        dto.landingConfig?.header?.videoTeaserUrl?.trim() ||
+        null;
+
+      const resolvedSocialLinks = {
+        instagramUrl:
+          dto.socialLinks?.instagramUrl?.trim() ||
+          dto.landingConfig?.footer?.instagramUrl?.trim() ||
+          null,
+        facebookUrl:
+          dto.socialLinks?.facebookUrl?.trim() ||
+          dto.landingConfig?.footer?.facebookUrl?.trim() ||
+          null,
+        tiktokUrl:
+          dto.socialLinks?.tiktokUrl?.trim() ||
+          dto.landingConfig?.footer?.tiktokUrl?.trim() ||
+          null,
+      };
+      const hasAnySocialLink = Boolean(
+        resolvedSocialLinks.instagramUrl ||
+          resolvedSocialLinks.facebookUrl ||
+          resolvedSocialLinks.tiktokUrl,
+      );
+
+      // Si tiene landing, propagar también video y redes hacia landingConfig para compatibilidad
+      const normalizedLandingConfig = dto.landingConfig
+        ? {
+            ...dto.landingConfig,
+            header: {
+              ...(dto.landingConfig.header || {}),
+              ...(resolvedPromoVideoUrl ? { videoTeaserUrl: resolvedPromoVideoUrl } : {}),
+            },
+            footer: {
+              ...(dto.landingConfig.footer || {}),
+              ...(resolvedSocialLinks.instagramUrl
+                ? { instagramUrl: resolvedSocialLinks.instagramUrl }
+                : {}),
+              ...(resolvedSocialLinks.facebookUrl
+                ? { facebookUrl: resolvedSocialLinks.facebookUrl }
+                : {}),
+              ...(resolvedSocialLinks.tiktokUrl
+                ? { tiktokUrl: resolvedSocialLinks.tiktokUrl }
+                : {}),
+            },
+          }
+        : null;
+
       const event = this.eventRepository.create({
         name: dto.title,
         slug: generatedSlug,
@@ -110,13 +161,15 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
         coordinates: dto.coordinates || null,
         googleMapsUrl: dto.googleMapsUrl || null,
         ageRestriction: dto.ageRestriction || 'ALL_AGES',
-        userTicketLimit: Number(dto.userTicketLimit) || 4,
+        userTicketLimit: resolvedEventLimit,
         entryRequirements: dto.entryRequirements || null,
         openingHoursComment: dto.openingHoursComment || null,
         termsAndConditionsUrl: dto.termsAndConditionsUrl || null,
         faqs: dto.faqs || null,
         hasLandingPage: dto.hasLandingPage || false,
-        landingConfig: dto.landingConfig || null,
+        landingConfig: normalizedLandingConfig,
+        promoVideoUrl: resolvedPromoVideoUrl,
+        socialLinks: hasAnySocialLink ? resolvedSocialLinks : null,
         status: 'draft',
       });
 
@@ -152,17 +205,21 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       // 2. Guardar Zonas y Preventas Escalonadas (Tiers)
       if (dto.zones && dto.zones.length > 0) {
         for (const z of dto.zones) {
+          const requestedPerOrder = Math.max(1, Number(z.maxTicketsPerOrder) || 4);
+          const regularPriceNum = Number(z.regularPrice) || 0;
+          const officialFee = calculatePlatformFee(regularPriceNum);
+
           const zone = this.zoneRepository.create({
             eventId: savedEvent.id,
             name: z.name || 'General',
             title: z.title || null,
             color: z.color || '#3B82F6',
             capacity: Number(z.capacity) || 100,
-            regularPrice: Number(z.regularPrice) || 0,
-            serviceFee: Number(z.serviceFee) || 0,
+            regularPrice: regularPriceNum,
+            serviceFee: officialFee,
+            feeIncluded: Boolean(z.feeIncluded),
             benefits: z.benefits || null,
-            maxTicketsPerOrder: Number(z.maxTicketsPerOrder) || 6,
-            maxTicketsPerUser: Number(z.maxTicketsPerUser) || 10,
+            maxTicketsPerOrder: Math.min(requestedPerOrder, resolvedEventLimit),
             salesStartAt: z.salesStartAt ? new Date(z.salesStartAt) : null,
           });
           const savedZone = await this.zoneRepository.save(zone);

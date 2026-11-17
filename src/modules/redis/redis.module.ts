@@ -25,6 +25,8 @@ import { ThrottlerStorageRedisService } from './throttler-storage-redis.service'
           lazyConnect: true,
           enableOfflineQueue: false,
           maxRetriesPerRequest: 1,
+          connectTimeout: 2500,
+          commandTimeout: 2500,
           retryStrategy(times) {
             // Reintento con backoff exponencial con tope de 5 segundos
             const delay = Math.min(times * 200, 5000);

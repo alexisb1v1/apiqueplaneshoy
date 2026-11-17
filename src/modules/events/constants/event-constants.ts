@@ -98,3 +98,10 @@ export const resolveCityFromUbigeo = (
   };
 };
 
+export {
+  QPH_FEE_RULES,
+  calculatePlatformFee,
+  calculateQphFee,
+} from '@orders/application/services/platform-fee.service';
+
+

@@ -23,7 +23,7 @@ export class RegisterUserRequestDto {
 
   @ApiProperty({
     description: 'Correo electrónico único para login y notificaciones',
-    example: 'alexis@queplaneshoy.com',
+    example: 'alexis@queplanhoy.com',
   })
   @Transform(({ value }) => value?.trim().toLowerCase())
   @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })

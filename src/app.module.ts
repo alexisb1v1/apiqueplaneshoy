@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MediaModule } from './modules/media/media.module';
 import { SearchModule } from './modules/search/search.module';
 import { RedisModule } from './modules/redis/redis.module';
+import { MailModule } from './modules/mail/mail.module';
 import { ThrottlerStorageRedisService } from './modules/redis/throttler-storage-redis.service';
 
 @Module({
@@ -56,7 +57,7 @@ import { ThrottlerStorageRedisService } from './modules/redis/throttler-storage-
     AuthModule,
     MediaModule,
     SearchModule,
-    RedisModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

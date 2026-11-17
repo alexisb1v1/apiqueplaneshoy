@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { GetPresignedUrlDto } from './dto/get-presigned-url.dto';
 import { PresignedUrlResponseDto } from './dto/presigned-url-response.dto';
+import { DeleteMediaResponseDto } from './dto/delete-media.response.dto';
 
 @Injectable()
 export class MediaService {
@@ -91,5 +92,76 @@ export class MediaService {
         return 'jpg';
     }
   }
-}
 
+  /**
+   * Elimina de forma segura un objeto en Cloudflare R2
+   */
+  async deleteMediaObject(keyOrUrl: string): Promise<DeleteMediaResponseDto> {
+    const key = this.extractKeyFromUrl(keyOrUrl);
+    if (!key) {
+      this.logger.warn(
+        `Solicitud de borrado ignorada: no se pudo resolver la key válida del recurso: ${keyOrUrl}`
+      );
+      return new DeleteMediaResponseDto({ success: false, key: '' });
+    }
+
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+      this.logger.log(`Objeto eliminado exitosamente de Cloudflare R2: ${key}`);
+
+      return new DeleteMediaResponseDto({
+        success: true,
+        key,
+      });
+    } catch (error) {
+      this.logger.error(`Error al eliminar objeto de Cloudflare R2 (${key}):`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extrae y valida la clave relativa autorizada a partir de una URL completa o ruta relativa
+   */
+  private extractKeyFromUrl(keyOrUrl: string): string | null {
+    if (!keyOrUrl || typeof keyOrUrl !== 'string') return null;
+
+    let clean = keyOrUrl.trim();
+    try {
+      clean = decodeURIComponent(clean);
+    } catch {
+      // Ignorar error si no estaba URI encoded
+    }
+
+    const allowedFolders = ['banners', 'croquis', 'gallery', 'landings', 'organizers'];
+
+    // Caso 1: Si es una URL completa (ej: https://pub-r2.dev/landings/1730328900-uuid.webp?v=1)
+    try {
+      const parsed = new URL(clean);
+      const pathname = parsed.pathname.replace(/^\/+/, '');
+      const folder = pathname.split('/')[0];
+      if (allowedFolders.includes(folder)) {
+        return pathname;
+      }
+    } catch {
+      // No es una URL absoluta válida con protocolo, evaluamos como clave relativa
+    }
+
+    // Caso 2: Si viene como path relativo con o sin slash inicial
+    const cleanRelative = clean.replace(/^\/+/, '');
+    const folderMatch = cleanRelative.match(/^([a-zA-Z0-9_-]+)\/(.+)$/);
+    if (folderMatch) {
+      const folder = folderMatch[1];
+      if (allowedFolders.includes(folder)) {
+        // Eliminar posibles query params residuales (?v=...)
+        return cleanRelative.split('?')[0].split('#')[0];
+      }
+    }
+
+    return null;
+  }
+}

@@ -1,12 +1,14 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { ok, err, Result } from 'neverthrow';
 import { PublishEventCommand } from '@events/commands/impl/publish-event.command';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { AppError } from '@common/errors/app-errors';
 import { SearchService } from '../../../search/services/search.service';
+import { MailService } from '@modules/mail/mail.service';
 
 @CommandHandler(PublishEventCommand)
 export class PublishEventHandler implements ICommandHandler<PublishEventCommand> {
@@ -16,6 +18,8 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly searchService: SearchService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -65,27 +69,67 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
     }
 
     try {
-      event.status = 'published';
+      // Si el rol es admin, aprueba y publica directamente.
+      // Si el rol es promotor/organizador, pasa a 'in_review' para moderación en el Backoffice.
+      event.status = user.role === 'admin' ? 'published' : 'in_review';
       const updatedEvent = await this.eventRepository.save(event);
 
-      // Sincronizar en Meilisearch para búsqueda instantánea
-      this.searchService.indexEvent({
-        id: updatedEvent.id.toString(),
-        publicUuid: updatedEvent.publicUuid,
-        title: updatedEvent.name,
-        slug: updatedEvent.slug,
-        description: updatedEvent.description,
-        category: updatedEvent.category,
-        tags: updatedEvent.tags || [],
-        venue: updatedEvent.venue,
-        address: updatedEvent.address,
-        ubigeoCode: updatedEvent.ubigeoCode,
-        status: updatedEvent.status,
-        minPrice: 0,
-        date: updatedEvent.createdAt ? updatedEvent.createdAt.toISOString() : new Date().toISOString(),
-        hasLandingPage: updatedEvent.hasLandingPage,
-        isFeatured: updatedEvent.isFeatured,
-      }).catch(() => {});
+      // Solo sincronizar en Meilisearch si pasa a published
+      if (updatedEvent.status === 'published') {
+        this.searchService.indexEvent({
+          id: updatedEvent.id.toString(),
+          publicUuid: updatedEvent.publicUuid,
+          title: updatedEvent.name,
+          slug: updatedEvent.slug,
+          description: updatedEvent.description,
+          category: updatedEvent.category,
+          tags: updatedEvent.tags || [],
+          venue: updatedEvent.venue,
+          address: updatedEvent.address,
+          ubigeoCode: updatedEvent.ubigeoCode,
+          status: updatedEvent.status,
+          minPrice: 0,
+          date: updatedEvent.createdAt ? updatedEvent.createdAt.toISOString() : new Date().toISOString(),
+          hasLandingPage: updatedEvent.hasLandingPage,
+          isFeatured: updatedEvent.isFeatured,
+        }).catch(() => {});
+      }
+
+      // Notificación al organizador
+      const publicPath =
+        updatedEvent.hasLandingPage && updatedEvent.slug
+          ? `/e/${updatedEvent.slug}`
+          : `/events/${updatedEvent.publicUuid}`;
+
+      if (updatedEvent.status === 'published') {
+        this.mailService
+          .sendEventPublishedEmail({
+            to: user.email,
+            name: user.organizerName || user.name,
+            eventTitle: updatedEvent.name,
+            eventPublicUrl: publicPath,
+            venueName: updatedEvent.venue,
+            category: updatedEvent.category,
+          })
+          .catch(() => {});
+      } else if (updatedEvent.status === 'in_review') {
+        // Enviar notificación al correo de moderación
+        const moderationEmail =
+          this.configService.get<string>('MODERATION_REVIEW_EMAIL') ||
+          'abasilio@queplanhoy.com';
+
+        this.mailService
+          .sendEventSubmittedForReviewEmail({
+            to: moderationEmail,
+            organizerName: user.organizerName || user.name,
+            organizerEmail: user.email,
+            eventTitle: updatedEvent.name,
+            eventId: updatedEvent.id.toString(),
+            category: updatedEvent.category,
+            venueName: updatedEvent.venue,
+          })
+          .catch(() => {});
+      }
 
       return ok(updatedEvent);
     } catch {

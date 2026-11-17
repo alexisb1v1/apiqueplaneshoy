@@ -13,7 +13,7 @@ export class AuthUserDto {
   @ApiProperty({ example: 'Bermúdez' })
   lastName: string;
 
-  @ApiProperty({ example: 'alexis@queplaneshoy.com' })
+  @ApiProperty({ example: 'alexis@queplanhoy.com' })
   email: string;
 
   @ApiProperty({ example: '+51 987654321', required: false, nullable: true })
@@ -34,7 +34,7 @@ export class AuthUserDto {
   @ApiProperty({ example: '20123456789', required: false, nullable: true })
   organizerDocumentNumber?: string | null;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/logos/org.png', required: false, nullable: true })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/logos/org.png', required: false, nullable: true })
   organizerLogoUrl?: string | null;
 
   @ApiProperty({ example: null, nullable: true })

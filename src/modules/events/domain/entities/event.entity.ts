@@ -6,6 +6,7 @@ import { ZoneEntity } from './zone.entity';
 import { EventAdvanceEntity } from './event-advance.entity';
 import { EventSettlementEntity } from './event-settlement.entity';
 import { CouponEntity } from '@orders/domain/entities/coupon.entity';
+import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { UserFavoriteEventEntity } from '@users/domain/entities/user-favorite-event.entity';
 
 @Entity('events')
@@ -61,6 +62,16 @@ export class EventEntity {
   @Column({ name: 'landing_config', type: 'jsonb', nullable: true, comment: 'Configuración visual de la landing del evento: colores, tema, imagen cabecera, CTA y croquis de zonas' })
   landingConfig: Record<string, any> | null;
 
+  @Column({ name: 'promo_video_url', type: 'varchar', length: 512, nullable: true, comment: 'URL del video promocional o teaser oficial del evento (YouTube, Vimeo o MP4 directo)' })
+  promoVideoUrl: string | null;
+
+  @Column({ name: 'social_links', type: 'jsonb', nullable: true, comment: 'Enlaces a redes sociales oficiales del evento: { instagramUrl, facebookUrl, tiktokUrl }' })
+  socialLinks: {
+    instagramUrl?: string | null;
+    facebookUrl?: string | null;
+    tiktokUrl?: string | null;
+  } | null;
+
   @Column({ name: 'ubigeo_code', type: 'varchar', length: 6, nullable: true, comment: 'Código de ubigeo INEI de 6 dígitos (dep-prov-distrito)' })
   ubigeoCode: string | null;
 
@@ -85,7 +96,7 @@ export class EventEntity {
   @Column({ name: 'opening_hours_comment', type: 'text', nullable: true, comment: 'Instrucciones y comentarios sobre horarios de apertura de puertas y recomendaciones de llegada' })
   openingHoursComment: string | null;
 
-  @Column({ name: 'user_ticket_limit', type: 'integer', default: 4, comment: 'Límite global por defecto de entradas por usuario en el evento' })
+  @Column({ name: 'user_ticket_limit', type: 'integer', default: 6, comment: 'Límite global acumulado de entradas por usuario en todo el evento' })
   userTicketLimit: number;
 
   @Column({ name: 'signing_key_id', type: 'varchar', length: 64, default: () => 'gen_random_uuid()', comment: 'Identificador del par de llaves criptográficas del evento para rotación y revocación' })
@@ -97,6 +108,25 @@ export class EventEntity {
   @Index()
   @Column({ type: 'varchar', length: 50, default: 'draft', comment: 'Estado del evento: draft, published, paused, cancelled' })
   status: string;
+
+  @Column({ name: 'observation_reason', type: 'text', nullable: true, comment: 'Motivo o detalle de observación del evento registrado por la administración en el Backoffice' })
+  observationReason: string | null;
+
+  @Column({ name: 'ticketera_fee_snapshot', type: 'jsonb', nullable: true, comment: 'Snapshot inmutable de comisiones y tarifas pactadas por zona congeladas al momento de aprobar el evento (published)' })
+  ticketeraFeeSnapshot: {
+    approvedAt: string;
+    approvedBy?: string;
+    rulesVersion: string;
+    feeRules: Record<string, any>;
+    zones: Array<{
+      zoneId: string;
+      zoneName: string;
+      regularPrice: number;
+      serviceFee: number;
+      feeIncluded: boolean;
+      capacity: number;
+    }>;
+  } | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz', comment: 'Fecha y hora de creación del registro' })
   createdAt: Date;
@@ -117,6 +147,9 @@ export class EventEntity {
 
   @OneToMany(() => CouponEntity, (coupon) => coupon.event)
   coupons: CouponEntity[];
+
+  @OneToMany(() => OrderEntity, (order) => order.event)
+  orders: OrderEntity[];
 
   @OneToMany(() => EventAdvanceEntity, (advance) => advance.event)
   advances: EventAdvanceEntity[];

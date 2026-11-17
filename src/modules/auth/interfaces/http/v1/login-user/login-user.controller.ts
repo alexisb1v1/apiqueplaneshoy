@@ -40,6 +40,7 @@ export class LoginUserController {
       },
       {
         UNAUTHORIZED: 'Credenciales de acceso inválidas',
+        FORBIDDEN: 'Acceso no permitido para este tipo de cuenta en esta plataforma',
       },
     );
   }

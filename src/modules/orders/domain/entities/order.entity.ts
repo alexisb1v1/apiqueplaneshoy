@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
 import { UserEntity } from '@users/domain/entities/user.entity';
+import { EventEntity } from '@events/domain/entities/event.entity';
 import { TicketEntity } from './ticket.entity';
 import { PaymentEntity } from './payment.entity';
 import { CouponEntity } from './coupon.entity';
@@ -17,6 +18,10 @@ export class OrderEntity {
   @Index()
   @Column({ name: 'user_id', type: 'integer', comment: 'ID del usuario comprador que generó esta orden' })
   userId: number;
+
+  @Index()
+  @Column({ name: 'event_id', type: 'bigint', nullable: true, comment: 'ID del evento al que corresponde esta orden de compra' })
+  eventId: string | null;
 
   @Index()
   @Column({ name: 'coupon_id', type: 'bigint', nullable: true, comment: 'ID del cupón de descuento aplicado a esta orden (si corresponde)' })
@@ -49,6 +54,10 @@ export class OrderEntity {
   @ManyToOne(() => UserEntity, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;
+
+  @ManyToOne(() => EventEntity, (event) => event.orders, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'event_id' })
+  event: EventEntity | null;
 
   @ManyToOne(() => CouponEntity, (coupon) => coupon.orders, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'coupon_id' })

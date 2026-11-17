@@ -18,6 +18,7 @@ import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { ShowEntity } from '@events/domain/entities/show.entity';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
+import { resolveZoneTicketPricing } from '../../application/services/order-lifecycle.service';
 
 @CommandHandler(SimulateOrderCheckoutCommand)
 export class SimulateOrderCheckoutHandler
@@ -106,18 +107,9 @@ export class SimulateOrderCheckoutHandler
           return err('INVALID_INPUT');
         }
 
-        const eventTicketLimit = Number(event.userTicketLimit) || 4;
+        const eventTicketLimit = Number(event.userTicketLimit) || 6;
 
-        // A. Límite máximo por compra única para el evento
-        if (totalOrderTickets > eventTicketLimit) {
-          this.logger.warn(
-            `[Límite Excedido] Intento de compra de ${totalOrderTickets} entradas supera el límite de ${eventTicketLimit} del evento '${event.name}'.`,
-          );
-          await queryRunner.rollbackTransaction();
-          return err('TICKET_LIMIT_EXCEEDED');
-        }
-
-        // B. Límite acumulado histórico del usuario para este evento
+        // A. Límite global acumulado del usuario para este evento (Regla 1: Por Evento)
         const userBoughtTicketsCount = await queryRunner.manager
           .createQueryBuilder(TicketEntity, 't')
           .innerJoin('t.order', 'o')
@@ -139,9 +131,13 @@ export class SimulateOrderCheckoutHandler
         }
 
         // 2.4 Validar zonas, aforo, límites por zona y calcular montos
+        let subtotalTickets = 0;
+        let totalServiceFee = 0;
         let subtotal = 0;
         const zoneItemsResolved: Array<{
           zone: ZoneEntity;
+          unitBasePrice: number;
+          unitServiceFee: number;
           unitPrice: number;
           tierName: string;
           quantity: number;
@@ -168,32 +164,11 @@ export class SimulateOrderCheckoutHandler
             return err('NOT_FOUND');
           }
 
-          // C. Límite por compra en la zona
-          const maxPerOrder = Number(zone.maxTicketsPerOrder) || 6;
+          // B. Límite por orden en la zona (Regla 2: Por Orden en Pasarela)
+          const maxPerOrder = Number(zone.maxTicketsPerOrder) || 4;
           if (item.quantity > maxPerOrder) {
             this.logger.warn(
               `[Límite Excedido] Cantidad de ${item.quantity} supera el máximo por orden (${maxPerOrder}) para la zona '${zone.name}'.`,
-            );
-            await queryRunner.rollbackTransaction();
-            return err('TICKET_LIMIT_EXCEEDED');
-          }
-
-          // D. Límite acumulado por usuario en la zona
-          const userBoughtInZoneCount = await queryRunner.manager
-            .createQueryBuilder(TicketEntity, 't')
-            .innerJoin('t.order', 'o')
-            .where('t.zoneId = :zoneId', { zoneId: zone.id })
-            .andWhere('o.userId = :userId', { userId: user.id })
-            .andWhere('o.status = :orderStatus', { orderStatus: 'paid' })
-            .andWhere('t.status IN (:...ticketStatuses)', {
-              ticketStatuses: ['sold', 'used', 'locked'],
-            })
-            .getCount();
-
-          const maxPerUserInZone = Number(zone.maxTicketsPerUser) || 10;
-          if (userBoughtInZoneCount + item.quantity > maxPerUserInZone) {
-            this.logger.warn(
-              `[Límite Excedido] Usuario ${user.email} supera el límite de ${maxPerUserInZone} entradas en la zona '${zone.name}' (Posee ${userBoughtInZoneCount}, intenta añadir ${item.quantity}).`,
             );
             await queryRunner.rollbackTransaction();
             return err('TICKET_LIMIT_EXCEEDED');
@@ -219,19 +194,27 @@ export class SimulateOrderCheckoutHandler
             )
             .sort((a, b) => a.tierNumber - b.tierNumber);
 
-          const currentTier = activeTiers[0];
-          const unitPrice = currentTier ? Number(currentTier.price) : Number(zone.regularPrice);
+          const currentTier = activeTiers[0] || null;
+          const pricing = resolveZoneTicketPricing(zone, currentTier);
           const tierName = currentTier ? currentTier.name : zone.title || zone.name;
 
-          subtotal += unitPrice * item.quantity;
+          subtotalTickets += pricing.unitBasePrice * item.quantity;
+          totalServiceFee += pricing.unitServiceFee * item.quantity;
+          subtotal += pricing.unitBuyerPrice * item.quantity;
 
           zoneItemsResolved.push({
             zone,
-            unitPrice,
+            unitBasePrice: pricing.unitBasePrice,
+            unitServiceFee: pricing.unitServiceFee,
+            unitPrice: pricing.unitBuyerPrice,
             tierName,
             quantity: item.quantity,
           });
         }
+
+        subtotalTickets = Math.round(subtotalTickets * 100) / 100;
+        totalServiceFee = Math.round(totalServiceFee * 100) / 100;
+        subtotal = Math.round(subtotal * 100) / 100;
 
         // 2.3.5 Doble Check Atómico de Cupón de Descuento (Validación en Transacción con Bloqueo)
         let discountAmount = 0.0;
@@ -332,10 +315,11 @@ export class SimulateOrderCheckoutHandler
         // 2.4 Crear Orden
         const order = queryRunner.manager.create(OrderEntity, {
           userId: user.id,
+          eventId: event.id,
           couponId: appliedCoupon ? appliedCoupon.id : null,
           status: 'paid',
-          subtotalTickets: subtotal,
-          totalServiceFee: 0.0,
+          subtotalTickets,
+          totalServiceFee,
           discountAmount: discountAmount,
           totalAmount: finalTotal,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
@@ -349,6 +333,7 @@ export class SimulateOrderCheckoutHandler
           orderId: savedOrder.id,
           paymentMethod: dto.paymentMethod,
           amount: finalTotal,
+          gatewayFeeAmount: 0.0,
           status: 'approved',
           externalTransactionId: externalTx,
           gatewayResponse: {
@@ -377,8 +362,8 @@ export class SimulateOrderCheckoutHandler
               zoneId: resolved.zone.id,
               userId: user.id,
               orderId: savedOrder.id,
-              paidBasePrice: resolved.unitPrice,
-              paidServiceFee: 0.0,
+              paidBasePrice: resolved.unitBasePrice,
+              paidServiceFee: resolved.unitServiceFee,
               qrCode: qrPayload,
               status: 'sold',
             });

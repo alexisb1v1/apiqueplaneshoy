@@ -33,20 +33,21 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Mail as Servicio de Email (SMTP/Resend)
 
-    alt Camino A: Autenticación con Redes Sociales (Google / Facebook)
+    alt Camino A: Autenticación con Google OAuth 2.0
         Usuario->>Web: Clic en "Continuar con Google"
-        Web->>OAuth: Redirige a consentimiento OAuth
-        OAuth-->>Web: Devuelve authorization_code
-        Web->>API: POST /api/auth/social-login { provider, code }
-        API->>OAuth: Valida token y obtiene perfil (email verificado)
-        API->>DB: Busca en users por email
+        Web->>API: GET /api/auth/google/url?redirect=...
+        API-->>Web: { url } (con state CSRF almacenado en Redis TTL 10 min)
+        Web->>OAuth: Redirige a consentimiento OAuth de Google
+        OAuth-->>Web: Redirige a /auth/google/callback?code=...&state=...
+        Web->>API: POST /api/auth/google/callback { code, state }
+        API->>OAuth: Intercambia code y consulta perfil verificado de Google
+        API->>DB: Valida social_identities o users.email como llave única
         opt Usuario nuevo
-            API->>DB: INSERT INTO users (email, email_verified_at=NOW(), role='customer', is_organizer=false)
-            API->>DB: INSERT INTO social_identities (provider, provider_id)
+            API->>DB: INSERT INTO users (email, email_verified_at=NOW(), password_hash=NULL, role='customer', is_organizer=false)
         end
-        API-->>Web: 200 OK { access_token, user_profile }
-        Web-->>Usuario: Sesión iniciada y cuenta 100% activa para comprar
-
+        API->>DB: Vincula/asegura registro en social_identities (provider='google', provider_id=sub)
+        API-->>Web: 200 OK { token, user, redirectTo } + Cookie HttpOnly refresh_token
+        Web-->>Usuario: Sesión iniciada y cuenta 100% activa
     else Camino B: Registro Tradicional (Formulario con Correo y Contraseña)
         Usuario->>Web: Ingresa Nombre, Correo y Contraseña
         Web->>API: POST /api/auth/register { name, email, password }
@@ -79,6 +80,8 @@ sequenceDiagram
 * **Endpoints Oficiales de Auth:**
   * `POST /api/auth/register`: Registro tradicional con hashing bcrypt, emisión de token criptográfico de verificación (24h), Access Token (15m) y Refresh Token rotativo en Redis (30d).
   * `POST /api/auth/login`: Autenticación con email/password y retorno de Access Token JWT (15m), Refresh Token rotativo en Redis (30d) y perfil de usuario `{ id, email, role, isOrganizer }`.
+  * `GET /api/auth/google/url`: Genera URL OAuth 2.0 de Google con token `state` anti-CSRF almacenado en Redis (TTL 10 min).
+  * `POST /api/auth/google/callback`: Intercambia el código recibido en `/auth/google/callback`, valida `state` de un solo uso, busca o vincula el usuario usando `users.email` como llave única en `social_identities` y emite JWT + Refresh Token en Cookie `HttpOnly`.
   * `POST /api/auth/refresh-token`: Renovación de tokens sin fricción. Valida el token contra Redis (`qph:auth:refresh:<userId>:<uuid>`) recibido automáticamente vía Cookie `HttpOnly` (o fallback en body), aplica rotación destruyendo el anterior, emite un nuevo par de tokens y actualiza la cookie.
   * `POST /api/auth/logout`: Cierre de sesión seguro. Invalida y elimina la Cookie `HttpOnly` (`Max-Age=0`).
   * `POST /api/auth/verify-email`: Confirmación de correo mediante token seguro. Actualiza `users.email_verified_at = NOW()`.
@@ -119,7 +122,7 @@ sequenceDiagram
     participant DB as PostgreSQL (Transacción Atómica)
 
     Org->>Web: Completa el Asistente de Creación en 6 Secciones
-    Note over Org,Web: 1. Ficha General (Nombre, Categoría oficial EVENT_CATEGORIES, Tags de búsqueda text[], Ubigeo INEI 6 dígitos, Recinto, Coordenadas lat/lng vía Mapa Leaflet, Restricción de edad AGE_RESTRICTIONS, Límite entradas usuario, Requisitos acceso, Horarios informativos)<br/>2. Legal y Contenido (Términos URL PDF, FAQs, Landing config con selección de fondo por color sólido o patrón en mosaico repeat: header, body, footer, theme)<br/>3. Shows (nombre, start_time fecha y hora, sales_end_at hora de cierre de ventas, duration_hours en horas enteras)<br/>4. Zonas (Badge con color HEX, nombre, título comercial resaltado, beneficios, aforo, regular_price S/., comisión service_fee, max_tickets_per_order, max_tickets_per_user, sales_start_at)<br/>   + Hasta 3 Preventas por zona (zone_pricing_tiers: tier_number, price, capacity, end_at)<br/>5. Cupones (code, discount_type % o S/., discount_value, usage_type, max_uses, expires_at)<br/>6. Multimedia (carga directa de imágenes para portada, galería, croquis y landing)
+    Note over Org,Web: 1. Ficha General (Nombre, Categoría oficial EVENT_CATEGORIES, Tags de búsqueda text[], Ubigeo INEI 6 dígitos, Recinto, Coordenadas lat/lng vía Mapa Leaflet, Restricción de edad AGE_RESTRICTIONS, Límite entradas usuario, Requisitos acceso, Horarios informativos)<br/>2. Legal y Contenido (Términos URL PDF, FAQs, Landing config con selección de fondo por color sólido o patrón en mosaico repeat: header, body, footer, theme)<br/>3. Shows (nombre, start_time fecha y hora, sales_end_at hora de cierre de ventas, duration_hours en horas enteras)<br/>4. Zonas (Badge con color HEX, nombre, título comercial resaltado, beneficios, aforo, regular_price S/., comisión service_fee, max_tickets_per_order, sales_start_at)<br/>   + Hasta 3 Preventas por zona (zone_pricing_tiers: tier_number, price, capacity, end_at)<br/>5. Cupones (code, discount_type % o S/., discount_value, usage_type, max_uses, expires_at)<br/>6. Multimedia (carga directa de imágenes para portada, galería, croquis y landing)
     
     Web->>API: POST /api/events (CreateEventCommand Payload)
     activate API
@@ -130,7 +133,7 @@ sequenceDiagram
     API->>DB: Inicia Transacción Atómica
     DB->>DB: INSERT INTO events (organizer_id, category, tags, age_restriction, terms_and_conditions_url, faqs, landing_config, ubigeo_code, coordinates, google_maps_url, user_ticket_limit, entry_requirements, opening_hours_comment, signing_key_id, signing_public_key, status='draft')
     DB->>DB: INSERT INTO shows (event_id, name, start_time, sales_end_at, duration_hours)
-    DB->>DB: INSERT INTO zones (event_id, name, title, color, capacity, regular_price, service_fee, benefits, max_tickets_per_order, max_tickets_per_user, sales_start_at)
+    DB->>DB: INSERT INTO zones (event_id, name, title, color, capacity, regular_price, service_fee, benefits, max_tickets_per_order, sales_start_at)
     DB->>DB: INSERT INTO zone_pricing_tiers (zone_id, tier_number, name, price, capacity, end_at)
     opt Cupones iniciales configurados
         DB->>DB: INSERT INTO coupons (event_id, organizer_id, code, discount_type, discount_value, usage_type, max_uses, expires_at)
@@ -144,7 +147,16 @@ sequenceDiagram
 ```
 
 ### 3.2 Reglas de Negocio en la Configuración:
-* **Precio Regular de la Zona (`zones.regular_price`):** Es la tarifa de lista oficial en Soles (S/.) y permanece perenne. En las tarjetas de zonas, el nombre del sector se presenta en un **badge con el color HEX** configurado, el título comercial de la zona se resalta visualmente con sus beneficios abajo, y se expone la comisión de ticketera (10%) y el IGV incluido (18%). Se permite duplicar cualquier zona con un solo clic.
+* **Precio Regular de la Zona (`zones.regular_price`):** Es la tarifa de lista oficial en Soles (S/.) y permanece perenne. En las tarjetas de zonas, el nombre del sector se presenta en un **badge con el color HEX** configurado y el título comercial de la zona se resalta visualmente con sus beneficios.
+* **Escala Oficial Automatizada de Comisión QuePlanesHoy:**
+  - **Hasta S/ 50.00:** S/ 6.00 fijos por entrada.
+  - **De S/ 51.00 a S/ 125.00:** S/ 10.00 fijos por entrada.
+  - **A partir de S/ 126.00:** 8% del precio por entrada (`Math.round(precio * 0.08 * 100) / 100`).
+  - **Tarifa Final:** Visualización dinámica en drawer que recalcula el importe final al público según la inclusión o no de la comisión.
+  - **Modal Informativo de Tarifario:** Ventana explicativa disponible en el asistente de creación de zonas.
+  - **Ocultamiento del Input en Creación:** El promotor no edita la comisión; en el drawer de zonas solo ingresa Aforo y Precio Regular.
+  - **Modal de Etapa de Aprobación & Liquidación:** Al pulsar "Publicar Evento", se abre un modal de aprobación donde se desglosan oficialmente las zonas, el precio al comprador, la comisión oficial calculada y la recaudación neta estimada que recibirá el promotor antes de dar el pase a producción.
+  - **Modalidad de Comisión (`zones.fee_included`):** Si está activado, la comisión oficial se descuenta del monto a liquidar al promotor; si está desactivado, la comisión se suma al precio final que abona el comprador.
 * **Preventas Escalonadas (`zone_pricing_tiers`):** Hasta 3 preventas por zona ordenadas por `tier_number ASC`. El precio promocional debe ser estrictamente menor que `regular_price` y la suma de cupos de preventa no puede exceder el `capacity` total de la zona.
 * **Shows y Funciones (`shows`):** Cada función se lista a razón de 1 por fila con un cuadro de calendario (`OCT 15`), hora de inicio, solo hora de cierre de venta de boletos, duración estimada del show en horas enteras (`duration_hours`), aforo asignado y opción de duplicar show con 1 clic.
 * **Multimedia, Galería Oficial y Cloudflare R2:** Organización en 2 filas visuales:
@@ -158,7 +170,7 @@ sequenceDiagram
 * **Cupones de Descuento:** Selector de vigencia con campos separados de Fecha (`dd/mm/aaaa`) y Hora (`hh:mm`), previniendo desajustes de hidratación SSR y confusiones de zona horaria.
 * **Geolocalización Normalizada:** El distrito se resuelve con el código de 6 dígitos `ubigeo_code` (INEI) y las coordenadas geográficas se almacenan en un único campo `coordinates` (`latitud, longitud`) capturado con el selector de mapa OpenStreetMap / Leaflet.
 * **Términos y Condiciones:** Se gestiona exclusivamente mediante enlace web o documento PDF oficial (`terms_and_conditions_url`).
-* **Control de Boletos:** Se valida `max_tickets_per_order` (máximo por checkout) y `max_tickets_per_user` (límite acumulado en esa zona para el evento).
+* **Control de Boletos:** Se valida `zones.max_tickets_per_order` (máximo por orden en esa zona) y `events.user_ticket_limit` (límite acumulado por usuario en todo el evento).
 
 ### 3.3 Publicación de Eventos y Regla de Oro del Plan B (Email Verification Gate)
 
@@ -208,6 +220,10 @@ sequenceDiagram
 ```
 
 * **Control de Autorización (BOLA / OWASP API1):** El endpoint `/api/events/:id/publish` valida que el `organizer_id` del evento coincida obligatoriamente con el usuario autenticado en el token JWT (o rol `admin`).
+* **Edición y Actualización de Borradores (`GET /api/events/organizer/:identifier/edit` y `PUT /api/events/:id`):**
+  * `GET /api/events/organizer/:identifier/edit`: Retorna la estructura editable completa del evento (ficha, ubicación, shows, zonas con pricing tiers, cupones, imágenes de galería, FAQs y landing page), permitiendo a los promotores recuperar borradores pendientes incluso cuando `status = 'draft'`. Protegido estrictamente con `JwtAuthGuard` y validación de propiedad (*Ownership Check*).
+  * `PUT /api/events/:id`: Endpoint atómico para actualizar la información del evento, sincronizar funciones de shows, reemplazar zonas y preventas escalonadas, actualizar cupones e imágenes, e invalidar de forma automática las claves de caché de Redis asociadas (`qph:events:detail:*`, `qph:events:landing:*`, `qph:home:*`).
+  * En el frontend, el acceso se realiza a través de la ruta dinámica `/organizer/events/[id]/edit`, vinculada al botón **"Editar Borrador"** de la lista de eventos (`/organizer/events`).
 * **Experiencia de Usuario (Lazy Authentication):** La ruta `/organizer/events/new` no fuerza redirecciones inmediatas al login, permitiendo a visitantes anónimos probar el creador de espectáculos y asegurando los datos en `localStorage` antes de solicitar el inicio de sesión.
 
 ---
@@ -228,15 +244,50 @@ Controla la alta concurrencia mediante doble ventana temporal (10 min en backend
 4. **Checkout Inteligente (`/checkout`):**
    * Lee `searchParams` (`eventId`, `zoneId`), donde `eventId` es el `publicUuid` seguro del evento. Autoselecciona la primera función disponible y preselecciona 1 entrada (`quantity = 1`) en la zona indicada en `zoneId`.
    * **Autenticación Obligatoria:** Para avanzar al paso de pago o confirmar la compra, se valida que el comprador cuente con sesión activa (JWT). Si no la tiene, se despliega el modal interactivo de autenticación que preserva las entradas seleccionadas y vincula la orden a su cuenta.
-   * **Simulación de Pasarela y Emisión de Tickets (`POST /api/orders/simulate-checkout`):**
-     * Exige JWT obligatorio de usuario autenticado (`req.user.sub`).
-     * Procesa la orden con simulación probabilística (80% éxito, 20% rechazo bancario simulado o forzado).
-     * En caso de éxito (`approved`): crea en transacción atómica la `OrderEntity` (status `paid`), `PaymentEntity` (status `approved`) y emite los `TicketEntity` con tokens QR criptográficos únicos asociados al comprador verificado, incrementando `sold_count` en las zonas.
-     * En caso de rechazo (`PAYMENT_REJECTED`): devuelve error de negocio para permitir al cliente cambiar de método de pago de inmediato sin perder sus entradas.
+   * **Pasarela Real Culqi Checkout Custom (`/api/orders/culqi/*` y `/api/webhooks/culqi`):**
+     * `POST /api/orders/culqi/prepare` (JWT): reserva atómicamente tickets en estado `locked`, bloquea zonas/preventas (`FOR UPDATE`), evalúa cupón sin quemarlo aún, crea orden `pending` con `expires_at` configurable (`CULQI_ORDER_EXPIRATION_SECONDS`, default 900s) y genera la orden en Culqi API v2 (`POST /v2/orders`) con `metadata` auditable (`qph_order_id`, `qph_order_uuid`, `qph_user_id`, `qph_user_uuid`, `qph_user_email`) habilitando **Yape / Billeteras QR / Tarjetas / Banca Móvil y Agentes (PagoEfectivo CIP) / Cuotéalo BCP** dentro de **Culqi Checkout Custom** (`https://js.culqi.com/checkout-js`).
+     * `POST /api/orders/culqi/confirm-charge` (JWT + BOLA): ejecuta `POST /v2/charges` con `CULQI_SECRET_KEY` enviando `antifraud_details` y `metadata` de trazabilidad completa (`qph_order_id`, `qph_order_uuid`, `qph_user_id`, `qph_user_uuid`, `qph_user_email`, `culqi_order_id`), soporta desafío **3D Secure (`REQUIRES_3DS` -> `Culqi3DS.initAuthentication` -> reenvío con `authentication_3DS`)**, quema el cupón atómicamente (`FOR UPDATE`) y emite tickets `sold` + código QR vía `OrderLifecycleService.finalizePaidOrder` (idempotente).
+     * `GET /api/orders/culqi/status/:orderPublicUuid` (JWT + BOLA): consulta activa contra `GET /v2/orders/:id` para pagos asíncronos (QR Billeteras, PagoEfectivo CIP, Cuotéalo) mientras el frontend realiza polling cada 3s.
+     * `POST /api/orders/culqi/cancel/:orderPublicUuid` (JWT + BOLA): libera el stock bloqueado cuando el usuario cierra el modal de Culqi sin pagar (validando antes que no se haya pagado en Culqi).
+     * `POST /api/webhooks/culqi`: endpoint servidor-a-servidor protegido por Basic Auth (`CULQI_WEBHOOK_USERNAME`/`CULQI_WEBHOOK_PASSWORD`), deduplicación en Redis (`qph:webhook:culqi:*`), verificación activa contra Culqi API v2 (`GET /v2/orders/:id` o `GET /v2/charges/:id`) y finalización idempotente.
+     * `OrderExpirationCronService`: audita cada minuto órdenes `pending` vencidas (`expires_at < NOW()`), verifica estado real en Culqi y libera stock `locked` en zonas y tiers.
+   * **Simulación de Pasarela (`POST /api/orders/simulate-checkout`):** Se mantiene disponible para pruebas internas de carga con `k6`.
 
 ### 4.1 La Doble Ventana de Tiempos
-* **10 Minutos (Reserva de Inventario en Backend):** `locked_until = now() + 10 min`. El sistema retiene los boletos en la base de datos con bloqueo atómico (`SELECT FOR UPDATE`).
-* **5 Minutos (Sesión Activa en la Pasarela de Pago):** La pasarela bancaria (Niubiz / Culqi / Mercado Pago) expira su formulario de cobro a los 5 minutos de inactividad. Si la tarjeta es rechazada, el cliente aún dispone de los 5 minutos restantes en su reserva para reintentar con otro medio.
+* **15 Minutos (`14:59` en Checkout + `CULQI_ORDER_EXPIRATION_SECONDS=900`):** Ventana persistente en `sessionStorage` del navegador (resiste recargas F5 y redirección de login) acompañada del bloqueo temporal `locked` en PostgreSQL y liberación automática cada 60s vía `OrderExpirationCronService`.
+* **Reintento tras Rechazo Bancario:** Si una tarjeta es rechazada en `/confirm-charge`, los tickets permanecen reservados (`pending`/`locked`) hasta la expiración, permitiendo reintentar con otro medio de pago (Yape, otra tarjeta o PagoEfectivo).
+
+```mermaid
+flowchart TD
+    subgraph Frontend["1. Frontend (Navegador Comprador)"]
+        F1["Inicio en Checkout (/checkout)"] --> F2["Cronómetro 15:00 min (sessionStorage)"]
+        F2 -->|"Paso 1 y 2"| F3["Selección de entradas y datos de compra"]
+        F3 -->|"Paso 3"| F4["Apertura Modal Culqi Checkout Custom"]
+    end
+
+    subgraph Backend["2. Backend NestJS & PostgreSQL (Reserva Atómica)"]
+        B1["POST /api/orders/culqi/prepare"] --> B2["Bloqueo atómico: SELECT ... FOR UPDATE"]
+        B2 --> B3["Crea orden: status='pending', expires_at = NOW() + 15 min (900s)"]
+        B3 --> B4["Tickets reservados: status='locked', locked_until = NOW() + 15 min"]
+    end
+
+    subgraph CulqiGateway["3. Pasarela Culqi API v2"]
+        C1["POST /v2/orders (Culqi Order)"] --> C2["Ventana de Pago: Tarjetas / Yape QR / PagoEfectivo CIP"]
+    end
+
+    subgraph WorkerCron["4. Worker de Expiración (OrderExpirationCronService)"]
+        W1["Ejecución periódica cada 60 segundos"] --> W2{"¿Orden pendiente con expires_at < NOW()?"}
+        W2 -->|"Sí y no pagada en Culqi"| W3["Transacción atómica de expiración"]
+        W3 --> W4["orders.status = 'expired'<br/>zones.locked_count -= qty<br/>tiers.locked_count -= qty<br/>tickets.status = 'available'"]
+        W4 --> W5["Stock recuperado y disponible nuevamente en cartelera"]
+        W2 -->|"No vencida o pagada"| W6["Continúa auditoría periódica"]
+    end
+
+    F4 --> B1
+    B3 --> C1
+    F4 -.->|"Cierre manual sin pagar"| B5["POST /api/orders/culqi/cancel/:uuid ➔ Libera stock inmediato"]
+    C2 -.->|"Si vence ventana de 15 min"| W1
+```
 
 ### 4.2 Diagrama de Secuencia
 
@@ -247,93 +298,103 @@ sequenceDiagram
     participant Web as Web Clientes (Next.js)
     participant API as Backend NestJS
     participant DB as PostgreSQL
-    participant Gateway as Pasarela (Niubiz/Mercado Pago/Stripe)
+    participant Culqi as Pasarela Culqi (API v2 / Culqi Checkout)
 
     Cliente->>Web: Selecciona Zona y Cantidad (ej: 2 VIP)
-    Web->>API: POST /api/orders/draft { show_uuid, zone_uuid, quantity: 2 }
-    activate API
-
-    API->>DB: 1. Valida límite por compra: total_order_tickets <= event.user_ticket_limit y quantity <= zone.max_tickets_per_order
-    API->>DB: 2. Valida límite acumulado por usuario: (previos_pagados + total_order_tickets) <= event.user_ticket_limit y <= zone.max_tickets_per_user
-    Note over API,DB: Si excede cualquiera ➔ Rechaza con 400 Bad Request (TICKET_LIMIT_EXCEEDED)
-
-    API->>DB: 3. Determina tarifa vigente de la zona
-    Note over API,DB: Busca zone_pricing_tiers activos por tier_number ASC.<br/>Si Tier 1 vigente ➔ Cobra tier1.price.<br/>Si no hay tiers vigentes ➔ Cobra zone.regular_price.
-
-    API->>DB: 4. SELECT FOR UPDATE tickets disponibles
-    Note over API,DB: Bloqueo atómico de inventario<br/>status='locked', locked_until=now() + 10 min
-    DB->>DB: INSERT INTO orders (status='pending', expires_at=now() + 10 min, subtotal_tickets, total_amount)
-    API-->>Web: 201 Created { order_token, expires_at, total_amount, gateway_session_limit: 300s }
-    deactivate API
-
     Web->>Cliente: Muestra pantalla de checkout con resumen de compra
 
-    opt Validación Interactiva de Cupón de Descuento (Paso 1 y Paso 2 en Frontend)
+    opt Validación Interactiva de Cupón de Descuento
         Cliente->>Web: Ingresa código de cupón (ej: "CYBER2026")
         Web->>API: POST /api/orders/validate-coupon { eventId, code: 'CYBER2026', subtotal }
         activate API
         API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:code)
-        API->>API: Evalúa Matriz de 6 Casos (Ciclo de Vida x Tipo de Descuento):
-        Note over API: 1. single_use: Valida used_count < 1<br/>2. reusable: Valida used_count < max_uses (si max_uses != null)<br/>3. vigencia: Valida starts_at <= NOW() <= expires_at<br/>4. Reglas base: is_active == true y subtotal >= min_order_amount<br/>5. Tipo Porcentaje: subtotal * (discount_value / 100)<br/>6. Tipo Monto Fijo: min(subtotal, discount_value) con piso cero
-        API-->>Web: 200 OK { code, discountType, discountValue, discountAmount, newTotal, message }
+        API->>API: Evalúa reglas (vigencia, single_use/reusable, min_amount)
+        API-->>Web: 200 OK { code, discountAmount, newTotal }
         deactivate API
-        Web-->>Cliente: Despliega badge verde y desglose con descuento reflejado
+        Web-->>Cliente: Despliega badge verde y total recalculado
     end
 
-    Cliente->>Web: Selecciona medio de pago ("Tarjeta" o "Yape") y confirma
-    
-    alt Pago Oficial Izipay (SmartForm Pop-in + Webhook IPN)
-        Web->>API: POST /api/orders/izipay/create-payment { eventId, showId, items, paymentMethod, couponCode }
+    Cliente->>Web: Selecciona medio de pago y confirma ("Pagar Entradas")
+    Web->>API: POST /api/orders/culqi/prepare { eventId, showId, items, paymentMethod, couponCode }
+    activate API
+    API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
+    API->>DB: 1. SELECT ... FOR UPDATE en zones y zone_pricing_tiers (aforo disponible)
+    API->>DB: 2. Valida límite global (event.user_ticket_limit) y por orden (zone.max_tickets_per_order)
+
+    opt Si incluye cupón (Doble Check Concurrente)
+        API->>DB: SELECT * FROM coupons WHERE event_id = :eventId FOR UPDATE
+        Note over API,DB: Bloqueo pesimista de fila para evitar race conditions
+    end
+
+    API->>DB: 3. INSERT INTO orders (status='pending', expires_at = NOW() + 15 min)
+    API->>DB: 4. UPDATE tickets SET status='locked', locked_until = NOW() + 15 min
+    API->>Culqi: POST /v2/orders (Genera orden Culqi con metadata de auditoría)
+    Culqi-->>API: 201 Created { id: 'ord_live_...', payment_code }
+    API->>DB: COMMIT TRANSACTION EN POSTGRESQL
+    API-->>Web: 201 Created { orderId, orderPublicUuid, culqiOrderId, expiresAt }
+    deactivate API
+
+    Web->>Culqi: Abre Modal Culqi Checkout Custom (js.culqi.com/checkout-js)
+    Cliente->>Culqi: Ingresa datos de pago (Tarjeta / Yape QR / PagoEfectivo)
+
+    alt Caso A: Pago Inmediato con Tarjeta (Tokenización)
+        Culqi-->>Web: Retorna token { id: 'tkn_live_...' }
+        Web->>API: POST /api/orders/culqi/confirm-charge { orderPublicUuid, token, deviceId }
         activate API
-        API->>DB: 1. Valida aforo, límites y cupón con bloqueo pesimista
-        API->>DB: 2. INSERT INTO orders (status='pending', expires_at=NOW()+10min) y bloquea stock en zonas (locked_count)
-        API->>API: 3. Llama a Izipay V4/Charge/CreatePayment (Basic Auth: ShopId + ClavePrivada)
-        API-->>Web: 201 Created { formToken, publicKey, orderId, orderCode, totalAmount }
-        deactivate API
-
-        Web->>Web: Inicializa SDK Krypton y abre Izipay Pop-in Modal sobre el checkout
-        Cliente->>Web: Ingresa datos en el modal seguro de Izipay
-        Web->>API: Izipay procesa la transacción criptográfica
-
-        par Notificación Servidor a Servidor (IPN Obligatoria con HMAC-SHA256)
-            API->>API: POST /api/orders/izipay/ipn { 'kr-answer', 'kr-hash' }
-            Note over API: Valida firma HMAC-SHA256 con IZIPAY_HMAC_SHA256_KEY.<br/>Garantiza Idempotencia: Si orden ya pagada ➔ 200 OK sin duplicar.<br/>Si pending y orderStatus=='PAID' ➔ order.status='paid', emite tickets Ed25519, actualiza cupones y sold_count.
-            API-->>API: 200 OK { status: 'SUCCESS' }
-        and Notificación Inmediata al Navegador
-            Web->>Web: KR.onSubmit captura éxito preliminar y avanza a Paso 3 (top: 0)
-        end
-
-    else Simulación Directa / Otros Medios
-        Web->>API: POST /api/orders/simulate-checkout { eventId, showId, items, paymentMethod, couponCode }
-        activate API
-        API->>DB: INICIA TRANSACCIÓN ATÓMICA EN POSTGRESQL (QueryRunner)
-        API->>DB: 1. Bloqueo pesimista de zonas y validación de aforo/límites (SELECT ... FOR UPDATE)
-        opt Si la orden incluye couponCode (Doble Check Atómico Obligatorio)
-            API->>DB: SELECT * FROM coupons WHERE event_id = :eventId AND UPPER(code) = UPPER(:couponCode) FOR UPDATE
-            Note over API,DB: CANDADO CONCURRENTE PESIMISTA:<br/>Bloquea la fila del cupón para impedir race conditions.
-            alt Cupón Expirado o Inactivo
-                API->>DB: ROLLBACK TRANSACTION
-                API-->>Web: 400 Bad Request { error: 'COUPON_INVALID_OR_EXPIRED' }
-            else Cupón Válido y Vigente
-                API->>API: Recalcula y aplica discountAmount
+        API->>Culqi: POST /v2/charges { amount, currency: 'PEN', source_id: token, metadata }
+        
+        alt Cargo Aprobado en Culqi
+            Culqi-->>API: 201 Created { id: 'chr_live_...', outcome: { type: 'venta_exitosa' } }
+            API->>DB: INICIA TRANSACCIÓN ATÓMICA
+            API->>DB: UPDATE orders SET status='paid'
+            API->>DB: UPDATE tickets SET status='sold', qr_code = :signedQrPayload
+            API->>DB: UPDATE zones SET sold_count = sold_count + :qty, locked_count = locked_count - :qty
+            opt Si tenía cupón
                 API->>DB: UPDATE coupons SET used_count = used_count + 1
             end
+            API->>DB: INSERT INTO payments (status='approved', external_transaction_id, gateway_response)
+            API->>DB: COMMIT TRANSACTION
+            API->>API: Despacha correo asíncrono con entradas PDF y QR
+            API-->>Web: 200 OK { status: 'PAID', tickets: [...] }
+            Web-->>Cliente: PANTALLA VERDE: ¡Compra Exitosa! Entradas listas en /my-tickets
+        else Desafío 3D Secure Requerido (REQUIRES_3DS)
+            Culqi-->>API: 402 Payment Required { action_code: 'REQUIRES_3DS', parameters: { 3DS: { url } } }
+            API-->>Web: 402 { code: 'REQUIRES_3DS', authUrl }
+            Web->>Culqi: Invoca Culqi3DS.initAuthentication(...)
+            Cliente->>Culqi: Completa autenticación bancaria OTP/3DS
+            Web->>API: Reintenta POST /api/orders/culqi/confirm-charge con authentication_3DS
+        else Cargo Rechazado por Banco (Fondos insuficientes / Bloqueo)
+            Culqi-->>API: 402 Declined { user_message: 'Fondos insuficientes' }
+            API-->>Web: 400 Bad Request { error: 'PAYMENT_DECLINED', message: '...' }
+            Note over Web,Cliente: Los tickets siguen reservados (status='locked').<br/>El usuario puede reintentar con otra tarjeta o Yape dentro de los 15 min.
         end
-        API->>DB: 2. INSERT INTO orders (status='paid'), INSERT INTO payments (status='approved'), INSERT tickets
-        API->>DB: COMMIT TRANSACTION EN POSTGRESQL
-        API-->>Web: 200 OK SimulateOrderCheckoutResponseDto
+        deactivate API
+
+    else Caso B: Pago Asíncrono (Yape / Billetera QR / PagoEfectivo CIP)
+        Culqi-->>Web: Muestra código CIP / QR de Yape en pantalla
+        Cliente->>Culqi: Paga desde app bancaria o billetera
+        Culqi->>API: POST /api/webhooks/culqi (Webhook servidor a servidor con Basic Auth)
+        activate API
+        API->>Culqi: GET /v2/orders/:id (Verificación activa de autenticidad del pago)
+        alt Pago Verificado en Culqi API
+            API->>DB: Finaliza orden idempotentemente (status='paid', emite tickets QR)
+            API-->>Culqi: 200 OK (Webhook recibido)
+            Web->>API: Polling GET /api/orders/culqi/status/:uuid
+            API-->>Web: 200 OK { status: 'paid' }
+            Web-->>Cliente: Pantalla de Éxito y confirmación inmediata
+        else Webhook Vencido o Inválido
+            API-->>Culqi: 400 Bad Request
+        end
+        deactivate API
+
+    else Caso C: Abandono o Cierre sin Pagar
+        Cliente->>Web: Cierra modal o pulsa "Cancelar Compra"
+        Web->>API: POST /api/orders/culqi/cancel/:orderPublicUuid
+        activate API
+        API->>DB: Libera reserva anticipadamente (tickets='available', locked_count -= qty)
+        API-->>Web: 200 OK { message: 'ORDER_CANCELLED' }
         deactivate API
     end
-
-    else Orden Expirada Tardíamente (CANDADO 3: status == 'expired')
-        Note over API,Gateway: La reserva de 10 min venció y el stock ya se liberó.<br/>¡CERO SOBREVENTA! El backend no genera boletos.
-        API->>Gateway: POST /refunds { transaction_id, reason: 'ORDER_EXPIRED_TIMEOUT' }
-        Gateway-->>API: Reembolso confirmado
-        API->>DB: INSERT INTO payments (status='refunded', gateway_response=JSONB)
-        API->>Cliente: Correo: "Tu compra expiró por tiempo. El dinero fue reembolsado a tu tarjeta"
-        API-->>Gateway: 200 OK (Webhook procesado con reembolso)
-    end
-    deactivate API
 ```
 
 ### 4.3 Ciclo de Liberación Dinámica de Stock y Reactivación Automática
@@ -661,9 +722,13 @@ sequenceDiagram
     Fan->>Web: Ingresa a /e/los-portales-del-huayllabamba
     Web->>Web: Despliega LandingPreloader (Isotipo QPH pulsante)
     Web->>UseCase: execute("los-portales-del-huayllabamba")
-    UseCase->>API: GET /events/landing/los-portales-del-huayllabamba
+    UseCase->>API: GET /events/landing/los-portales-del-huayllabamba?previewTemp={token}
 
-    alt Cache HIT en Redis
+    alt Modo previewTemp activo (Vista Previa de Borradores)
+        API->>DB: SELECT event WHERE slug = :slug (Sin restricción status='published')
+        DB-->>API: Registro completo del evento en borrador o publicado
+        API->>API: Omite caché Redis y marca isPreview = true
+    else Cache HIT en Redis
         API->>Redis: GET qph:events:landing:los-portales-del-huayllabamba
         Redis-->>API: 200 JSON en memoria (< 3ms)
     else Cache MISS o Expirado
@@ -809,6 +874,125 @@ sequenceDiagram
   * Cupón Porcentual: `PROMO15-[SUFIJO]` (15% de descuento en el total de entradas).
   * Cupón de Monto Fijo: `VIP20-[SUFIJO]` (S/ 20.00 de rebaja directa con compra mínima de S/ 60.00).
 * **Teaser de YouTube en Landing Pages:** Los eventos con `hasLandingPage = true` configuran un enlace oficial de YouTube en `landingConfig.header.videoTeaserUrl`, habilitando en el frontend el botón flotante de reproducción y el modal `VideoTeaserModal`.
+
+---
+
+## 13. Flujo 13: Lista de Favoritos (Persistencia y Sincronización)
+
+Permite a los usuarios marcar/desmarcar eventos como favoritos desde tarjetas o páginas de detalle, sincronizando en tiempo real la colección personal del usuario con la base de datos `user_favorite_events`.
+
+### 13.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Usuario as Usuario
+    participant Web as Frontend Next.js (Card / Detalle)
+    participant Store as Hook useFavorites & EventBus
+    participant API as Backend NestJS (UsersModule)
+    participant DB as PostgreSQL (user_favorite_events)
+
+    Usuario->>Web: Clic en el corazón (favorite)
+    alt Usuario no autenticado
+        Web->>Usuario: Redirige a /login?redirect=/events/...
+    else Usuario autenticado
+        Web->>Store: Optimistic Update inmediato
+        Store-->>Web: Alterna estado visual (corazón relleno/vacío)
+        Web->>API: POST /api/users/favorites/:eventId/toggle
+        API->>DB: SELECT * FROM user_favorite_events WHERE user_id AND event_id
+        alt Ya existía
+            API->>DB: DELETE FROM user_favorite_events
+            API-->>Web: 200 OK { isFavorite: false }
+        else No existía
+            API->>DB: INSERT INTO user_favorite_events (user_id, event_id)
+            API-->>Web: 200 OK { isFavorite: true }
+        end
+        Store->>Web: window.dispatchEvent('qph:favorites-updated')
+    end
+```
+
+---
+
+## 14. Flujo 14: Restablecimiento de Contraseña (Password Reset con Token Temporal)
+
+Flujo seguro en 2 pasos para recuperar el acceso a la cuenta con tokens encriptados con caducidad (10-15 min) y rate limiting anti-fuerza bruta.
+
+### 14.1 Diagrama de Secuencia
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Usuario as Usuario
+    participant Web as Web (Recuperar / Restablecer)
+    participant API as Backend NestJS (AuthModule)
+    participant Redis as Redis (TTL 15 min)
+    participant Mail as Servicio de Email (SMTP/Resend)
+    participant DB as PostgreSQL (users)
+
+    Note over Usuario,Mail: Paso 1: Solicitud de Restablecimiento
+    Usuario->>Web: Ingresa correo en /forgot-password
+    Web->>API: POST /api/auth/forgot-password { email } (Rate Limited)
+    API->>DB: Verifica si el correo existe
+    opt Correo registrado
+        API->>Redis: SETEX pwd_reset:<token> 900 <userId>
+        API->>Mail: Envía correo con enlace /reset-password?token=<token>
+    end
+    API-->>Web: 200 OK (Respuesta opaca para evitar enumeración de correos)
+
+    Note over Usuario,DB: Paso 2: Cambio de Contraseña
+    Usuario->>Web: Clic en link del correo -> abre /reset-password?token=...
+    Usuario->>Web: Ingresa nueva contraseña y confirma
+    Web->>API: POST /api/auth/reset-password { token, newPassword }
+    API->>Redis: GET pwd_reset:<token>
+    alt Token válido
+        API->>DB: UPDATE users SET password_hash = bcrypt(newPassword)
+        API->>Redis: DEL pwd_reset:<token>
+        API->>Mail: Envía correo de confirmación "Tu contraseña ha sido cambiada"
+        API-->>Web: 200 OK
+        Web-->>Usuario: Mensaje de éxito y redirección a /login
+    else Token inválido o expirado
+        API-->>Web: 400 Bad Request { message: "Token inválido o expirado" }
+    end
+```
+
+### 14.2 Cambio de Contraseña Autenticado (`POST /api/auth/change-password`)
+- Protegido con `JwtAuthGuard` y limitador `@Throttle` (máx. 5 intentos cada 15 min).
+- Valida mediante `ChangePasswordHandler` que el usuario autenticado posea contraseña local (`password_hash`), compara `oldPassword` con bcrypt (`INVALID_CURRENT_PASSWORD` → HTTP 400 si no coincide), exige que `newPassword` sea distinta a la actual (mín. 6 caracteres), actualiza `users.password_hash` y envía notificación informativa por correo.
+
+---
+
+## 15. Servicio Transaccional de Correos (`MailModule` + Resend API)
+
+Módulo global (`@Global()`) ubicado en `src/modules/mail/` encargado de despachar los correos transaccionales de la plataforma mediante la API REST oficial de **Resend** (`POST https://api.resend.com/emails`) con timeout explícito (`RESEND_TIMEOUT_MS`, default `5000ms`), fallback controlado a consola local cuando `RESEND_API_KEY` no está configurada (sin imprimir enlaces/tokens en producción) y sanitización HTML estricta en `mail-template.builder.ts`.
+
+* **Métodos y plantillas implementados en `MailService` (`TicketPdfService` + `mail-template.builder.ts`):**
+  * `sendEmail(input)`: envío genérico tipado con HTML, texto alternativo, `reply_to`, `tags` y soporte para adjuntos Base64 (`attachments`) e imágenes inline (`content_id` / `cid:`).
+  * `sendVerificationEmail`: verificación de correo electrónico en registro/reenvío (`AuthModule`).
+  * `sendWelcomeGoogleEmail`: bienvenida automática para usuarios nuevos registrados por primera vez mediante Google OAuth (`GoogleCallbackHandler`).
+  * `sendPasswordResetEmail`: recuperación de contraseña de un solo uso con vigencia de 15 minutos (`AuthModule`).
+  * `sendPasswordChangedNotificationEmail`: alerta informativa cuando se actualiza o restablece la contraseña (`AuthModule`).
+  * `sendOrderTicketsEmail`: disparado automáticamente al pasar una orden a `paid` en `OrderLifecycleService.finalizePaidOrder` (una sola vez); adjunta el documento **PDF oficial (`entradas-#QPH-XXXXXX.pdf`)** generado con `TicketPdfService` (`pdfkit` + `qrcode`), incrusta los QR inline (`cid:`) en el cuerpo HTML (hasta 6 tickets inline) y enlaza al visor web (`/profile/tickets`).
+  * `sendOrganizerActivatedEmail`: confirmación automática al habilitar el perfil comercial de Organizador (`BecomeOrganizerHandler`).
+  * `sendOrganizerKycVerifiedEmail`: plantilla lista para aprobación administrativa KYC de la productora.
+  * `sendEventPublishedEmail`: confirmación automática al promotor cuando publica un evento (`PublishEventHandler`) con el enlace público (`/e/:slug` o `/events/:uuid`).
+  * `sendAdvancePaidEmail` y `sendSettlementPaidEmail`: plantillas listas para notificar desembolsos bancarios de anticipos y cierre contable de liquidación final.
+
+---
+
+## 16. Panel del Organizador: Listado Real de Mis Eventos (`GET /api/events/organizer`)
+
+Endpoint protegido con `JwtAuthGuard` en `EventsController` (ubicado antes de `GET /api/events/:identifier` para evitar colisión de rutas) atendido por `GetOrganizerEventsHandler`:
+
+1. **Aislamiento de Propietario (BOLA - OWASP API1):** Filtra estrictamente `events.organizer_id = user.id` resuelto desde el JWT verificado (`req.user.sub`), ignorando cualquier identificador externo.
+2. **Código y Estados Reales:** Genera `eventCode` determinístico (`#EV-${publicUuid.substring(0, 8).toUpperCase()}`) y alinea los estados reales (`draft`, `published`, `paused`, `completed`, `cancelled`, más indicador `isSoldOut` cuando `ticketsSold >= capacity` y preventa activa vigente).
+3. **Métricas Agregadas Parametrizadas (PostgreSQL):**
+   * Suma boletos confirmados (`tickets.status IN ('sold', 'used')`) y `paid_base_price` agrupados por `event_id` y `zone_id` para reflejar el monto real vendido según cada fase de preventa.
+   * Calcula los descuentos de cupones aplicados (`orders.discount_amount` de órdenes `paid`, deduplicando por `order.id`) usando `COALESCE(orders.event_id, shows.event_id)`.
+   * Expone `netSalesRevenue` (`grossRevenue - couponsDiscountAmount`), `targetRevenue` (`SUM(zone.capacity * zone.regularPrice)`), `settlementStatus`, y `draftChecklist` dinámico para borradores.
+
+
+
+
 
 
 

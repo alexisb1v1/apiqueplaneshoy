@@ -61,7 +61,7 @@ export class CreateEventDto {
   @IsOptional()
   readonly organizerPhone?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/organizers/logo.png', description: 'Logotipo de la productora', required: false })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/organizers/logo.png', description: 'Logotipo de la productora', required: false })
   @IsString()
   @IsOptional()
   readonly organizerLogoUrl?: string;
@@ -83,7 +83,7 @@ export class CreateEventDto {
   @IsOptional()
   readonly category?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/banners/rock.jpg', required: false })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/banners/rock.jpg', required: false })
   @IsString()
   @IsOptional()
   readonly bannerUrl?: string;
@@ -139,7 +139,7 @@ export class CreateEventDto {
   @IsOptional()
   readonly openingHoursComment?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/legal/terminos.pdf', required: false })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/legal/terminos.pdf', required: false })
   @IsString()
   @IsOptional()
   readonly termsAndConditionsUrl?: string;
@@ -157,6 +157,19 @@ export class CreateEventDto {
   @ApiProperty({ example: { header: {}, body: {}, footer: {}, theme: {} }, required: false })
   @IsOptional()
   readonly landingConfig?: Record<string, any>;
+
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx', description: 'URL de video promocional o teaser (YouTube, Vimeo o MP4 directo)', required: false })
+  @IsString()
+  @IsOptional()
+  readonly promoVideoUrl?: string;
+
+  @ApiProperty({ example: { instagramUrl: 'https://instagram.com/...', facebookUrl: 'https://facebook.com/...', tiktokUrl: 'https://tiktok.com/@...' }, required: false })
+  @IsOptional()
+  readonly socialLinks?: {
+    instagramUrl?: string;
+    facebookUrl?: string;
+    tiktokUrl?: string;
+  };
 
   @ApiProperty({ description: 'Funciones u horarios del evento', required: false })
   @IsArray()
@@ -179,9 +192,9 @@ export class CreateEventDto {
     capacity: number;
     regularPrice: number;
     serviceFee?: number;
+    feeIncluded?: boolean;
     benefits?: string;
     maxTicketsPerOrder?: number;
-    maxTicketsPerUser?: number;
     salesStartAt?: string;
     tiers?: Array<{
       tierNumber?: number;
