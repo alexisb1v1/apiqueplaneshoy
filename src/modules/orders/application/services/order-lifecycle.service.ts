@@ -82,7 +82,7 @@ export class OrderLifecycleService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   /**
    * Resuelve un evento por ID numérico, UUID público o slug.
@@ -571,7 +571,7 @@ export class OrderLifecycleService {
             customerName: buyer.name || buyer.email,
             orderCode,
             txCode: input.externalTransactionId,
-            eventTitle: event?.name || 'Evento Oficial queplaneshoy',
+            eventTitle: event?.name || 'Evento Oficial queplanhoy',
             eventSubtitle: event?.category
               ? `${event.category} · Venta Oficial`
               : 'Entrada Oficial Garantizada · Qué Planes Hoy',

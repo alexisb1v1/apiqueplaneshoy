@@ -51,15 +51,14 @@ function normalizePeruPhone(rawPhone?: string | null): string {
 @CommandHandler(PrepareCulqiCheckoutCommand)
 export class PrepareCulqiCheckoutHandler
   implements
-    ICommandHandler<PrepareCulqiCheckoutCommand, Result<PrepareCulqiCheckoutResponseDto, AppError>>
-{
+  ICommandHandler<PrepareCulqiCheckoutCommand, Result<PrepareCulqiCheckoutResponseDto, AppError>> {
   private readonly logger = new Logger(PrepareCulqiCheckoutHandler.name);
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly culqiGatewayService: CulqiGatewayService,
     private readonly orderLifecycleService: OrderLifecycleService,
-  ) {}
+  ) { }
 
   /**
    * Reserva stock de forma atómica en PostgreSQL y crea la orden correspondiente en Culqi API v2.
@@ -382,7 +381,7 @@ export class PrepareCulqiCheckoutHandler
           amountInCents,
           totalAmount: finalTotal,
           currency: 'PEN',
-          title: 'queplaneshoy • Entradas Oficiales',
+          title: 'queplanhoy • Entradas Oficiales',
           description: description.slice(0, 80),
           expiresAt: expiresAt.toISOString(),
           publicKey: publicConfig.publicKey,

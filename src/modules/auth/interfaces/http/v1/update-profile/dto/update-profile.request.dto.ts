@@ -71,7 +71,7 @@ export class UpdateProfileRequestDto {
 
   @ApiPropertyOptional({
     description: 'URL del logo de la productora',
-    example: 'https://cdn.queplaneshoy.com/organizers/logo.png',
+    example: 'https://cdn.queplanhoy.com/organizers/logo.png',
   })
   @IsOptional()
   @Transform(({ value }) => value?.trim())

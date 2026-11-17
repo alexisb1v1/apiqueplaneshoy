@@ -19,7 +19,7 @@ export class GoogleAuthUserDto {
   @Expose()
   lastName: string;
 
-  @ApiProperty({ example: 'alexis@queplaneshoy.com' })
+  @ApiProperty({ example: 'alexis@queplanhoy.com' })
   @Expose()
   email: string;
 
@@ -47,7 +47,7 @@ export class GoogleAuthUserDto {
   @Expose()
   organizerDocumentNumber?: string | null;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/logos/org.png', required: false, nullable: true })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/logos/org.png', required: false, nullable: true })
   @Expose()
   organizerLogoUrl?: string | null;
 

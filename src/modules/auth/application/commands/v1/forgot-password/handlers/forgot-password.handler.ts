@@ -26,7 +26,7 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
     @Inject('EmailService')
     private readonly emailService: EmailService,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
 
   /**
    * Procesa la solicitud de recuperación de contraseña.
@@ -40,7 +40,7 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
     const normalizedEmail = email.trim().toLowerCase();
 
     const genericSuccessResponse = new ForgotPasswordResponseDto(
-      'Si el correo electrónico se encuentra registrado en queplaneshoy, recibirás un enlace seguro para restablecer tu contraseña.',
+      'Si el correo electrónico se encuentra registrado en queplanhoy, recibirás un enlace seguro para restablecer tu contraseña.',
     );
 
     try {

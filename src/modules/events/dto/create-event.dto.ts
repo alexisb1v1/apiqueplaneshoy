@@ -61,7 +61,7 @@ export class CreateEventDto {
   @IsOptional()
   readonly organizerPhone?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/organizers/logo.png', description: 'Logotipo de la productora', required: false })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/organizers/logo.png', description: 'Logotipo de la productora', required: false })
   @IsString()
   @IsOptional()
   readonly organizerLogoUrl?: string;
@@ -83,7 +83,7 @@ export class CreateEventDto {
   @IsOptional()
   readonly category?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/banners/rock.jpg', required: false })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/banners/rock.jpg', required: false })
   @IsString()
   @IsOptional()
   readonly bannerUrl?: string;
@@ -139,7 +139,7 @@ export class CreateEventDto {
   @IsOptional()
   readonly openingHoursComment?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/legal/terminos.pdf', required: false })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/legal/terminos.pdf', required: false })
   @IsString()
   @IsOptional()
   readonly termsAndConditionsUrl?: string;

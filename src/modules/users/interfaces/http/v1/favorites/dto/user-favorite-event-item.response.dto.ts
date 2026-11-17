@@ -22,7 +22,7 @@ export class UserFavoriteEventItemResponseDto {
   @Expose()
   category: string;
 
-  @ApiProperty({ example: 'https://cdn.queplaneshoy.com/banners/banner.webp', description: 'URL de la imagen de portada' })
+  @ApiProperty({ example: 'https://cdn.queplanhoy.com/banners/banner.webp', description: 'URL de la imagen de portada' })
   @Expose()
   imageUrl: string;
 

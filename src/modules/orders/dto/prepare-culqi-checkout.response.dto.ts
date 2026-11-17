@@ -12,7 +12,7 @@ export class CulqiCustomerPreviewDto {
   lastName!: string;
 
   @Expose()
-  @ApiProperty({ example: 'carlos@queplaneshoy.com' })
+  @ApiProperty({ example: 'carlos@queplanhoy.com' })
   email!: string;
 
   @Expose()
@@ -51,7 +51,7 @@ export class PrepareCulqiCheckoutResponseDto {
   currency!: 'PEN';
 
   @Expose()
-  @ApiProperty({ example: 'queplaneshoy • Entradas' })
+  @ApiProperty({ example: 'queplanhoy • Entradas' })
   title!: string;
 
   @Expose()

@@ -298,7 +298,7 @@ export class EventSeederService {
     private readonly userRepository: Repository<UserEntity>,
     private readonly redisService: RedisService,
     private readonly searchService: SearchService,
-  ) {}
+  ) { }
 
   /**
    * Genera masivamente eventos de prueba con funciones pasadas, de hoy y futuras,
@@ -387,31 +387,31 @@ export class EventSeederService {
         userTicketLimit: 6,
         landingConfig: hasLandingPage
           ? {
-              theme: {
-                primaryColor: '#6366F1',
-                secondaryColor: '#4F46E5',
-                backgroundType: 'color',
-                backgroundColor: '#0F172A',
-              },
-              header: {
-                title: eventName,
-                subtitle: `Experiencia exclusiva en ${template.city}`,
-                ctaText: 'Asegurar Entradas Ahora',
-                headerImageUrl: template.bannerUrl,
-                videoTeaserUrl: videoTeaserUrl,
-              },
-              body: {
-                highlight1: 'Acceso digital garantizado con código QR Ed25519',
-                highlight2: 'Sonido line-array y pantallas LED de alta resolución',
-                highlight3: 'Seguridad privada, puestos de primeros auxilios y zona gastronómica',
-                highlight4: 'Estacionamiento vigilado con capacidad para más de 200 vehículos',
-              },
-              footer: {
-                instagramUrl: 'https://instagram.com/queplaneshoy',
-                tiktokUrl: 'https://tiktok.com/@queplaneshoy',
-                facebookUrl: 'https://facebook.com/queplaneshoy',
-              },
-            }
+            theme: {
+              primaryColor: '#6366F1',
+              secondaryColor: '#4F46E5',
+              backgroundType: 'color',
+              backgroundColor: '#0F172A',
+            },
+            header: {
+              title: eventName,
+              subtitle: `Experiencia exclusiva en ${template.city}`,
+              ctaText: 'Asegurar Entradas Ahora',
+              headerImageUrl: template.bannerUrl,
+              videoTeaserUrl: videoTeaserUrl,
+            },
+            body: {
+              highlight1: 'Acceso digital garantizado con código QR Ed25519',
+              highlight2: 'Sonido line-array y pantallas LED de alta resolución',
+              highlight3: 'Seguridad privada, puestos de primeros auxilios y zona gastronómica',
+              highlight4: 'Estacionamiento vigilado con capacidad para más de 200 vehículos',
+            },
+            footer: {
+              instagramUrl: 'https://instagram.com/queplanhoy',
+              tiktokUrl: 'https://tiktok.com/@queplanhoy',
+              facebookUrl: 'https://facebook.com/queplanhoy',
+            },
+          }
           : null,
       });
 
@@ -554,7 +554,7 @@ export class EventSeederService {
           hasLandingPage: savedEvent.hasLandingPage,
           isFeatured: savedEvent.isFeatured,
         })
-        .catch(() => {});
+        .catch(() => { });
 
       seededEvents.push({
         id: savedEvent.id.toString(),
@@ -621,7 +621,7 @@ export class EventSeederService {
 
     const newOrganizer = this.userRepository.create({
       name: 'QPH Productora Oficial',
-      email: 'organizador.demo@queplaneshoy.com',
+      email: 'organizador.demo@queplanhoy.com',
       role: 'admin',
       isOrganizer: true,
       organizerName: 'QPH Live Events SAC',

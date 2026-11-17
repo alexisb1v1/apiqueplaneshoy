@@ -59,7 +59,7 @@ describe('TicketPdfService', () => {
       venueAddress: 'Av. Javier Prado Este 2225, San Borja, Referencia Estación La Cultura',
       city: 'Lima',
       customerName: 'ALEXIS FERNANDO BASILIO VERASTEGUI',
-      customerEmail: 'alexis.basilio.corporativo.largo@queplaneshoy.com',
+      customerEmail: 'alexis.basilio.corporativo.largo@queplanhoy.com',
       totalAmountFormatted: 'S/. 460.00',
       tickets: [
         {

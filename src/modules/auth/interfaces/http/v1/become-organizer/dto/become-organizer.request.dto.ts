@@ -40,7 +40,7 @@ export class BecomeOrganizerRequestDto {
   readonly organizerPhone: string;
 
   @ApiProperty({
-    example: 'https://cdn.queplaneshoy.com/logos/organizador.png',
+    example: 'https://cdn.queplanhoy.com/logos/organizador.png',
     description: 'URL del logotipo o foto de la productora (opcional)',
     required: false,
   })

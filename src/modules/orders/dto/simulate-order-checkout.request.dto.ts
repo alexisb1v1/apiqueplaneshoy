@@ -55,7 +55,7 @@ export class SimulateOrderCheckoutRequestDto {
   })
   paymentMethod!: 'card' | 'yape' | 'transfer' | 'cuotealo' | 'apple_pay' | 'google_pay';
 
-  @ApiProperty({ example: 'cliente@queplaneshoy.com', required: false })
+  @ApiProperty({ example: 'cliente@queplanhoy.com', required: false })
   @IsOptional()
   @IsEmail({}, { message: 'El correo electrónico no es válido' })
   customerEmail?: string;

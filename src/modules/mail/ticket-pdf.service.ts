@@ -55,8 +55,8 @@ const DECORATIVE_BARCODE_WIDTHS = [3, 1, 4, 2, 1, 3, 5, 1, 2, 4, 2, 1, 3, 5, 2];
 const LEGAL_CONDITIONS: Array<{ number: string; title: string; body: string }> = [
   {
     number: '1.',
-    title: 'Control de Identidad:',
-    body: 'Presentar DNI, Carné de Extranjería o Pasaporte original en vigor coincidente con los datos del comprador.',
+    title: 'Entrada al Portador:',
+    body: 'El boleto es al portador. El portador del código QR digital único oficial tiene derecho al acceso.',
   },
   {
     number: '2.',
@@ -70,22 +70,167 @@ const LEGAL_CONDITIONS: Array<{ number: string; title: string; body: string }> =
   },
   {
     number: '4.',
-    title: 'Soporte y Reclamaciones:',
-    body: 'En caso de incidencias en torno de acceso, acuda a la boletería oficial del evento con su DNI.',
+    title: 'Soporte y Devoluciones:',
+    body: 'En caso de incidencias en tornos o devoluciones, contacte a soporte@queplanhoy.com o al +51 992 884 054.',
   },
 ];
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PNG } = require('pngjs');
+
+/**
+ * Incrusta el isotipo oficial de QPH en el centro del código QR (seguro bajo redundancia nivel H).
+ */
+function embedQphLogoInPng(pngBuffer: Buffer): Buffer {
+  try {
+    const png = PNG.sync.read(pngBuffer);
+    const { width, height, data } = png;
+    const cx = Math.floor(width / 2);
+    const cy = Math.floor(height / 2);
+
+    // Tamaño del badge central: ~22% del ancho (seguro hasta 30% en nivel H)
+    const badgeOuter = Math.max(Math.floor(width * 0.22), 48);
+    const badgeInner = badgeOuter - 8;
+    const outerHalf = Math.floor(badgeOuter / 2);
+    const innerHalf = Math.floor(badgeInner / 2);
+    const radiusOuter = 6;
+    const radiusInner = 5;
+
+    const setPixel = (px: number, py: number, r: number, g: number, b: number, a = 255) => {
+      if (px < 0 || px >= width || py < 0 || py >= height) return;
+      const idx = (width * py + px) << 2;
+      data[idx] = r;
+      data[idx + 1] = g;
+      data[idx + 2] = b;
+      data[idx + 3] = a;
+    };
+
+    const isInsideRoundedRect = (
+      x: number,
+      y: number,
+      minX: number,
+      minY: number,
+      maxX: number,
+      maxY: number,
+      r: number,
+    ): boolean => {
+      if (x < minX || x > maxX || y < minY || y > maxY) return false;
+      if (x < minX + r && y < minY + r) {
+        const dx = x - (minX + r);
+        const dy = y - (minY + r);
+        return dx * dx + dy * dy <= r * r;
+      }
+      if (x > maxX - r && y < minY + r) {
+        const dx = x - (maxX - r);
+        const dy = y - (minY + r);
+        return dx * dx + dy * dy <= r * r;
+      }
+      if (x < minX + r && y > maxY - r) {
+        const dx = x - (minX + r);
+        const dy = y - (maxY - r);
+        return dx * dx + dy * dy <= r * r;
+      }
+      if (x > maxX - r && y > maxY - r) {
+        const dx = x - (maxX - r);
+        const dy = y - (maxY - r);
+        return dx * dx + dy * dy <= r * r;
+      }
+      return true;
+    };
+
+    // 1. Fondo exterior blanco
+    for (let y = cy - outerHalf; y <= cy + outerHalf; y++) {
+      for (let x = cx - outerHalf; x <= cx + outerHalf; x++) {
+        if (isInsideRoundedRect(x, y, cx - outerHalf, cy - outerHalf, cx + outerHalf, cy + outerHalf, radiusOuter)) {
+          setPixel(x, y, 255, 255, 255);
+        }
+      }
+    }
+
+    // 2. Fondo interior índigo eléctrico (#6366F1: 99, 102, 241)
+    for (let y = cy - innerHalf; y <= cy + innerHalf; y++) {
+      for (let x = cx - innerHalf; x <= cx + innerHalf; x++) {
+        if (isInsideRoundedRect(x, y, cx - innerHalf, cy - innerHalf, cx + innerHalf, cy + innerHalf, radiusInner)) {
+          setPixel(x, y, 99, 102, 241);
+        }
+      }
+    }
+
+    // 3. Letras "Q P H" en blanco (matriz 7x9)
+    const letterQ: number[][] = [
+      [0, 1, 1, 1, 1, 1, 0],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 1, 0, 1, 1],
+      [1, 1, 0, 0, 1, 1, 1],
+      [0, 1, 1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0, 1, 1],
+    ];
+
+    const letterP: number[][] = [
+      [1, 1, 1, 1, 1, 1, 0],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 1, 1, 1, 1, 0],
+      [1, 1, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0],
+    ];
+
+    const letterH: number[][] = [
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 1, 1],
+    ];
+
+    const letters = [letterQ, letterP, letterH];
+    const letterWidth = 7;
+    const letterHeight = 9;
+    const spacing = 3;
+    const totalLettersWidth = letterWidth * 3 + spacing * 2; // 27px
+
+    const startX = cx - Math.floor(totalLettersWidth / 2);
+    const startY = cy - Math.floor(letterHeight / 2);
+
+    let curX = startX;
+    for (const letter of letters) {
+      for (let row = 0; row < letterHeight; row++) {
+        for (let col = 0; col < letterWidth; col++) {
+          if (letter[row][col] === 1) {
+            setPixel(curX + col, startY + row, 255, 255, 255);
+          }
+        }
+      }
+      curX += letterWidth + spacing;
+    }
+
+    return PNG.sync.write(png);
+  } catch {
+    return pngBuffer;
+  }
+}
 
 @Injectable()
 export class TicketPdfService {
   private readonly logger = new Logger(TicketPdfService.name);
 
   /**
-   * Genera un código QR en formato PNG de alta corrección de errores (`H`) como `Buffer`.
+   * Genera un código QR en formato PNG de alta corrección de errores (`H`) con el logotipo QPH central embebido como `Buffer`.
    */
   async generateQrPngBuffer(qrPayload: string): Promise<Buffer> {
-    return QRCode.toBuffer(qrPayload, {
+    const rawQr = await QRCode.toBuffer(qrPayload, {
       type: 'png',
-      width: 240,
+      width: 280,
       margin: 1,
       errorCorrectionLevel: 'H',
       color: {
@@ -93,6 +238,7 @@ export class TicketPdfService {
         light: PDF_COLORS.white,
       },
     });
+    return embedQphLogoInPng(rawQr);
   }
 
   /**
@@ -132,7 +278,7 @@ export class TicketPdfService {
           margin,
           info: {
             Title: `Entradas ${input.orderCode} - ${input.eventTitle}`,
-            Author: 'queplaneshoy',
+            Author: 'queplanhoy',
             Subject: `Pases Oficiales ${input.orderCode}`,
           },
         });
@@ -222,7 +368,7 @@ export class TicketPdfService {
   }
 
   /**
-   * Dibuja la cabecera blanca institucional coincidente con el visor oficial web (`queplaneshoy`).
+   * Dibuja la cabecera blanca institucional coincidente con el visor oficial web (`queplanhoy`).
    */
   private drawInstitutionalHeader(
     doc: PDFKit.PDFDocument,
@@ -245,12 +391,12 @@ export class TicketPdfService {
       .fontSize(9.5)
       .text('QPH', x + 4, y + 16, { width: 28, align: 'center' });
 
-    // Marca textual queplaneshoy + subtítulo
+    // Marca textual queplanhoy + subtítulo
     doc
       .font('Helvetica-Bold')
       .fontSize(15)
       .fillColor(PDF_COLORS.deepSlate)
-      .text('queplanes', x + 44, y + 4, { continued: true })
+      .text('queplan', x + 44, y + 4, { continued: true })
       .fillColor(PDF_COLORS.electricIndigo)
       .text('hoy');
 
@@ -274,7 +420,7 @@ export class TicketPdfService {
       .fillColor(PDF_COLORS.deepSlate)
       .font('Helvetica-Bold')
       .fontSize(6.8)
-      .text('VERIFICADO · QPH PASS ED25519', badgeX + 21, y + 5, { width: badgeW - 25 });
+      .text('VERIFICADO · QPH PASS OFICIAL', badgeX + 21, y + 5, { width: badgeW - 25 });
 
     const metaW = 260;
     const metaX = x + width - metaW;
