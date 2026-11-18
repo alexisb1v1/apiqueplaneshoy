@@ -205,6 +205,9 @@ erDiagram
         decimal total_service_fee "Comisiones servicio"
         decimal discount_amount "Descuento por cupon"
         decimal total_amount "Total cobrado neto"
+        boolean terms_accepted "Aceptacion expresa TyC y Privacidad"
+        timestamptz terms_accepted_at "Fecha y hora del consentimiento"
+        varchar terms_version "Version legal vigente (ej. v1.0-2026)"
         timestamptz created_at "Inicio compra"
         timestamptz expires_at "Limite 10 minutos"
     }
@@ -476,6 +479,9 @@ erDiagram
 * **`total_service_fee`** (`decimal(10,2)`): Suma de cargos por servicio de ticketera.
 * **`discount_amount`** (`decimal(10,2)`, default 0.00): Importe monetario descontado del total de la orden por la aplicación del cupón.
 * **`total_amount`** (`decimal(10,2)`): Total final neto a pagar por el cliente (`subtotal_tickets + total_service_fee - discount_amount`).
+* **`terms_accepted`** (`boolean`, default false): Consentimiento expreso e informado de Términos y Condiciones y Políticas de Privacidad otorgado por el comprador antes de procesar el pago.
+* **`terms_accepted_at`** (`timestamptz`, NULL): Marca temporal exacta en que se registró la aceptación para fines de auditoría y no repudio legal ante Indecopi o entidades bancarias.
+* **`terms_version`** (`varchar(50)`, default 'v1.0-2026'): Versión del marco legal y contractual vigente aceptado por el usuario al generar la orden.
 * **`created_at`** (`timestamptz`): Fecha de inicio de la compra.
 * **`expires_at`** (`timestamptz`, INDEX): Hora límite en que expira la reserva si no se paga (configurable vía `CULQI_ORDER_EXPIRATION_SECONDS`, por defecto 15 minutos).
 * **Índice Compuesto:** `(status, expires_at)` para el proceso en segundo plano que libera boletos vencidos.

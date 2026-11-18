@@ -293,6 +293,9 @@ export class PrepareCulqiCheckoutHandler
         discountAmount,
         totalAmount: finalTotal,
         expiresAt,
+        termsAccepted: Boolean(dto.acceptedTerms),
+        termsAcceptedAt: dto.acceptedTerms ? new Date() : null,
+        termsVersion: dto.termsVersion || 'v1.0-2026',
       });
 
       const savedOrder = await queryRunner.manager.save(OrderEntity, order);

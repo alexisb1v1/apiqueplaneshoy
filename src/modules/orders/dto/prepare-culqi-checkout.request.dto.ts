@@ -8,6 +8,8 @@ import {
   IsString,
   IsOptional,
   IsIn,
+  IsBoolean,
+  Equals,
 } from 'class-validator';
 import { OrderItemDto } from './simulate-order-checkout.request.dto';
 
@@ -49,5 +51,19 @@ export class PrepareCulqiCheckoutRequestDto {
   @IsOptional()
   @IsString({ message: 'El teléfono debe ser una cadena de texto' })
   customerPhone?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Consentimiento expreso de Términos y Condiciones y Políticas de Privacidad',
+  })
+  @IsNotEmpty({ message: 'La aceptación de los Términos y Condiciones es obligatoria' })
+  @IsBoolean({ message: 'acceptedTerms debe ser un valor booleano' })
+  @Equals(true, { message: 'Debes aceptar los Términos y Condiciones y las Políticas de Privacidad para proceder con el pago' })
+  acceptedTerms!: boolean;
+
+  @ApiProperty({ example: 'v1.0-2026', required: false, description: 'Versión del marco legal aceptado' })
+  @IsOptional()
+  @IsString({ message: 'termsVersion debe ser una cadena de texto' })
+  termsVersion?: string;
 }
 

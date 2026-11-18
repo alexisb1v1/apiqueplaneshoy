@@ -87,5 +87,19 @@ export class SimulateOrderCheckoutRequestDto {
   @IsOptional()
   @IsBoolean({ message: 'forceFailure debe ser booleano' })
   forceFailure?: boolean;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Consentimiento de Términos y Condiciones y Privacidad',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'acceptedTerms debe ser un valor booleano' })
+  acceptedTerms?: boolean;
+
+  @ApiProperty({ example: 'v1.0-2026', required: false })
+  @IsOptional()
+  @IsString({ message: 'termsVersion debe ser una cadena de texto' })
+  termsVersion?: string;
 }
 
