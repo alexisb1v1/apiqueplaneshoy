@@ -323,6 +323,9 @@ export class SimulateOrderCheckoutHandler
           discountAmount: discountAmount,
           totalAmount: finalTotal,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          termsAccepted: dto.acceptedTerms ?? true,
+          termsAcceptedAt: new Date(),
+          termsVersion: dto.termsVersion || 'v1.0-2026',
         });
 
         const savedOrder = await queryRunner.manager.save(OrderEntity, order);

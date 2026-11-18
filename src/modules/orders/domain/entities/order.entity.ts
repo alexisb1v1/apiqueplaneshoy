@@ -43,6 +43,32 @@ export class OrderEntity {
   @Column({ name: 'total_amount', type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Monto final total a cobrar al cliente (subtotal + service_fee - discount_amount)' })
   totalAmount: number;
 
+  @Column({
+    name: 'terms_accepted',
+    type: 'boolean',
+    default: false,
+    comment: 'Consentimiento expreso de Términos y Condiciones y Políticas de Privacidad',
+  })
+  termsAccepted: boolean;
+
+  @Column({
+    name: 'terms_accepted_at',
+    type: 'timestamptz',
+    nullable: true,
+    comment: 'Timestamp exacto en que el usuario otorgó el consentimiento de compra',
+  })
+  termsAcceptedAt: Date | null;
+
+  @Column({
+    name: 'terms_version',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    default: 'v1.0-2026',
+    comment: 'Versión del marco legal aceptado al momento de crear la orden',
+  })
+  termsVersion: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz', comment: 'Fecha y hora exacta de creación de la reserva' })
   createdAt: Date;
 
