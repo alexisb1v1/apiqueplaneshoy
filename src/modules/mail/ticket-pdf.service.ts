@@ -380,7 +380,7 @@ export class TicketPdfService {
         this.logger.error(
           `Error generando PDF de entradas: ${(err as Error).message}`,
         );
-        reject(err);
+        reject(err instanceof Error ? err : new Error(String(err)));
       }
     });
   }

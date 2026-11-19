@@ -5,7 +5,6 @@ import {
   IsEnum,
   Length,
   IsOptional,
-  IsUrl,
 } from 'class-validator';
 
 export class BecomeOrganizerRequestDto {

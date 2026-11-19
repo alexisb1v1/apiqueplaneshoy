@@ -8,7 +8,7 @@ export class ConsoleEmailAdapter implements EmailService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async sendVerificationEmail(
+  sendVerificationEmail(
     to: string,
     name: string,
     token: string,
@@ -26,9 +26,10 @@ export class ConsoleEmailAdapter implements EmailService {
     this.logger.log(
       `============================================================\n`,
     );
+    return Promise.resolve();
   }
 
-  async sendPasswordResetEmail(
+  sendPasswordResetEmail(
     to: string,
     name: string,
     token: string,
@@ -47,9 +48,10 @@ export class ConsoleEmailAdapter implements EmailService {
     this.logger.log(
       `============================================================\n`,
     );
+    return Promise.resolve();
   }
 
-  async sendPasswordChangedNotificationEmail(
+  sendPasswordChangedNotificationEmail(
     to: string,
     name: string,
   ): Promise<void> {
@@ -64,5 +66,6 @@ export class ConsoleEmailAdapter implements EmailService {
     this.logger.log(
       `============================================================\n`,
     );
+    return Promise.resolve();
   }
 }
