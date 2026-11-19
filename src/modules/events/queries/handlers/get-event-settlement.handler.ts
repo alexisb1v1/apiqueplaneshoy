@@ -40,7 +40,7 @@ export class GetEventSettlementHandler implements IQueryHandler<
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   async execute(
     query: GetEventSettlementQuery,

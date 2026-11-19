@@ -94,7 +94,7 @@ export class GetOrganizerEventReportHandler implements IQueryHandler<
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
     private readonly umamiAnalyticsService: UmamiAnalyticsService,
-  ) { }
+  ) {}
 
   async execute(
     query: GetOrganizerEventReportQuery,
@@ -561,7 +561,7 @@ export class GetOrganizerEventReportHandler implements IQueryHandler<
       const netSalesRevenue = Math.max(
         0,
         Math.round((totalGrossRevenue - totalCouponsDiscountAmount) * 100) /
-        100,
+          100,
       );
       const remainingCapacity = Math.max(0, totalCapacity - totalTicketsSold);
       const globalOccupancyPct =
@@ -650,7 +650,7 @@ export class GetOrganizerEventReportHandler implements IQueryHandler<
         settlementStatus: settlementRecord?.status || null,
         settlementStatusLabel: settlementRecord
           ? settlementStatusLabels[settlementRecord.status] ||
-          settlementRecord.status
+            settlementRecord.status
           : null,
         settlementAmount: settlementRecord
           ? Number(settlementRecord.netPayoutAmount) || 0

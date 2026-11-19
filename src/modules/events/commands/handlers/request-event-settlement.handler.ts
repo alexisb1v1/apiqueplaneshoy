@@ -43,7 +43,7 @@ export class RequestEventSettlementHandler implements ICommandHandler<
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   async execute(
     command: RequestEventSettlementCommand,
