@@ -503,7 +503,7 @@ export class EventsController {
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    const adminUser = req.user?.email || (req.user?.sub as string) || 'admin';
+    const adminUser = req.user?.email || req.user?.sub || 'admin';
     const result = await this.commandBus.execute(
       new ApproveEventCommand(id, adminUser),
     );

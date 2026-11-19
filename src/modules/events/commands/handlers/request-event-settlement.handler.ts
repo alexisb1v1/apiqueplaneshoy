@@ -7,7 +7,6 @@ import { plainToInstance } from 'class-transformer';
 import { AppError } from '@common/errors/app-errors';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { ShowEntity } from '@events/domain/entities/show.entity';
-import { ZoneEntity } from '@events/domain/entities/zone.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 import { OrderEntity } from '@orders/domain/entities/order.entity';
@@ -44,7 +43,7 @@ export class RequestEventSettlementHandler implements ICommandHandler<
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async execute(
     command: RequestEventSettlementCommand,

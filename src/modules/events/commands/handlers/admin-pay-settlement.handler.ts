@@ -71,7 +71,7 @@ export class AdminPaySettlementHandler implements ICommandHandler<
       const organizerEmail = settlement.organizer?.email;
       if (organizerEmail) {
         (async () => {
-          let attachments: EmailAttachment[] = [];
+          const attachments: EmailAttachment[] = [];
           if (saved.transferVoucherUrl) {
             try {
               const voucherRes = await fetch(saved.transferVoucherUrl);

@@ -417,12 +417,10 @@ export class TicketPdfService {
       .roundedRect(pillX, y, codeTextWidth, 15, 4)
       .lineWidth(0.7)
       .fillAndStroke(PDF_COLORS.surfaceGray, PDF_COLORS.surfaceVariant);
-    doc
-      .fillColor(PDF_COLORS.onSurfaceVariant)
-      .text(ticketCode, pillX, y + 4, {
-        width: codeTextWidth,
-        align: 'center',
-      });
+    doc.fillColor(PDF_COLORS.onSurfaceVariant).text(ticketCode, pillX, y + 4, {
+      width: codeTextWidth,
+      align: 'center',
+    });
 
     doc
       .moveTo(x, y + 21)

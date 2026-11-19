@@ -7,8 +7,6 @@ import { plainToInstance } from 'class-transformer';
 import { AppError } from '@common/errors/app-errors';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { ShowEntity } from '@events/domain/entities/show.entity';
-import { ZoneEntity } from '@events/domain/entities/zone.entity';
-import { ZonePricingTierEntity } from '@events/domain/entities/zone-pricing-tier.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 import { OrderEntity } from '@orders/domain/entities/order.entity';
@@ -96,7 +94,7 @@ export class GetOrganizerEventReportHandler implements IQueryHandler<
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
     private readonly umamiAnalyticsService: UmamiAnalyticsService,
-  ) {}
+  ) { }
 
   async execute(
     query: GetOrganizerEventReportQuery,
@@ -563,7 +561,7 @@ export class GetOrganizerEventReportHandler implements IQueryHandler<
       const netSalesRevenue = Math.max(
         0,
         Math.round((totalGrossRevenue - totalCouponsDiscountAmount) * 100) /
-          100,
+        100,
       );
       const remainingCapacity = Math.max(0, totalCapacity - totalTicketsSold);
       const globalOccupancyPct =
@@ -652,7 +650,7 @@ export class GetOrganizerEventReportHandler implements IQueryHandler<
         settlementStatus: settlementRecord?.status || null,
         settlementStatusLabel: settlementRecord
           ? settlementStatusLabels[settlementRecord.status] ||
-            settlementRecord.status
+          settlementRecord.status
           : null,
         settlementAmount: settlementRecord
           ? Number(settlementRecord.netPayoutAmount) || 0

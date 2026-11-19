@@ -58,7 +58,7 @@ export class ListAdminSettlementsHandler implements IQueryHandler<
     const items: AdminSettlementItemDto[] = rows.map((s) => {
       const event = s.event;
       const organizer = s.organizer;
-      const breakdown = (s.breakdownByZone || {}) as Record<string, any>;
+      const breakdown = s.breakdownByZone || {};
 
       const reqTime = s.requestedAt ? new Date(s.requestedAt).getTime() : now;
       const hoursElapsed =

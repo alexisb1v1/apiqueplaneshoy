@@ -47,7 +47,7 @@ export class GetWeekendEventsHandler implements IQueryHandler<GetWeekendEventsQu
     const now = new Date();
     const currentDay = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 5 = Viernes, 6 = Sábado
 
-    let fridayDate = new Date(now);
+    const fridayDate = new Date(now);
     if (currentDay === 5) {
       // Hoy es viernes
       fridayDate.setHours(0, 0, 0, 0);
