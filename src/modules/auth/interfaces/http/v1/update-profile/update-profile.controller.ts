@@ -1,7 +1,23 @@
-import { Controller, Put, Body, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Put,
+  Body,
+  Req,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import {
+  JwtAuthGuard,
+  AuthenticatedRequest,
+} from '@auth/infrastructure/guards/jwt-auth.guard';
 import { UpdateProfileRequestDto } from './dto/update-profile.request.dto';
 import { AuthUserDto } from '@auth/interfaces/http/v1/register-user/dto/register-user.response.dto';
 import { UpdateProfileCommand } from '@auth/application/commands/v1/update-profile/update-profile.command';
@@ -16,7 +32,9 @@ export class UpdateProfileController {
   @Put('profile')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar información del perfil del usuario autenticado' })
+  @ApiOperation({
+    summary: 'Actualizar información del perfil del usuario autenticado',
+  })
   @ApiResponse({
     status: 200,
     description: 'Perfil actualizado exitosamente',
@@ -30,15 +48,12 @@ export class UpdateProfileController {
     @Body() dto: UpdateProfileRequestDto,
   ): Promise<AuthUserDto> {
     const publicUuid = req.user?.sub as string;
-    const result = await this.commandBus.execute(new UpdateProfileCommand(publicUuid, dto));
-
-    return matchResult(
-      result,
-      (user: AuthUserDto) => user,
-      {
-        NOT_FOUND: 'Usuario no encontrado',
-      },
+    const result = await this.commandBus.execute(
+      new UpdateProfileCommand(publicUuid, dto),
     );
+
+    return matchResult(result, (user: AuthUserDto) => user, {
+      NOT_FOUND: 'Usuario no encontrado',
+    });
   }
 }
-

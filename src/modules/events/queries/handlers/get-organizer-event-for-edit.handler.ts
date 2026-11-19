@@ -12,13 +12,10 @@ import { GetOrganizerEventForEditQuery } from '../impl/get-organizer-event-for-e
 import { OrganizerEventEditResponseDto } from '../../dto/organizer-event-edit.response.dto';
 
 @QueryHandler(GetOrganizerEventForEditQuery)
-export class GetOrganizerEventForEditHandler
-  implements
-    IQueryHandler<
-      GetOrganizerEventForEditQuery,
-      Result<OrganizerEventEditResponseDto, AppError>
-    >
-{
+export class GetOrganizerEventForEditHandler implements IQueryHandler<
+  GetOrganizerEventForEditQuery,
+  Result<OrganizerEventEditResponseDto, AppError>
+> {
   constructor(
     @InjectRepository(EventEntity)
     private readonly eventRepository: Repository<EventEntity>,
@@ -89,7 +86,9 @@ export class GetOrganizerEventForEditHandler
         : event.venue || '';
 
     const bannerImg = event.images?.find((img) => img.imageType === 'banner');
-    const zoneMapImg = event.images?.find((img) => img.imageType === 'zone_map');
+    const zoneMapImg = event.images?.find(
+      (img) => img.imageType === 'zone_map',
+    );
     const galleryImgs = (event.images || [])
       .filter((img) => img.imageType === 'gallery')
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))

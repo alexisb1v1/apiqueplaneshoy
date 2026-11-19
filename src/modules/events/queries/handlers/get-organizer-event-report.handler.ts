@@ -57,8 +57,18 @@ function formatEventDate(date: Date): string {
   const d = new Date(date);
   const day = d.getDate();
   const months = [
-    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
   ];
   const month = months[d.getMonth()];
   const year = d.getFullYear();
@@ -73,13 +83,10 @@ function formatEventDate(date: Date): string {
 }
 
 @QueryHandler(GetOrganizerEventReportQuery)
-export class GetOrganizerEventReportHandler
-  implements
-    IQueryHandler<
-      GetOrganizerEventReportQuery,
-      Result<OrganizerEventReportResponseDto, AppError>
-    >
-{
+export class GetOrganizerEventReportHandler implements IQueryHandler<
+  GetOrganizerEventReportQuery,
+  Result<OrganizerEventReportResponseDto, AppError>
+> {
   private readonly logger = new Logger(GetOrganizerEventReportHandler.name);
 
   constructor(
@@ -109,7 +116,10 @@ export class GetOrganizerEventReportHandler
     }
 
     // Validación de permisos: solo usuarios con perfil activo de organizador (is_organizer = true)
-    if (!user.isOrganizer || (user.role !== 'customer' && user.role !== 'admin')) {
+    if (
+      !user.isOrganizer ||
+      (user.role !== 'customer' && user.role !== 'admin')
+    ) {
       this.logger.warn(
         `Usuario ${user.id} sin permisos de organizador (rol=${user.role}, isOrganizer=${user.isOrganizer}) intentó acceder al reporte de ventas`,
       );
@@ -174,11 +184,16 @@ export class GetOrganizerEventReportHandler
           .innerJoin(ShowEntity, 's', 's.id = t.show_id')
           .select('t.zone_id', 'zoneId')
           .addSelect('COUNT(t.id)', 'soldCount')
-          .addSelect('COUNT(CASE WHEN t.status = \'used\' THEN 1 END)', 'usedCount')
+          .addSelect(
+            "COUNT(CASE WHEN t.status = 'used' THEN 1 END)",
+            'usedCount',
+          )
           .addSelect('COALESCE(SUM(t.paid_base_price), 0)', 'grossRevenue')
           .addSelect('COALESCE(SUM(t.paid_service_fee), 0)', 'serviceFeeTotal')
           .where('s.event_id = :eventId', { eventId })
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .groupBy('t.zone_id')
           .getRawMany<ZoneSalesRow>(),
 
@@ -190,7 +205,9 @@ export class GetOrganizerEventReportHandler
           .addSelect('COUNT(t.id)', 'soldCount')
           .where('s.event_id = :eventId', { eventId })
           .andWhere('t.pricing_tier_id IS NOT NULL')
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .groupBy('t.pricing_tier_id')
           .getRawMany<TierSalesRow>(),
 
@@ -200,9 +217,14 @@ export class GetOrganizerEventReportHandler
           .innerJoin(ShowEntity, 's', 's.id = t.show_id')
           .select('t.show_id', 'showId')
           .addSelect('COUNT(t.id)', 'soldCount')
-          .addSelect('COUNT(CASE WHEN t.status = \'used\' THEN 1 END)', 'usedCount')
+          .addSelect(
+            "COUNT(CASE WHEN t.status = 'used' THEN 1 END)",
+            'usedCount',
+          )
           .where('s.event_id = :eventId', { eventId })
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .groupBy('t.show_id')
           .getRawMany<ShowSalesRow>(),
 
@@ -214,7 +236,9 @@ export class GetOrganizerEventReportHandler
           .select('DISTINCT o.id', 'orderId')
           .addSelect('COALESCE(o.discount_amount, 0)', 'discountAmount')
           .where('o.status = :paidStatus', { paidStatus: 'paid' })
-          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', { eventId })
+          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', {
+            eventId,
+          })
           .getRawMany<{ orderId: string; discountAmount: string }>(),
 
         // E. Últimas 25 órdenes pagadas del evento
@@ -227,7 +251,9 @@ export class GetOrganizerEventReportHandler
           .leftJoinAndSelect('t.zone', 'z')
           .leftJoin('t.show', 's')
           .where('o.status = :paidStatus', { paidStatus: 'paid' })
-          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', { eventId })
+          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', {
+            eventId,
+          })
           .orderBy('o.created_at', 'DESC')
           .take(25)
           .getMany(),
@@ -237,14 +263,16 @@ export class GetOrganizerEventReportHandler
           .createQueryBuilder(TicketEntity, 't')
           .innerJoin(ShowEntity, 's', 's.id = t.show_id')
           .innerJoin(OrderEntity, 'o', 'o.id = t.order_id')
-          .select('TO_CHAR(o.created_at, \'YYYY-MM-DD\')', 'date')
+          .select("TO_CHAR(o.created_at, 'YYYY-MM-DD')", 'date')
           .addSelect('t.zone_id', 'zoneId')
           .addSelect('COUNT(t.id)', 'ticketsSold')
           .addSelect('COALESCE(SUM(t.paid_base_price), 0)', 'revenue')
           .where('s.event_id = :eventId', { eventId })
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .andWhere('o.status = :paidStatus', { paidStatus: 'paid' })
-          .groupBy('TO_CHAR(o.created_at, \'YYYY-MM-DD\')')
+          .groupBy("TO_CHAR(o.created_at, 'YYYY-MM-DD')")
           .addGroupBy('t.zone_id')
           .orderBy('date', 'ASC')
           .getRawMany<DailySalesRow>(),
@@ -284,7 +312,8 @@ export class GetOrganizerEventReportHandler
         totalCouponsDiscountAmount += Number(row.discountAmount) || 0;
         totalPaidOrdersCount += 1;
       }
-      totalCouponsDiscountAmount = Math.round(totalCouponsDiscountAmount * 100) / 100;
+      totalCouponsDiscountAmount =
+        Math.round(totalCouponsDiscountAmount * 100) / 100;
 
       // 2. Mapear Zonas y Tiers
       const sortedZones = [...(event.zones || [])].sort(
@@ -299,127 +328,140 @@ export class GetOrganizerEventReportHandler
       let totalTargetRevenue = 0;
 
       const hasFeeIncluded = sortedZones.some((z) => z.feeIncluded === true);
-      const hasFeeNotIncluded = sortedZones.some((z) => z.feeIncluded === false);
+      const hasFeeNotIncluded = sortedZones.some(
+        (z) => z.feeIncluded === false,
+      );
       const feeChargedTo: 'promoter' | 'buyer' | 'mixed' =
         hasFeeIncluded && hasFeeNotIncluded
           ? 'mixed'
           : hasFeeIncluded
-          ? 'promoter'
-          : 'buyer';
+            ? 'promoter'
+            : 'buyer';
 
-      const mappedZones: OrganizerEventReportZoneDto[] = sortedZones.map((zone) => {
-        const zoneCapacity = Number(zone.capacity) || 0;
-        const regPrice = Number(zone.regularPrice) || 0;
-        const sFee = Number(zone.serviceFee) || 0;
+      const mappedZones: OrganizerEventReportZoneDto[] = sortedZones.map(
+        (zone) => {
+          const zoneCapacity = Number(zone.capacity) || 0;
+          const regPrice = Number(zone.regularPrice) || 0;
+          const sFee = Number(zone.serviceFee) || 0;
 
-        totalCapacity += zoneCapacity;
-        totalTargetRevenue += zoneCapacity * regPrice;
+          totalCapacity += zoneCapacity;
+          totalTargetRevenue += zoneCapacity * regPrice;
 
-        const metrics = zoneSalesMap.get(String(zone.id));
-        const sold = metrics ? Number(metrics.soldCount) || 0 : 0;
-        const used = metrics ? Number(metrics.usedCount) || 0 : 0;
-        const grossRev = metrics ? Number(metrics.grossRevenue) || 0 : 0;
-        const sFeeTot = metrics ? Number(metrics.serviceFeeTotal) || 0 : 0;
+          const metrics = zoneSalesMap.get(String(zone.id));
+          const sold = metrics ? Number(metrics.soldCount) || 0 : 0;
+          const used = metrics ? Number(metrics.usedCount) || 0 : 0;
+          const grossRev = metrics ? Number(metrics.grossRevenue) || 0 : 0;
+          const sFeeTot = metrics ? Number(metrics.serviceFeeTotal) || 0 : 0;
 
-        totalTicketsSold += sold;
-        totalTicketsUsed += used;
-        totalGrossRevenue += grossRev;
-        totalServiceFee += sFeeTot;
+          totalTicketsSold += sold;
+          totalTicketsUsed += used;
+          totalGrossRevenue += grossRev;
+          totalServiceFee += sFeeTot;
 
-        const remaining = Math.max(0, zoneCapacity - sold);
-        const occupancyPct =
-          zoneCapacity > 0
-            ? Math.round((sold / zoneCapacity) * 1000) / 10
-            : 0;
+          const remaining = Math.max(0, zoneCapacity - sold);
+          const occupancyPct =
+            zoneCapacity > 0
+              ? Math.round((sold / zoneCapacity) * 1000) / 10
+              : 0;
 
-        // Mapear Tiers de la zona
-        const sortedTiers = [...(zone.pricingTiers || [])].sort(
-          (a, b) => a.tierNumber - b.tierNumber,
-        );
+          // Mapear Tiers de la zona
+          const sortedTiers = [...(zone.pricingTiers || [])].sort(
+            (a, b) => a.tierNumber - b.tierNumber,
+          );
 
-        let activeTierName = 'Precio Regular';
-        let activePrice = regPrice;
-        let isPresaleActive = false;
+          let activeTierName = 'Precio Regular';
+          let activePrice = regPrice;
+          let isPresaleActive = false;
 
-        const mappedTiers: OrganizerEventReportTierDto[] = sortedTiers.map((tier) => {
-          const tierSold = tierSalesMap.get(String(tier.id)) || 0;
-          const tierCap = Number(tier.capacity) || 0;
-          const isExpired = tier.endAt ? new Date(tier.endAt) < now : false;
-          const isSoldOut = tierCap > 0 && tierSold >= tierCap;
-          const isTierActive = Boolean(tier.isActive && !isExpired && !isSoldOut);
+          const mappedTiers: OrganizerEventReportTierDto[] = sortedTiers.map(
+            (tier) => {
+              const tierSold = tierSalesMap.get(String(tier.id)) || 0;
+              const tierCap = Number(tier.capacity) || 0;
+              const isExpired = tier.endAt ? new Date(tier.endAt) < now : false;
+              const isSoldOut = tierCap > 0 && tierSold >= tierCap;
+              const isTierActive = Boolean(
+                tier.isActive && !isExpired && !isSoldOut,
+              );
 
-          let statusBadge = 'Agotado';
-          if (isTierActive) {
-            statusBadge = 'Activo';
-            if (!isPresaleActive) {
-              isPresaleActive = true;
-              activeTierName = tier.name;
-              activePrice = Number(tier.price) || regPrice;
-            }
-          } else if (isExpired) {
-            statusBadge = 'Caducado';
-          }
+              let statusBadge = 'Agotado';
+              if (isTierActive) {
+                statusBadge = 'Activo';
+                if (!isPresaleActive) {
+                  isPresaleActive = true;
+                  activeTierName = tier.name;
+                  activePrice = Number(tier.price) || regPrice;
+                }
+              } else if (isExpired) {
+                statusBadge = 'Caducado';
+              }
+
+              return {
+                tierNumber: tier.tierNumber,
+                name: tier.name,
+                price: Number(tier.price) || 0,
+                capacity: tierCap,
+                soldCount: tierSold,
+                endAt: tier.endAt ? new Date(tier.endAt).toISOString() : null,
+                isActive: isTierActive,
+                statusBadge,
+              };
+            },
+          );
 
           return {
-            tierNumber: tier.tierNumber,
-            name: tier.name,
-            price: Number(tier.price) || 0,
-            capacity: tierCap,
-            soldCount: tierSold,
-            endAt: tier.endAt ? new Date(tier.endAt).toISOString() : null,
-            isActive: isTierActive,
-            statusBadge,
+            id: String(zone.id),
+            publicUuid: zone.publicUuid,
+            name: zone.name,
+            color: zone.color || '#6366F1',
+            capacity: zoneCapacity,
+            soldCount: sold,
+            usedCount: used,
+            remainingTickets: remaining,
+            occupancyPercentage: occupancyPct,
+            regularPrice: regPrice,
+            activePrice,
+            activeTierName,
+            isPresaleActive,
+            revenue: Math.round(grossRev * 100) / 100,
+            feeIncluded: Boolean(zone.feeIncluded),
+            serviceFee: sFee,
+            tiers: mappedTiers,
           };
-        });
-
-        return {
-          id: String(zone.id),
-          publicUuid: zone.publicUuid,
-          name: zone.name,
-          color: zone.color || '#6366F1',
-          capacity: zoneCapacity,
-          soldCount: sold,
-          usedCount: used,
-          remainingTickets: remaining,
-          occupancyPercentage: occupancyPct,
-          regularPrice: regPrice,
-          activePrice,
-          activeTierName,
-          isPresaleActive,
-          revenue: Math.round(grossRev * 100) / 100,
-          feeIncluded: Boolean(zone.feeIncluded),
-          serviceFee: sFee,
-          tiers: mappedTiers,
-        };
-      });
+        },
+      );
 
       // 3. Mapear Funciones (Shows)
       const sortedShows = [...(event.shows || [])].sort(
-        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        (a, b) =>
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
       );
 
-      const mappedShows: OrganizerEventReportShowDto[] = sortedShows.map((show) => {
-        const sMetrics = showSalesMap.get(String(show.id));
-        const sSold = sMetrics ? Number(sMetrics.soldCount) || 0 : 0;
-        const sUsed = sMetrics ? Number(sMetrics.usedCount) || 0 : 0;
+      const mappedShows: OrganizerEventReportShowDto[] = sortedShows.map(
+        (show) => {
+          const sMetrics = showSalesMap.get(String(show.id));
+          const sSold = sMetrics ? Number(sMetrics.soldCount) || 0 : 0;
+          const sUsed = sMetrics ? Number(sMetrics.usedCount) || 0 : 0;
 
-        return {
-          id: String(show.id),
-          publicUuid: show.publicUuid,
-          name: show.name || 'Función Principal',
-          startTime: new Date(show.startTime).toISOString(),
-          dateFormatted: formatEventDate(new Date(show.startTime)),
-          salesEndAt: show.salesEndAt ? new Date(show.salesEndAt).toISOString() : null,
-          durationHours: Number(show.durationHours) || 2,
-          status: show.status,
-          ticketsSold: sSold,
-          ticketsUsed: sUsed,
-        };
-      });
+          return {
+            id: String(show.id),
+            publicUuid: show.publicUuid,
+            name: show.name || 'Función Principal',
+            startTime: new Date(show.startTime).toISOString(),
+            dateFormatted: formatEventDate(new Date(show.startTime)),
+            salesEndAt: show.salesEndAt
+              ? new Date(show.salesEndAt).toISOString()
+              : null,
+            durationHours: Number(show.durationHours) || 2,
+            status: show.status,
+            ticketsSold: sSold,
+            ticketsUsed: sUsed,
+          };
+        },
+      );
 
       // 4. Mapear Órdenes Recientes
-      const mappedOrders: OrganizerEventReportRecentOrderDto[] = recentOrdersRaw.map(
-        (order) => {
+      const mappedOrders: OrganizerEventReportRecentOrderDto[] =
+        recentOrdersRaw.map((order) => {
           const buyer = order.user;
           const coupon = order.coupon;
           const latestPayment =
@@ -433,9 +475,10 @@ export class GetOrganizerEventReportHandler
             const zName = t.zone?.name || 'General';
             zoneCounts.set(zName, (zoneCounts.get(zName) || 0) + 1);
           }
-          const zonesSummary = Array.from(zoneCounts.entries())
-            .map(([zName, count]) => `${count}x ${zName}`)
-            .join(', ') || 'Entradas del evento';
+          const zonesSummary =
+            Array.from(zoneCounts.entries())
+              .map(([zName, count]) => `${count}x ${zName}`)
+              .join(', ') || 'Entradas del evento';
 
           const orderUuidStr = String(order.publicUuid || order.id);
           const orderCode = `#ORD-${orderUuidStr.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
@@ -456,8 +499,7 @@ export class GetOrganizerEventReportHandler
             paymentMethod: latestPayment?.paymentMethod || 'Tarjeta / Pasarela',
             status: order.status,
           };
-        },
-      );
+        });
 
       // 5. Mapear Ventas por Día y por Zona (Timeline histórico completo)
       const zoneMetaMap = new Map<string, { name: string; color: string }>();
@@ -511,12 +553,18 @@ export class GetOrganizerEventReportHandler
         });
       }
 
-      const mappedDailySales: OrganizerEventReportDailySalesDto[] = Array.from(dailyMap.values());
+      const mappedDailySales: OrganizerEventReportDailySalesDto[] = Array.from(
+        dailyMap.values(),
+      );
 
       // 6. Resumen Global (Summary KPIs)
       totalGrossRevenue = Math.round(totalGrossRevenue * 100) / 100;
       totalServiceFee = Math.round(totalServiceFee * 100) / 100;
-      const netSalesRevenue = Math.max(0, Math.round((totalGrossRevenue - totalCouponsDiscountAmount) * 100) / 100);
+      const netSalesRevenue = Math.max(
+        0,
+        Math.round((totalGrossRevenue - totalCouponsDiscountAmount) * 100) /
+          100,
+      );
       const remainingCapacity = Math.max(0, totalCapacity - totalTicketsSold);
       const globalOccupancyPct =
         totalCapacity > 0
@@ -554,7 +602,9 @@ export class GetOrganizerEventReportHandler
 
       // 7. Meta del Evento
       const flyerImage =
-        event.images?.find((img) => img.imageType === 'flyer' || img.imageType === 'banner') ||
+        event.images?.find(
+          (img) => img.imageType === 'flyer' || img.imageType === 'banner',
+        ) ||
         event.images?.[0] ||
         null;
 
@@ -601,9 +651,12 @@ export class GetOrganizerEventReportHandler
         createdAt: new Date(event.createdAt).toISOString(),
         settlementStatus: settlementRecord?.status || null,
         settlementStatusLabel: settlementRecord
-          ? settlementStatusLabels[settlementRecord.status] || settlementRecord.status
+          ? settlementStatusLabels[settlementRecord.status] ||
+            settlementRecord.status
           : null,
-        settlementAmount: settlementRecord ? Number(settlementRecord.netPayoutAmount) || 0 : null,
+        settlementAmount: settlementRecord
+          ? Number(settlementRecord.netPayoutAmount) || 0
+          : null,
         settlementBankName: settlementRecord?.bankName || null,
         settlementRequestedAt: settlementRecord?.requestedAt
           ? new Date(settlementRecord.requestedAt).toISOString()

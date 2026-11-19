@@ -24,13 +24,15 @@ import {
 @ApiTags('Auth')
 @Controller('auth')
 export class RefreshTokenController {
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Renovar Access Token mediante Refresh Token (Soporta Cookie HttpOnly y Body)',
-    description: 'Valida el Refresh Token en Redis (leído desde cookie HttpOnly o body), lo rota por uno nuevo y emite un nuevo Access Token JWT válido por 15 minutos.',
+    summary:
+      'Renovar Access Token mediante Refresh Token (Soporta Cookie HttpOnly y Body)',
+    description:
+      'Valida el Refresh Token en Redis (leído desde cookie HttpOnly o body), lo rota por uno nuevo y emite un nuevo Access Token JWT válido por 15 minutos.',
   })
   @ApiResponse({
     status: 200,
@@ -46,7 +48,9 @@ export class RefreshTokenController {
     @Res({ passthrough: true }) res: Response,
     @Body() dto?: RefreshTokenRequestDto,
   ): Promise<RefreshTokenResponseDto> {
-    const origin = dto?.origin || (req.headers['x-origin'] === 'backoffice' ? 'backoffice' : 'web');
+    const origin =
+      dto?.origin ||
+      (req.headers['x-origin'] === 'backoffice' ? 'backoffice' : 'web');
     const targetCookieName =
       origin === 'backoffice'
         ? ADMIN_REFRESH_TOKEN_COOKIE_NAME
@@ -55,38 +59,54 @@ export class RefreshTokenController {
     const rawToken = req.cookies?.[targetCookieName] || dto?.refreshToken;
 
     if (!rawToken || typeof rawToken !== 'string') {
-      throw new UnauthorizedException('No se proporcionó token de actualización (Refresh Token).');
+      throw new UnauthorizedException(
+        'No se proporcionó token de actualización (Refresh Token).',
+      );
     }
 
-    const result = await this.commandBus.execute(new RefreshTokenCommand({ refreshToken: rawToken, origin }));
+    const result = await this.commandBus.execute(
+      new RefreshTokenCommand({ refreshToken: rawToken, origin }),
+    );
     return matchResult(
       result,
       (data: RefreshTokenResponseDto) => {
         if (data.refreshToken) {
-          res.cookie(targetCookieName, data.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+          res.cookie(
+            targetCookieName,
+            data.refreshToken,
+            REFRESH_TOKEN_COOKIE_OPTIONS,
+          );
         }
         return data;
       },
       {
-        UNAUTHORIZED: 'El token de actualización es inválido, ha expirado o ya fue consumido.',
-        FORBIDDEN: 'Acceso no permitido para este tipo de cuenta en esta plataforma.',
+        UNAUTHORIZED:
+          'El token de actualización es inválido, ha expirado o ya fue consumido.',
+        FORBIDDEN:
+          'Acceso no permitido para este tipo de cuenta en esta plataforma.',
       },
     );
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Cerrar sesión e invalidar la cookie HttpOnly de Refresh Token' })
+  @ApiOperation({
+    summary: 'Cerrar sesión e invalidar la cookie HttpOnly de Refresh Token',
+  })
   @ApiResponse({ status: 200, description: 'Sesión cerrada exitosamente' })
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body() body?: { origin?: string },
   ): Promise<{ success: boolean; message: string }> {
-    const origin = body?.origin || (req.headers['x-origin'] === 'backoffice' ? 'backoffice' : 'web');
-    const cookieToClear = origin === 'backoffice' ? ADMIN_REFRESH_TOKEN_COOKIE_NAME : REFRESH_TOKEN_COOKIE_NAME;
+    const origin =
+      body?.origin ||
+      (req.headers['x-origin'] === 'backoffice' ? 'backoffice' : 'web');
+    const cookieToClear =
+      origin === 'backoffice'
+        ? ADMIN_REFRESH_TOKEN_COOKIE_NAME
+        : REFRESH_TOKEN_COOKIE_NAME;
     res.clearCookie(cookieToClear, { path: '/' });
     return { success: true, message: 'Sesión cerrada exitosamente' };
   }
 }
-

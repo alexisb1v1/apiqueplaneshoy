@@ -4,4 +4,3 @@ export class GetUpcomingEventsQuery {
     public readonly skipCache: boolean = false,
   ) {}
 }
-

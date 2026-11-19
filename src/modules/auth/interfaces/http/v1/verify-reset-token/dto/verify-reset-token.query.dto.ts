@@ -12,4 +12,3 @@ export class VerifyResetTokenQueryDto {
   @Transform(({ value }: { value: string }) => value?.trim())
   token: string;
 }
-

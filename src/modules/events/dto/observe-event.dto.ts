@@ -10,4 +10,3 @@ export class ObserveEventDto {
   @IsString()
   reason?: string;
 }
-

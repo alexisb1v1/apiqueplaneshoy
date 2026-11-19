@@ -56,7 +56,8 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
     }
 
     const redisKey = `${GOOGLE_STATE_PREFIX}${state.trim()}`;
-    const storedState = await this.redisService.get<StoredGoogleStatePayload>(redisKey);
+    const storedState =
+      await this.redisService.get<StoredGoogleStatePayload>(redisKey);
 
     if (!storedState) {
       return err('TOKEN_EXPIRED_OR_INVALID');
@@ -65,7 +66,8 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
     // Consumo de un solo uso inmediato para prevenir ataques de repetición
     await this.redisService.del(redisKey);
 
-    const googleProfile = await this.googleOAuthService.exchangeCodeForProfile(code);
+    const googleProfile =
+      await this.googleOAuthService.exchangeCodeForProfile(code);
     if (!googleProfile) {
       return err('INVALID_INPUT');
     }
@@ -87,13 +89,16 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
       let isNewUser = false;
 
       // 1. Buscar vinculación social existente por proveedor + ID externo de Google
-      const existingIdentity = await queryRunner.manager.findOne(SocialIdentityEntity, {
-        where: {
-          provider: 'google',
-          providerId: googleProfile.sub,
+      const existingIdentity = await queryRunner.manager.findOne(
+        SocialIdentityEntity,
+        {
+          where: {
+            provider: 'google',
+            providerId: googleProfile.sub,
+          },
+          relations: { user: true },
         },
-        relations: { user: true },
-      });
+      );
 
       if (existingIdentity?.user) {
         user = existingIdentity.user;
@@ -114,11 +119,14 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
             user = await queryRunner.manager.save(UserEntity, user);
           }
 
-          const linkedIdentity = queryRunner.manager.create(SocialIdentityEntity, {
-            userId: user.id,
-            provider: 'google',
-            providerId: googleProfile.sub,
-          });
+          const linkedIdentity = queryRunner.manager.create(
+            SocialIdentityEntity,
+            {
+              userId: user.id,
+              provider: 'google',
+              providerId: googleProfile.sub,
+            },
+          );
           await queryRunner.manager.save(SocialIdentityEntity, linkedIdentity);
         } else {
           // 3. Usuario nuevo -> registrar cuenta unificada ya verificada y vincular identidad social

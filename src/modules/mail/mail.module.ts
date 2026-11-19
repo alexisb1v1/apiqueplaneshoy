@@ -10,4 +10,3 @@ import { TicketPdfService } from './ticket-pdf.service';
   exports: [MailService, TicketPdfService],
 })
 export class MailModule {}
-

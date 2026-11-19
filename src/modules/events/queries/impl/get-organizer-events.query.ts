@@ -6,4 +6,3 @@ export class GetOrganizerEventsQuery {
     public readonly period?: '3m' | '6m' | '12m' | 'all',
   ) {}
 }
-

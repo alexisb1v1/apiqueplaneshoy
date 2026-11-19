@@ -21,13 +21,25 @@ export class ForgotPasswordController {
     description: 'Instrucciones enviadas si el correo está registrado',
     type: ForgotPasswordResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Formato de correo electrónico inválido' })
-  @ApiResponse({ status: 429, description: 'Demasiadas solicitudes. Inténtalo más tarde.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Formato de correo electrónico inválido',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Demasiadas solicitudes. Inténtalo más tarde.',
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async execute(@Body() dto: ForgotPasswordRequestDto): Promise<ForgotPasswordResponseDto> {
-    const result = await this.commandBus.execute(new ForgotPasswordCommand(dto));
+  async execute(
+    @Body() dto: ForgotPasswordRequestDto,
+  ): Promise<ForgotPasswordResponseDto> {
+    const result = await this.commandBus.execute(
+      new ForgotPasswordCommand(dto),
+    );
 
-    return matchResult(result, (response: ForgotPasswordResponseDto) => response);
+    return matchResult(
+      result,
+      (response: ForgotPasswordResponseDto) => response,
+    );
   }
 }
-

@@ -4,4 +4,3 @@ export class CancelPendingCulqiOrderCommand {
     public readonly authenticatedUserId: number,
   ) {}
 }
-

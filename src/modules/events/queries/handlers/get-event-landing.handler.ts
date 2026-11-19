@@ -6,7 +6,10 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { GetEventLandingQuery } from '../impl/get-event-landing.query';
 import { EventLandingResponseDto } from '../../dto/event-landing.response.dto';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
 import { plainToInstance } from 'class-transformer';
 
@@ -26,17 +29,25 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
 
     // 1. Verificar Caché en Redis (Solo si NO es modo previewTemp ni skipCache)
     if (!query.skipCache && !isPreviewMode) {
-      const cached = await this.redisService.get<EventLandingResponseDto>(cacheKey);
+      const cached =
+        await this.redisService.get<EventLandingResponseDto>(cacheKey);
       if (cached) {
-        this.logger.debug(`[Redis Cache HIT] Landing de evento [${query.slug}] recuperado desde memoria.`);
+        this.logger.debug(
+          `[Redis Cache HIT] Landing de evento [${query.slug}] recuperado desde memoria.`,
+        );
         return cached;
       }
-      this.logger.debug(`[Redis Cache MISS] No hay caché para landing [${query.slug}]. Consultando PostgreSQL...`);
+      this.logger.debug(
+        `[Redis Cache MISS] No hay caché para landing [${query.slug}]. Consultando PostgreSQL...`,
+      );
     }
 
     // 2. Consultar evento por slug (o publicUuid si tiene formato UUID).
     // Si previewTemp está presente, permite ver eventos no publicados (draft/pending)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.slug);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        query.slug,
+      );
     const baseWhere: Record<string, any> = isUuid
       ? { publicUuid: query.slug }
       : { slug: query.slug };
@@ -61,24 +72,41 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
     }
 
     if (!isPreviewMode && !event.hasLandingPage) {
-      throw new NotFoundException(`Landing page para el evento con slug '${query.slug}' no encontrada o no está habilitada.`);
+      throw new NotFoundException(
+        `Landing page para el evento con slug '${query.slug}' no encontrada o no está habilitada.`,
+      );
     }
 
     // 3. Resolver Ciudad, Banner y Mapa de Zonas
     const cityInfo = resolveCityFromUbigeo(event.ubigeoCode);
-    const city = (cityInfo.name && cityInfo.name !== 'Perú' ? cityInfo.name : event.venue || 'LIMA').toUpperCase();
-    const banner = event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
-    const zoneMapImg = event.images?.find((img) => img.imageType === 'zone_map');
+    const city = (
+      cityInfo.name && cityInfo.name !== 'Perú'
+        ? cityInfo.name
+        : event.venue || 'LIMA'
+    ).toUpperCase();
+    const banner =
+      event.images?.find((img) => img.imageType === 'banner') ||
+      event.images?.[0];
+    const zoneMapImg = event.images?.find(
+      (img) => img.imageType === 'zone_map',
+    );
 
     // 4. Mapear Zonas y Precios Dinámicos (Preventas en Cascada)
     const now = new Date();
     const mappedZones = (event.zones || []).map((zone) => {
       const activeTiers = (zone.pricingTiers || [])
-        .filter((tier) => tier.isActive && (!tier.endAt || new Date(tier.endAt) >= now) && Number(tier.soldCount) < Number(tier.capacity))
+        .filter(
+          (tier) =>
+            tier.isActive &&
+            (!tier.endAt || new Date(tier.endAt) >= now) &&
+            Number(tier.soldCount) < Number(tier.capacity),
+        )
         .sort((a, b) => a.tierNumber - b.tierNumber);
 
       const currentTier = activeTiers[0];
-      const currentPrice = currentTier ? Number(currentTier.price) : Number(zone.regularPrice);
+      const currentPrice = currentTier
+        ? Number(currentTier.price)
+        : Number(zone.regularPrice);
       const activeTierName = currentTier ? currentTier.name : 'Venta Regular';
 
       const cap = Number(zone.capacity) || 0;
@@ -126,8 +154,10 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
         title: rawConfig.header?.title || event.name,
         subtitle: rawConfig.header?.subtitle || 'EXPERIENCIA EXCLUSIVA',
         ctaText: rawConfig.header?.ctaText || 'Comprar Entradas Oficiales',
-        headerImageUrl: rawConfig.header?.headerImageUrl || banner?.imageUrl || null,
-        videoTeaserUrl: rawConfig.header?.videoTeaserUrl || event.promoVideoUrl || null,
+        headerImageUrl:
+          rawConfig.header?.headerImageUrl || banner?.imageUrl || null,
+        videoTeaserUrl:
+          rawConfig.header?.videoTeaserUrl || event.promoVideoUrl || null,
       },
       body: {
         aboutText: rawConfig.body?.aboutText || event.description || null,
@@ -139,9 +169,16 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
       },
       footer: {
         footerImageUrl: rawConfig.footer?.footerImageUrl || null,
-        tiktokUrl: rawConfig.footer?.tiktokUrl || event.socialLinks?.tiktokUrl || null,
-        facebookUrl: rawConfig.footer?.facebookUrl || event.socialLinks?.facebookUrl || null,
-        instagramUrl: rawConfig.footer?.instagramUrl || event.socialLinks?.instagramUrl || null,
+        tiktokUrl:
+          rawConfig.footer?.tiktokUrl || event.socialLinks?.tiktokUrl || null,
+        facebookUrl:
+          rawConfig.footer?.facebookUrl ||
+          event.socialLinks?.facebookUrl ||
+          null,
+        instagramUrl:
+          rawConfig.footer?.instagramUrl ||
+          event.socialLinks?.instagramUrl ||
+          null,
       },
     };
 
@@ -172,11 +209,16 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
 
     // 7. Guardar en Redis con TTL de 15 minutos (Solo si no es vista previa)
     if (!isPreviewMode) {
-      await this.redisService.set(cacheKey, responseDto, REDIS_DEFAULT_TTL.EVENT_LANDING_SECONDS);
-      this.logger.debug(`[Redis Cache SET] Landing guardado en [${cacheKey}] con TTL de 15 minutos.`);
+      await this.redisService.set(
+        cacheKey,
+        responseDto,
+        REDIS_DEFAULT_TTL.EVENT_LANDING_SECONDS,
+      );
+      this.logger.debug(
+        `[Redis Cache SET] Landing guardado en [${cacheKey}] con TTL de 15 minutos.`,
+      );
     }
 
     return responseDto;
   }
 }
-

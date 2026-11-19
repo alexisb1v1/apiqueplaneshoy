@@ -25,7 +25,11 @@ export class AuthUserDto {
   @ApiProperty({ example: false })
   isOrganizer: boolean;
 
-  @ApiProperty({ example: 'Productora Musical SAC', required: false, nullable: true })
+  @ApiProperty({
+    example: 'Productora Musical SAC',
+    required: false,
+    nullable: true,
+  })
   organizerName?: string | null;
 
   @ApiProperty({ example: 'RUC', required: false, nullable: true })
@@ -34,7 +38,11 @@ export class AuthUserDto {
   @ApiProperty({ example: '20123456789', required: false, nullable: true })
   organizerDocumentNumber?: string | null;
 
-  @ApiProperty({ example: 'https://cdn.queplanhoy.com/logos/org.png', required: false, nullable: true })
+  @ApiProperty({
+    example: 'https://cdn.queplanhoy.com/logos/org.png',
+    required: false,
+    nullable: true,
+  })
   organizerLogoUrl?: string | null;
 
   @ApiProperty({ example: null, nullable: true })
@@ -45,16 +53,29 @@ export class AuthUserDto {
 }
 
 export class RegisterUserResponseDto {
-  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', description: 'Access Token JWT (Vigencia 15 min)' })
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Access Token JWT (Vigencia 15 min)',
+  })
   token: string;
 
-  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', description: 'Alias de Access Token' })
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Alias de Access Token',
+  })
   accessToken: string;
 
-  @ApiProperty({ example: '4.a1b2c3d4.e5f6g7h8...', required: false, description: 'Refresh Token rotativo de larga duración (30 días)' })
+  @ApiProperty({
+    example: '4.a1b2c3d4.e5f6g7h8...',
+    required: false,
+    description: 'Refresh Token rotativo de larga duración (30 días)',
+  })
   refreshToken?: string;
 
-  @ApiProperty({ example: 900, description: 'Segundos de vigencia del Access Token (15 minutos = 900s)' })
+  @ApiProperty({
+    example: 900,
+    description: 'Segundos de vigencia del Access Token (15 minutos = 900s)',
+  })
   expiresInSeconds: number;
 
   @ApiProperty({ type: () => AuthUserDto })

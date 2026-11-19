@@ -10,4 +10,3 @@ export const REFRESH_TOKEN_COOKIE_OPTIONS: CookieOptions = {
   path: '/',
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días en milisegundos
 };
-

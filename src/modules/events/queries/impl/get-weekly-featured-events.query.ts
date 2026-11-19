@@ -4,4 +4,3 @@ export class GetWeeklyFeaturedEventsQuery {
     public readonly skipCache: boolean = false,
   ) {}
 }
-

@@ -16,7 +16,10 @@ export class LandingThemeDto {
   backgroundColor!: string;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/landings/pattern.png', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/landings/pattern.png',
+    nullable: true,
+  })
   backgroundPatternUrl?: string | null;
 }
 
@@ -35,11 +38,17 @@ export class LandingHeaderDto {
   ctaText?: string;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/landings/header.jpg', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/landings/header.jpg',
+    nullable: true,
+  })
   headerImageUrl?: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx', nullable: true })
+  @ApiProperty({
+    example: 'https://www.youtube.com/watch?v=xxxx',
+    nullable: true,
+  })
   videoTeaserUrl?: string | null;
 }
 
@@ -50,7 +59,10 @@ export class LandingBodyDto {
   aboutText?: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/landings/body.png', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/landings/body.png',
+    nullable: true,
+  })
   bodyImageUrl?: string | null;
 
   @Expose()
@@ -62,7 +74,10 @@ export class LandingBodyDto {
   highlight2?: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'Seguridad y Accesos Preferenciales', nullable: true })
+  @ApiProperty({
+    example: 'Seguridad y Accesos Preferenciales',
+    nullable: true,
+  })
   highlight3?: string | null;
 
   @Expose()
@@ -73,7 +88,10 @@ export class LandingBodyDto {
 @Exclude()
 export class LandingFooterDto {
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/landings/footer.jpg', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/landings/footer.jpg',
+    nullable: true,
+  })
   footerImageUrl?: string | null;
 
   @Expose()
@@ -178,7 +196,9 @@ export class LandingFaqDto {
   question!: string;
 
   @Expose()
-  @ApiProperty({ example: 'Las puertas abrirán 2 horas antes del inicio del show.' })
+  @ApiProperty({
+    example: 'Las puertas abrirán 2 horas antes del inicio del show.',
+  })
   answer!: string;
 }
 
@@ -244,4 +264,3 @@ export class EventLandingResponseDto {
   @ApiProperty({ example: false, required: false })
   isPreview?: boolean;
 }
-

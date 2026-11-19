@@ -12,16 +12,22 @@ import {
 
 @Injectable()
 @QueryHandler(ListUsersQuery)
-export class ListUsersHandler implements IQueryHandler<ListUsersQuery, Result<ListUsersResponseDto, AppError>> {
+export class ListUsersHandler implements IQueryHandler<
+  ListUsersQuery,
+  Result<ListUsersResponseDto, AppError>
+> {
   constructor(
     @Inject('UserRepository')
     private readonly userRepository: UserRepository,
   ) {}
 
-  async execute(query: ListUsersQuery): Promise<Result<ListUsersResponseDto, AppError>> {
+  async execute(
+    query: ListUsersQuery,
+  ): Promise<Result<ListUsersResponseDto, AppError>> {
     try {
       const page = query.dto.page && query.dto.page > 0 ? query.dto.page : 1;
-      const limit = query.dto.limit && query.dto.limit > 0 ? query.dto.limit : 10;
+      const limit =
+        query.dto.limit && query.dto.limit > 0 ? query.dto.limit : 10;
       const role = query.dto.role?.trim();
       const search = query.dto.search?.trim();
       const isOrganizer = query.dto.isOrganizer;
@@ -36,25 +42,27 @@ export class ListUsersHandler implements IQueryHandler<ListUsersQuery, Result<Li
 
       const totalPages = Math.ceil(total / limit) || 1;
 
-      const userDtos: UserListItemDto[] = items.map(({ user, ticketsCount }) => {
-        const item = new UserListItemDto();
-        item.id = user.id;
-        item.publicUuid = user.publicUuid;
-        item.name = user.name;
-        item.email = user.email;
-        item.username = user.username;
-        item.role = user.role;
-        item.isOrganizer = user.isOrganizer;
-        item.organizerName = user.organizerName;
-        item.organizerDocumentType = user.organizerDocumentType;
-        item.organizerDocumentNumber = user.organizerDocumentNumber;
-        item.organizerPhone = user.organizerPhone;
-        item.isEmailVerified = !!user.emailVerifiedAt;
-        item.emailVerifiedAt = user.emailVerifiedAt;
-        item.ticketsCount = ticketsCount;
-        item.createdAt = user.createdAt;
-        return item;
-      });
+      const userDtos: UserListItemDto[] = items.map(
+        ({ user, ticketsCount }) => {
+          const item = new UserListItemDto();
+          item.id = user.id;
+          item.publicUuid = user.publicUuid;
+          item.name = user.name;
+          item.email = user.email;
+          item.username = user.username;
+          item.role = user.role;
+          item.isOrganizer = user.isOrganizer;
+          item.organizerName = user.organizerName;
+          item.organizerDocumentType = user.organizerDocumentType;
+          item.organizerDocumentNumber = user.organizerDocumentNumber;
+          item.organizerPhone = user.organizerPhone;
+          item.isEmailVerified = !!user.emailVerifiedAt;
+          item.emailVerifiedAt = user.emailVerifiedAt;
+          item.ticketsCount = ticketsCount;
+          item.createdAt = user.createdAt;
+          return item;
+        },
+      );
 
       const meta = new ListUsersPaginationMetaDto();
       meta.total = total;
@@ -74,4 +82,3 @@ export class ListUsersHandler implements IQueryHandler<ListUsersQuery, Result<Li
     }
   }
 }
-

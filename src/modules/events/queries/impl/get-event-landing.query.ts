@@ -5,4 +5,3 @@ export class GetEventLandingQuery {
     public readonly previewTemp?: string,
   ) {}
 }
-

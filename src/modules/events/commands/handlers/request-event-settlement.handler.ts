@@ -29,13 +29,10 @@ const SETTLEMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 @CommandHandler(RequestEventSettlementCommand)
-export class RequestEventSettlementHandler
-  implements
-    ICommandHandler<
-      RequestEventSettlementCommand,
-      Result<EventSettlementResponseDto, AppError>
-    >
-{
+export class RequestEventSettlementHandler implements ICommandHandler<
+  RequestEventSettlementCommand,
+  Result<EventSettlementResponseDto, AppError>
+> {
   private readonly logger = new Logger(RequestEventSettlementHandler.name);
 
   constructor(
@@ -66,7 +63,10 @@ export class RequestEventSettlementHandler
       return err('UNAUTHORIZED');
     }
 
-    if (!user.isOrganizer || (user.role !== 'customer' && user.role !== 'admin')) {
+    if (
+      !user.isOrganizer ||
+      (user.role !== 'customer' && user.role !== 'admin')
+    ) {
       return err('FORBIDDEN');
     }
 
@@ -116,7 +116,9 @@ export class RequestEventSettlementHandler
     // Validación del documento fiscal (RUC con algoritmo SUNAT Módulo 11 o DNI)
     if (dto.documentType === 'RUC' && dto.documentNumber) {
       if (!isValidRuc(dto.documentNumber)) {
-        this.logger.warn(`RUC inválido según algoritmo SUNAT Módulo 11: ${dto.documentNumber}`);
+        this.logger.warn(
+          `RUC inválido según algoritmo SUNAT Módulo 11: ${dto.documentNumber}`,
+        );
         return err('INVALID_INPUT');
       }
     } else if (dto.documentType === 'DNI' && dto.documentNumber) {
@@ -138,7 +140,9 @@ export class RequestEventSettlementHandler
           .addSelect('COALESCE(SUM(t.paid_base_price), 0)', 'grossRevenue')
           .addSelect('COALESCE(SUM(t.paid_service_fee), 0)', 'serviceFeeTotal')
           .where('s.event_id = :eventId', { eventId })
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .groupBy('t.zone_id')
           .getRawMany<{
             zoneId: string;
@@ -154,7 +158,9 @@ export class RequestEventSettlementHandler
           .select('DISTINCT o.id', 'orderId')
           .addSelect('COALESCE(o.discount_amount, 0)', 'discountAmount')
           .where('o.status = :paidStatus', { paidStatus: 'paid' })
-          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', { eventId })
+          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', {
+            eventId,
+          })
           .getRawMany<{ orderId: string; discountAmount: string }>(),
       ]);
 
@@ -176,27 +182,32 @@ export class RequestEventSettlementHandler
         zoneMap.set(String(z.id), { name: z.name });
       }
 
-      const breakdownZones: SettlementBreakdownZoneDto[] = zoneSalesRows.map((r) => {
-        const sold = Number(r.soldCount) || 0;
-        const rev = Math.round((Number(r.grossRevenue) || 0) * 100) / 100;
-        const fee = Math.round((Number(r.serviceFeeTotal) || 0) * 100) / 100;
+      const breakdownZones: SettlementBreakdownZoneDto[] = zoneSalesRows.map(
+        (r) => {
+          const sold = Number(r.soldCount) || 0;
+          const rev = Math.round((Number(r.grossRevenue) || 0) * 100) / 100;
+          const fee = Math.round((Number(r.serviceFeeTotal) || 0) * 100) / 100;
 
-        totalSold += sold;
-        totalGross += rev;
-        totalFee += fee;
+          totalSold += sold;
+          totalGross += rev;
+          totalFee += fee;
 
-        return {
-          zoneId: String(r.zoneId),
-          zoneName: zoneMap.get(String(r.zoneId))?.name || 'Zona',
-          ticketsSold: sold,
-          revenue: rev,
-          serviceFee: fee,
-        };
-      });
+          return {
+            zoneId: String(r.zoneId),
+            zoneName: zoneMap.get(String(r.zoneId))?.name || 'Zona',
+            ticketsSold: sold,
+            revenue: rev,
+            serviceFee: fee,
+          };
+        },
+      );
 
       totalGross = Math.round(totalGross * 100) / 100;
       totalFee = Math.round(totalFee * 100) / 100;
-      const netPayout = Math.max(0, Math.round((totalGross - totalCouponsDiscount - totalFee) * 100) / 100);
+      const netPayout = Math.max(
+        0,
+        Math.round((totalGross - totalCouponsDiscount - totalFee) * 100) / 100,
+      );
 
       if (totalSold === 0 || netPayout <= 0) {
         return err('NO_FUNDS_TO_SETTLE');
@@ -239,7 +250,9 @@ export class RequestEventSettlementHandler
       const saved = await this.settlementRepository.save(settlement);
 
       // Notificar a promotores@queplanhoy.com que se ingresó una solicitud de liquidación
-      const settlementNotificationEmail = process.env.SETTLEMENT_NOTIFICATION_EMAIL || 'promotores@queplanhoy.com';
+      const settlementNotificationEmail =
+        process.env.SETTLEMENT_NOTIFICATION_EMAIL ||
+        'promotores@queplanhoy.com';
       this.mailService
         .sendSettlementRequestedEmail({
           to: settlementNotificationEmail,
@@ -253,10 +266,14 @@ export class RequestEventSettlementHandler
           bankName: saved.bankName || 'No especificado',
           bankAccountNumber: saved.bankAccountNumber || '-',
           bankAccountCci: saved.bankAccountCci,
-          requestedAtIso: saved.requestedAt ? new Date(saved.requestedAt).toISOString() : new Date().toISOString(),
+          requestedAtIso: saved.requestedAt
+            ? new Date(saved.requestedAt).toISOString()
+            : new Date().toISOString(),
         })
         .catch((mailErr) => {
-          this.logger.warn(`No se pudo enviar el correo de solicitud de liquidación a ${settlementNotificationEmail}: ${(mailErr as Error).message}`);
+          this.logger.warn(
+            `No se pudo enviar el correo de solicitud de liquidación a ${settlementNotificationEmail}: ${(mailErr as Error).message}`,
+          );
         });
 
       const eventCode = `#EV-${event.publicUuid.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
@@ -271,7 +288,8 @@ export class RequestEventSettlementHandler
         isSettlementRequested: true,
         totalTicketsSold: Number(saved.totalTicketsSold) || 0,
         grossAmount: Number(saved.grossAmount) || 0,
-        totalCouponsDiscountAmount: Number(saved.totalCouponsDiscountAmount) || 0,
+        totalCouponsDiscountAmount:
+          Number(saved.totalCouponsDiscountAmount) || 0,
         platformFeeAmount: Number(saved.platformFeeAmount) || 0,
         gatewayFeeAmount: Number(saved.gatewayFeeAmount) || 0,
         totalAdvancesAmount: Number(saved.totalAdvancesAmount) || 0,
@@ -286,7 +304,9 @@ export class RequestEventSettlementHandler
         documentNumber: dto.documentNumber || null,
         transferReference: saved.transferReference,
         transferVoucherUrl: saved.transferVoucherUrl,
-        requestedAt: saved.requestedAt ? new Date(saved.requestedAt).toISOString() : null,
+        requestedAt: saved.requestedAt
+          ? new Date(saved.requestedAt).toISOString()
+          : null,
         paidAt: saved.paidAt ? new Date(saved.paidAt).toISOString() : null,
         notes: saved.notes,
         breakdownByZone: breakdownZones,

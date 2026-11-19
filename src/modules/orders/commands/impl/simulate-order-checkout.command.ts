@@ -6,4 +6,3 @@ export class SimulateOrderCheckoutCommand {
     public readonly authenticatedUserId?: number,
   ) {}
 }
-

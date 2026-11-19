@@ -22,7 +22,9 @@ export class GetCurrentUserHandler implements IQueryHandler<GetCurrentUserQuery>
    *
    * @throws NOT_FOUND si el usuario no existe en la base de datos.
    */
-  async execute(query: GetCurrentUserQuery): Promise<Result<AuthUserDto, AppError>> {
+  async execute(
+    query: GetCurrentUserQuery,
+  ): Promise<Result<AuthUserDto, AppError>> {
     const user = await this.userRepository.findByPublicUuid(query.publicUuid);
     if (!user) {
       return err('NOT_FOUND');

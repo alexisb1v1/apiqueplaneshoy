@@ -3,7 +3,8 @@ import { Expose } from 'class-transformer';
 
 export class ResetPasswordResponseDto {
   @ApiProperty({
-    example: 'Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión.',
+    example:
+      'Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión.',
     description: 'Mensaje de éxito tras actualizar la credencial',
   })
   @Expose()
@@ -13,4 +14,3 @@ export class ResetPasswordResponseDto {
     this.message = message;
   }
 }
-

@@ -11,7 +11,10 @@ import { UserEntity } from '@users/domain/entities/user.entity';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS } from '@modules/redis/redis.constants';
 import { SearchService } from '../../search/services/search.service';
-import { SeedEventsResponseDto, SeededEventSummaryDto } from '../dto/seed-events.response.dto';
+import {
+  SeedEventsResponseDto,
+  SeededEventSummaryDto,
+} from '../dto/seed-events.response.dto';
 
 interface EventTemplate {
   name: string;
@@ -40,13 +43,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'Grupo 5 en Concierto - Noche de Oro',
     category: 'CONCERTS',
-    description: 'La orquesta de cumbia más aclamada del Perú llega con su espectáculo sinfónico en vivo. Más de 3 horas de éxitos, luces inteligentes y sonido de última generación.',
+    description:
+      'La orquesta de cumbia más aclamada del Perú llega con su espectáculo sinfónico en vivo. Más de 3 horas de éxitos, luces inteligentes y sonido de última generación.',
     venue: 'Campo Ferial de Yarinacocha',
     address: 'Av. Yarinacocha 954, Pucallpa',
     city: 'Pucallpa',
     ubigeoCode: '250102',
     coordinates: '-8.35193, -74.56877',
-    bannerUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [
       'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80',
@@ -70,9 +75,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         color: '#10B981',
         capacity: 800,
         regularPrice: 65.0,
-        tiers: [
-          { name: 'Preventa 1 - General', price: 45.0, capacity: 300 },
-        ],
+        tiers: [{ name: 'Preventa 1 - General', price: 45.0, capacity: 300 }],
       },
     ],
     hasLandingPage: true,
@@ -81,13 +84,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'Festival Selva Viva 2026 - Cumbia & Huayno Electrónico',
     category: 'FESTIVALS',
-    description: 'El festival musical más imponente de la Amazonía peruana. Dos escenarios simultáneos, gastronomía regional típica, feria de emprendedores y 14 artistas en escena.',
+    description:
+      'El festival musical más imponente de la Amazonía peruana. Dos escenarios simultáneos, gastronomía regional típica, feria de emprendedores y 14 artistas en escena.',
     venue: 'Explanada del Malecón Grau',
     address: 'Malecón Grau s/n, Pucallpa',
     city: 'Pucallpa',
     ubigeoCode: '250101',
     coordinates: '-8.38210, -74.53200',
-    bannerUrl: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [
       'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=800&q=80',
@@ -99,9 +104,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         color: '#8B5CF6',
         capacity: 150,
         regularPrice: 220.0,
-        tiers: [
-          { name: 'Preventa Fans', price: 180.0, capacity: 50 },
-        ],
+        tiers: [{ name: 'Preventa Fans', price: 180.0, capacity: 50 }],
       },
       {
         name: 'CAMPO',
@@ -121,13 +124,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'Carlos Álvarez - Habla Causa Stand Up',
     category: 'COMEDY',
-    description: 'Una noche de carcajadas inolvidables con la mejor sátira política y personajes icónicos de la televisión peruana. Función única con aforo limitado.',
+    description:
+      'Una noche de carcajadas inolvidables con la mejor sátira política y personajes icónicos de la televisión peruana. Función única con aforo limitado.',
     venue: 'Teatro Municipal de Lima',
     address: 'Jr. Ica 377, Cercado de Lima',
     city: 'Lima',
     ubigeoCode: '150101',
     coordinates: '-12.04430, -77.03450',
-    bannerUrl: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [
       'https://images.unsplash.com/photo-1514306191717-452ec28c7814?auto=format&fit=crop&w=800&q=80',
     ],
@@ -138,9 +143,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         color: '#F59E0B',
         capacity: 180,
         regularPrice: 90.0,
-        tiers: [
-          { name: 'Preventa Exclusiva', price: 75.0, capacity: 60 },
-        ],
+        tiers: [{ name: 'Preventa Exclusiva', price: 75.0, capacity: 60 }],
       },
       {
         name: 'MEZZANINE',
@@ -157,13 +160,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'Armonía 10 - La Primerísima en Vivo',
     category: 'CONCERTS',
-    description: 'Celebra más de 50 años de historia de la cumbia piurana. Todos los éxitos que marcaron generaciones en un concierto monumental.',
+    description:
+      'Celebra más de 50 años de historia de la cumbia piurana. Todos los éxitos que marcaron generaciones en un concierto monumental.',
     venue: 'Estadio Aliardo Soria Pérez',
     address: 'Jr. Inmaculada 450, Pucallpa',
     city: 'Pucallpa',
     ubigeoCode: '250101',
     coordinates: '-8.37915, -74.55387',
-    bannerUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [
       'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=800&q=80',
     ],
@@ -182,9 +187,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         color: '#3B82F6',
         capacity: 1500,
         regularPrice: 40.0,
-        tiers: [
-          { name: 'Preventa Promocional', price: 30.0, capacity: 500 },
-        ],
+        tiers: [{ name: 'Preventa Promocional', price: 30.0, capacity: 500 }],
       },
     ],
     hasLandingPage: true,
@@ -193,13 +196,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'El Rey León - El Gran Musical',
     category: 'THEATER',
-    description: 'La magia de Broadway adaptada por el más talentoso elenco de teatro musical peruano. Vestuarios asombrosos, orquesta en vivo y acrobacias aéreas.',
+    description:
+      'La magia de Broadway adaptada por el más talentoso elenco de teatro musical peruano. Vestuarios asombrosos, orquesta en vivo y acrobacias aéreas.',
     venue: 'Gran Teatro Nacional',
     address: 'Av. Javier Prado Este 2225, San Borja, Lima',
     city: 'Lima',
     ubigeoCode: '150130',
     coordinates: '-12.08740, -77.00490',
-    bannerUrl: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [
       'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?auto=format&fit=crop&w=800&q=80',
     ],
@@ -210,9 +215,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         color: '#6366F1',
         capacity: 220,
         regularPrice: 160.0,
-        tiers: [
-          { name: 'Preventa Familiar', price: 135.0, capacity: 80 },
-        ],
+        tiers: [{ name: 'Preventa Familiar', price: 135.0, capacity: 80 }],
       },
       {
         name: 'PISO 2 CENTRAL',
@@ -229,13 +232,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'Copa Regional de Pádel Open Pucallpa 2026',
     category: 'SPORTS',
-    description: 'El torneo oficial de pádel más importante del oriente peruano. Más de 64 parejas compitiendo en categorías Primera, Segunda y Mixtos con premios en efectivo.',
+    description:
+      'El torneo oficial de pádel más importante del oriente peruano. Más de 64 parejas compitiendo en categorías Primera, Segunda y Mixtos con premios en efectivo.',
     venue: 'Club Campestre Pucallpa',
     address: 'Carretera Federico Basadre Km 6, Pucallpa',
     city: 'Pucallpa',
     ubigeoCode: '250102',
     coordinates: '-8.39500, -74.58000',
-    bannerUrl: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [],
     zones: [
       {
@@ -252,13 +257,15 @@ const EVENT_TEMPLATES: EventTemplate[] = [
   {
     name: 'Feria Gastronómica Mistura Amazónica',
     category: 'GASTRONOMY',
-    description: 'Juane gigante, cecina con tacacho, paiche a la parrilla, tragos exóticos de camu camu y cocona. Tres días de fiesta con los mejores chefs del Perú.',
+    description:
+      'Juane gigante, cecina con tacacho, paiche a la parrilla, tragos exóticos de camu camu y cocona. Tres días de fiesta con los mejores chefs del Perú.',
     venue: 'Boulevard de Yarinacocha',
     address: 'Malecón Turístico Yarinacocha, Pucallpa',
     city: 'Pucallpa',
     ubigeoCode: '250102',
     coordinates: '-8.35500, -74.57100',
-    bannerUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl:
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
     galleryUrls: [],
     zones: [
       {
@@ -267,9 +274,7 @@ const EVENT_TEMPLATES: EventTemplate[] = [
         color: '#F97316',
         capacity: 600,
         regularPrice: 35.0,
-        tiers: [
-          { name: 'Preventa Degustación', price: 25.0, capacity: 200 },
-        ],
+        tiers: [{ name: 'Preventa Degustación', price: 25.0, capacity: 200 }],
       },
     ],
     hasLandingPage: true,
@@ -298,7 +303,7 @@ export class EventSeederService {
     private readonly userRepository: Repository<UserEntity>,
     private readonly redisService: RedisService,
     private readonly searchService: SearchService,
-  ) { }
+  ) {}
 
   /**
    * Genera masivamente eventos de prueba con funciones pasadas, de hoy y futuras,
@@ -307,7 +312,9 @@ export class EventSeederService {
    */
   async seedEvents(count: number = 10): Promise<SeedEventsResponseDto> {
     const validCount = Math.max(1, Math.min(count, 100));
-    this.logger.log(`🌱 Iniciando generación masiva de ${validCount} eventos de prueba con cupones y videos...`);
+    this.logger.log(
+      `🌱 Iniciando generación masiva de ${validCount} eventos de prueba con cupones y videos...`,
+    );
 
     // 1. Obtener o crear organizador de prueba
     const organizer = await this.getOrCreateOrganizer();
@@ -321,7 +328,8 @@ export class EventSeederService {
     const baseNow = new Date();
 
     for (let i = 0; i < validCount; i++) {
-      const template = EVENT_TEMPLATES[(currentTotalEvents + i) % EVENT_TEMPLATES.length];
+      const template =
+        EVENT_TEMPLATES[(currentTotalEvents + i) % EVENT_TEMPLATES.length];
       const randomSuffix = Math.random().toString(36).substring(2, 7);
       const eventNumber = currentTotalEvents + i + 1;
       const eventName = `${template.name} #${eventNumber}`;
@@ -354,13 +362,17 @@ export class EventSeederService {
       } else if (scenario === 2) {
         // Evento de Fin de Semana (próximo sábado)
         const daysToSaturday = (6 - baseNow.getDay() + 7) % 7 || 7;
-        showDate = new Date(baseNow.getTime() + daysToSaturday * 24 * 60 * 60 * 1000);
+        showDate = new Date(
+          baseNow.getTime() + daysToSaturday * 24 * 60 * 60 * 1000,
+        );
         showDate.setHours(20, 30, 0, 0);
         upcomingCount++;
       } else {
         // Evento Futuro: en 12 a 35 días
         const daysForward = 12 + ((i * 3) % 25);
-        showDate = new Date(baseNow.getTime() + daysForward * 24 * 60 * 60 * 1000);
+        showDate = new Date(
+          baseNow.getTime() + daysForward * 24 * 60 * 60 * 1000,
+        );
         showDate.setHours(19, 0, 0, 0);
         upcomingCount++;
       }
@@ -368,7 +380,10 @@ export class EventSeederService {
       // Configuración de Landing Page y Video de YouTube
       const isFeatured = i < 3; // Los 3 primeros son destacados para el Hero Carousel
       const hasLandingPage = !!template.hasLandingPage;
-      const videoTeaserUrl = hasLandingPage ? template.videoTeaserUrl || 'https://www.youtube.com/watch?v=kJQP7kiw5Fk' : null;
+      const videoTeaserUrl = hasLandingPage
+        ? template.videoTeaserUrl ||
+          'https://www.youtube.com/watch?v=kJQP7kiw5Fk'
+        : null;
 
       const event = this.eventRepository.create({
         name: eventName,
@@ -376,7 +391,11 @@ export class EventSeederService {
         description: template.description,
         organizerId: organizer.id,
         category: template.category,
-        tags: [template.category.toLowerCase(), template.city.toLowerCase(), 'entradas-oficiales'],
+        tags: [
+          template.category.toLowerCase(),
+          template.city.toLowerCase(),
+          'entradas-oficiales',
+        ],
         venue: template.venue,
         address: template.address,
         ubigeoCode: template.ubigeoCode,
@@ -387,31 +406,34 @@ export class EventSeederService {
         userTicketLimit: 6,
         landingConfig: hasLandingPage
           ? {
-            theme: {
-              primaryColor: '#6366F1',
-              secondaryColor: '#4F46E5',
-              backgroundType: 'color',
-              backgroundColor: '#0F172A',
-            },
-            header: {
-              title: eventName,
-              subtitle: `Experiencia exclusiva en ${template.city}`,
-              ctaText: 'Asegurar Entradas Ahora',
-              headerImageUrl: template.bannerUrl,
-              videoTeaserUrl: videoTeaserUrl,
-            },
-            body: {
-              highlight1: 'Acceso digital garantizado con código QR Ed25519',
-              highlight2: 'Sonido line-array y pantallas LED de alta resolución',
-              highlight3: 'Seguridad privada, puestos de primeros auxilios y zona gastronómica',
-              highlight4: 'Estacionamiento vigilado con capacidad para más de 200 vehículos',
-            },
-            footer: {
-              instagramUrl: 'https://instagram.com/queplanhoy',
-              tiktokUrl: 'https://tiktok.com/@queplanhoy',
-              facebookUrl: 'https://facebook.com/queplanhoy',
-            },
-          }
+              theme: {
+                primaryColor: '#6366F1',
+                secondaryColor: '#4F46E5',
+                backgroundType: 'color',
+                backgroundColor: '#0F172A',
+              },
+              header: {
+                title: eventName,
+                subtitle: `Experiencia exclusiva en ${template.city}`,
+                ctaText: 'Asegurar Entradas Ahora',
+                headerImageUrl: template.bannerUrl,
+                videoTeaserUrl: videoTeaserUrl,
+              },
+              body: {
+                highlight1: 'Acceso digital garantizado con código QR Ed25519',
+                highlight2:
+                  'Sonido line-array y pantallas LED de alta resolución',
+                highlight3:
+                  'Seguridad privada, puestos de primeros auxilios y zona gastronómica',
+                highlight4:
+                  'Estacionamiento vigilado con capacidad para más de 200 vehículos',
+              },
+              footer: {
+                instagramUrl: 'https://instagram.com/queplanhoy',
+                tiktokUrl: 'https://tiktok.com/@queplanhoy',
+                facebookUrl: 'https://facebook.com/queplanhoy',
+              },
+            }
           : null,
       });
 
@@ -554,7 +576,7 @@ export class EventSeederService {
           hasLandingPage: savedEvent.hasLandingPage,
           isFeatured: savedEvent.isFeatured,
         })
-        .catch(() => { });
+        .catch(() => {});
 
       seededEvents.push({
         id: savedEvent.id.toString(),

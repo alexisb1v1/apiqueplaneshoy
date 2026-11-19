@@ -3,8 +3,10 @@ import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class AdminRejectSettlementRequestDto {
   @ApiProperty({
-    description: 'Motivo u observación formal del rechazo para que el promotor subsane',
-    example: 'El número de cuenta bancaria ingresado no coincide con el titular del RUC registrado.',
+    description:
+      'Motivo u observación formal del rechazo para que el promotor subsane',
+    example:
+      'El número de cuenta bancaria ingresado no coincide con el titular del RUC registrado.',
   })
   @IsString()
   @IsNotEmpty({ message: 'El motivo de observación o rechazo es obligatorio' })

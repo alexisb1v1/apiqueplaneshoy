@@ -12,12 +12,15 @@ import {
 
 export class RequestEventSettlementRequestDto {
   @ApiProperty({
-    description: 'Entidad bancaria en Perú (ej. BCP, BBVA, Interbank, Scotiabank, BanBif, Banco de la Nación)',
+    description:
+      'Entidad bancaria en Perú (ej. BCP, BBVA, Interbank, Scotiabank, BanBif, Banco de la Nación)',
     example: 'BCP',
   })
   @IsString()
   @IsNotEmpty({ message: 'El nombre del banco es obligatorio' })
-  @MaxLength(100, { message: 'El nombre del banco no debe exceder 100 caracteres' })
+  @MaxLength(100, {
+    message: 'El nombre del banco no debe exceder 100 caracteres',
+  })
   bankName: string;
 
   @ApiPropertyOptional({
@@ -35,8 +38,12 @@ export class RequestEventSettlementRequestDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'El titular de la cuenta es obligatorio' })
-  @MinLength(3, { message: 'El titular de la cuenta debe tener al menos 3 caracteres' })
-  @MaxLength(150, { message: 'El titular de la cuenta no debe exceder 150 caracteres' })
+  @MinLength(3, {
+    message: 'El titular de la cuenta debe tener al menos 3 caracteres',
+  })
+  @MaxLength(150, {
+    message: 'El titular de la cuenta no debe exceder 150 caracteres',
+  })
   accountHolder: string;
 
   @ApiPropertyOptional({
@@ -49,7 +56,8 @@ export class RequestEventSettlementRequestDto {
   documentType?: string;
 
   @ApiPropertyOptional({
-    description: 'Número de documento de identidad del titular (DNI de 8 dígitos o RUC de 11 dígitos)',
+    description:
+      'Número de documento de identidad del titular (DNI de 8 dígitos o RUC de 11 dígitos)',
     example: '20601234567',
   })
   @IsString()
@@ -63,23 +71,40 @@ export class RequestEventSettlementRequestDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'El número de cuenta bancaria es obligatorio' })
-  @MinLength(6, { message: 'El número de cuenta debe tener al menos 6 caracteres' })
-  @MaxLength(50, { message: 'El número de cuenta no debe exceder 50 caracteres' })
+  @MinLength(6, {
+    message: 'El número de cuenta debe tener al menos 6 caracteres',
+  })
+  @MaxLength(50, {
+    message: 'El número de cuenta no debe exceder 50 caracteres',
+  })
   accountNumber: string;
 
   @ApiPropertyOptional({
-    description: 'Código de Cuenta Interbancario (CCI) de exactamente 20 dígitos (Obligatorio para otros bancos, opcional para BCP)',
+    description:
+      'Código de Cuenta Interbancario (CCI) de exactamente 20 dígitos (Obligatorio para otros bancos, opcional para BCP)',
     example: '00219300987654320112',
   })
-  @ValidateIf((o: RequestEventSettlementRequestDto) => o.bankName !== 'BCP' || Boolean(o.accountCci && o.accountCci.trim().length > 0))
+  @ValidateIf(
+    (o: RequestEventSettlementRequestDto) =>
+      o.bankName !== 'BCP' ||
+      Boolean(o.accountCci && o.accountCci.trim().length > 0),
+  )
   @IsString()
-  @IsNotEmpty({ message: 'El código CCI interbancario es obligatorio para transferencias a otros bancos' })
-  @Length(20, 20, { message: 'El CCI debe tener exactamente 20 dígitos numéricos' })
-  @Matches(/^\d{20}$/, { message: 'El CCI debe contener únicamente 20 dígitos numéricos' })
+  @IsNotEmpty({
+    message:
+      'El código CCI interbancario es obligatorio para transferencias a otros bancos',
+  })
+  @Length(20, 20, {
+    message: 'El CCI debe tener exactamente 20 dígitos numéricos',
+  })
+  @Matches(/^\d{20}$/, {
+    message: 'El CCI debe contener únicamente 20 dígitos numéricos',
+  })
   accountCci?: string;
 
   @ApiPropertyOptional({
-    description: 'Notas adicionales u observaciones del organizador para la liquidación',
+    description:
+      'Notas adicionales u observaciones del organizador para la liquidación',
     example: 'Por favor emitir comprobante a nombre de Juan Perez Eventos SAC',
   })
   @IsString()

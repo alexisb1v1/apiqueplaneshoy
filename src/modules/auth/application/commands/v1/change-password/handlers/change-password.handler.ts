@@ -95,4 +95,3 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     }
   }
 }
-

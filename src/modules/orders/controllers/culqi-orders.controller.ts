@@ -11,9 +11,17 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
+import {
+  JwtAuthGuard,
+  AuthenticatedRequest,
+} from '@auth/infrastructure/guards/jwt-auth.guard';
 import { matchResult } from '@common/http/match-result';
 import { PrepareCulqiCheckoutRequestDto } from '../dto/prepare-culqi-checkout.request.dto';
 import { PrepareCulqiCheckoutResponseDto } from '../dto/prepare-culqi-checkout.response.dto';
@@ -133,4 +141,3 @@ export class CulqiOrdersController {
     });
   }
 }
-

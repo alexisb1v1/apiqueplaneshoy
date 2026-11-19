@@ -10,9 +10,10 @@ import { MailService } from '@modules/mail/mail.service';
 import { EmailAttachment } from '@modules/mail/mail.types';
 
 @CommandHandler(AdminPaySettlementCommand)
-export class AdminPaySettlementHandler
-  implements ICommandHandler<AdminPaySettlementCommand, Result<EventSettlementEntity, AppError>>
-{
+export class AdminPaySettlementHandler implements ICommandHandler<
+  AdminPaySettlementCommand,
+  Result<EventSettlementEntity, AppError>
+> {
   private readonly logger = new Logger(AdminPaySettlementHandler.name);
 
   constructor(
@@ -77,14 +78,16 @@ export class AdminPaySettlementHandler
               if (voucherRes.ok) {
                 const arrayBuffer = await voucherRes.arrayBuffer();
                 const buffer = Buffer.from(arrayBuffer);
-                const contentType = voucherRes.headers.get('content-type') || 'image/webp';
+                const contentType =
+                  voucherRes.headers.get('content-type') || 'image/webp';
                 const extension = contentType.includes('png')
                   ? 'png'
                   : contentType.includes('pdf')
-                  ? 'pdf'
-                  : contentType.includes('jpeg') || contentType.includes('jpg')
-                  ? 'jpg'
-                  : 'webp';
+                    ? 'pdf'
+                    : contentType.includes('jpeg') ||
+                        contentType.includes('jpg')
+                      ? 'jpg'
+                      : 'webp';
 
                 attachments.push({
                   filename: `voucher-liquidacion-${saved.transferReference}.${extension}`,
@@ -93,13 +96,18 @@ export class AdminPaySettlementHandler
                 });
               }
             } catch (fetchErr) {
-              this.logger.warn(`No se pudo descargar el voucher para adjuntarlo al correo: ${(fetchErr as Error).message}`);
+              this.logger.warn(
+                `No se pudo descargar el voucher para adjuntarlo al correo: ${(fetchErr as Error).message}`,
+              );
             }
           }
 
           await this.mailService.sendSettlementPaidEmail({
             to: organizerEmail,
-            name: settlement.organizer?.name || settlement.organizer?.organizerName || 'Organizador',
+            name:
+              settlement.organizer?.name ||
+              settlement.organizer?.organizerName ||
+              'Organizador',
             eventTitle: settlement.event?.name || 'Evento',
             totalTicketsSold: Number(saved.totalTicketsSold) || 0,
             grossAmountFormatted: `S/ ${Number(saved.grossAmount || 0).toFixed(2)}`,
@@ -111,12 +119,16 @@ export class AdminPaySettlementHandler
             netPayoutFormatted: `S/ ${Number(saved.netPayoutAmount || 0).toFixed(2)}`,
             bankName: saved.bankName || 'No especificado',
             transferReference: saved.transferReference || '-',
-            paidAtIso: saved.paidAt ? new Date(saved.paidAt).toISOString() : new Date().toISOString(),
+            paidAtIso: saved.paidAt
+              ? new Date(saved.paidAt).toISOString()
+              : new Date().toISOString(),
             voucherUrl: saved.transferVoucherUrl,
             attachments: attachments.length > 0 ? attachments : undefined,
           });
         })().catch((mailErr) => {
-          this.logger.warn(`No se pudo enviar el correo de liquidación pagada a ${organizerEmail}: ${(mailErr as Error).message}`);
+          this.logger.warn(
+            `No se pudo enviar el correo de liquidación pagada a ${organizerEmail}: ${(mailErr as Error).message}`,
+          );
         });
       }
 

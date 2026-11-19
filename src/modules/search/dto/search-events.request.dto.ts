@@ -3,27 +3,40 @@ import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SearchEventsRequestDto {
-  @ApiPropertyOptional({ description: 'Término de búsqueda libre', example: 'concierto rock' })
+  @ApiPropertyOptional({
+    description: 'Término de búsqueda libre',
+    example: 'concierto rock',
+  })
   @IsOptional()
   @IsString()
   readonly q?: string;
 
-  @ApiPropertyOptional({ description: 'Filtrar por categoría (CONCERTS, FESTIVALS, etc.)' })
+  @ApiPropertyOptional({
+    description: 'Filtrar por categoría (CONCERTS, FESTIVALS, etc.)',
+  })
   @IsOptional()
   @IsString()
   readonly category?: string;
 
-  @ApiPropertyOptional({ description: 'Filtrar por código de ubigeo (ej: 150101)' })
+  @ApiPropertyOptional({
+    description: 'Filtrar por código de ubigeo (ej: 150101)',
+  })
   @IsOptional()
   @IsString()
   readonly ubigeoCode?: string;
 
-  @ApiPropertyOptional({ description: 'Filtrar por nombre de ciudad o departamento (ej: Lima, Pucallpa)' })
+  @ApiPropertyOptional({
+    description:
+      'Filtrar por nombre de ciudad o departamento (ej: Lima, Pucallpa)',
+  })
   @IsOptional()
   @IsString()
   readonly city?: string;
 
-  @ApiPropertyOptional({ description: 'Filtrar por estado del evento (published, draft, all)', default: 'published' })
+  @ApiPropertyOptional({
+    description: 'Filtrar por estado del evento (published, draft, all)',
+    default: 'published',
+  })
   @IsOptional()
   @IsString()
   readonly status?: string;
@@ -57,4 +70,3 @@ export class SearchEventsRequestDto {
   @Min(0)
   readonly offset?: number;
 }
-

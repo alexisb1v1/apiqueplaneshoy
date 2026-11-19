@@ -17,7 +17,8 @@ export class GetPresignedUrlDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^image\/(jpeg|jpg|png|webp|svg\+xml)$/, {
-    message: 'Formato de imagen no permitido. Solo se permiten JPEG, PNG, WebP o SVG.',
+    message:
+      'Formato de imagen no permitido. Solo se permiten JPEG, PNG, WebP o SVG.',
   })
   readonly contentType: string;
 
@@ -25,10 +26,16 @@ export class GetPresignedUrlDto {
     description: 'Carpeta o sección donde se almacenará el recurso',
     example: 'banners',
     required: false,
-    enum: ['banners', 'croquis', 'gallery', 'landings', 'organizers', 'vouchers'],
+    enum: [
+      'banners',
+      'croquis',
+      'gallery',
+      'landings',
+      'organizers',
+      'vouchers',
+    ],
   })
   @IsString()
   @IsOptional()
   readonly folder?: string = 'banners';
 }
-

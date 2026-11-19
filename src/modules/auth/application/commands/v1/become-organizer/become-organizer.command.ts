@@ -6,4 +6,3 @@ export class BecomeOrganizerCommand {
     public readonly dto: BecomeOrganizerRequestDto,
   ) {}
 }
-

@@ -6,4 +6,3 @@ export class ChangePasswordCommand {
     public readonly dto: ChangePasswordRequestDto,
   ) {}
 }
-

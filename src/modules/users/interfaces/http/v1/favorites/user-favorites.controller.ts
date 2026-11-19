@@ -10,8 +10,17 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
+import {
+  JwtAuthGuard,
+  AuthenticatedRequest,
+} from '@auth/infrastructure/guards/jwt-auth.guard';
 import { ToggleFavoriteCommand } from '@users/application/commands/v1/toggle-favorite/toggle-favorite.command';
 import { RemoveFavoriteCommand } from '@users/application/commands/v1/remove-favorite/remove-favorite.command';
 import { GetUserFavoriteIdsQuery } from '@users/application/queries/v1/get-user-favorite-ids/get-user-favorite-ids.query';
@@ -33,8 +42,14 @@ export class UserFavoritesController {
 
   @Post(':eventId/toggle')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Alternar (agregar o quitar) un evento en la lista de favoritos del usuario' })
-  @ApiParam({ name: 'eventId', description: 'ID numérico o UUID público del evento' })
+  @ApiOperation({
+    summary:
+      'Alternar (agregar o quitar) un evento en la lista de favoritos del usuario',
+  })
+  @ApiParam({
+    name: 'eventId',
+    description: 'ID numérico o UUID público del evento',
+  })
   @ApiResponse({
     status: 200,
     description: 'Estado de favorito actualizado',
@@ -47,7 +62,9 @@ export class UserFavoritesController {
     @Param('eventId') eventId: string,
   ): Promise<ToggleFavoriteResponseDto> {
     const userId = req.user!.id;
-    const result = await this.commandBus.execute(new ToggleFavoriteCommand(userId, eventId));
+    const result = await this.commandBus.execute(
+      new ToggleFavoriteCommand(userId, eventId),
+    );
 
     return matchResult(result, (data: ToggleFavoriteResponseDto) => data, {
       NOT_FOUND: 'El evento especificado no existe o no está disponible.',
@@ -56,23 +73,32 @@ export class UserFavoritesController {
 
   @Get('ids')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener los identificadores de todos los eventos favoritos del usuario' })
+  @ApiOperation({
+    summary:
+      'Obtener los identificadores de todos los eventos favoritos del usuario',
+  })
   @ApiResponse({
     status: 200,
     description: 'Listado de IDs y UUIDs de eventos favoritos',
     type: UserFavoriteIdsResponseDto,
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  async getFavoriteIds(@Req() req: AuthenticatedRequest): Promise<UserFavoriteIdsResponseDto> {
+  async getFavoriteIds(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<UserFavoriteIdsResponseDto> {
     const userId = req.user!.id;
-    const result = await this.queryBus.execute(new GetUserFavoriteIdsQuery(userId));
+    const result = await this.queryBus.execute(
+      new GetUserFavoriteIdsQuery(userId),
+    );
 
     return matchResult(result, (data: UserFavoriteIdsResponseDto) => data);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener todos los eventos favoritos del usuario con detalles' })
+  @ApiOperation({
+    summary: 'Obtener todos los eventos favoritos del usuario con detalles',
+  })
   @ApiResponse({
     status: 200,
     description: 'Listado de eventos favoritos',
@@ -83,15 +109,25 @@ export class UserFavoritesController {
     @Req() req: AuthenticatedRequest,
   ): Promise<UserFavoriteEventItemResponseDto[]> {
     const userId = req.user!.id;
-    const result = await this.queryBus.execute(new GetUserFavoritesQuery(userId));
+    const result = await this.queryBus.execute(
+      new GetUserFavoritesQuery(userId),
+    );
 
-    return matchResult(result, (data: UserFavoriteEventItemResponseDto[]) => data);
+    return matchResult(
+      result,
+      (data: UserFavoriteEventItemResponseDto[]) => data,
+    );
   }
 
   @Delete(':eventId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Quitar un evento de la lista de favoritos del usuario' })
-  @ApiParam({ name: 'eventId', description: 'ID numérico o UUID público del evento' })
+  @ApiOperation({
+    summary: 'Quitar un evento de la lista de favoritos del usuario',
+  })
+  @ApiParam({
+    name: 'eventId',
+    description: 'ID numérico o UUID público del evento',
+  })
   @ApiResponse({ status: 200, description: 'Evento eliminado de favoritos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   async remove(
@@ -99,9 +135,10 @@ export class UserFavoritesController {
     @Param('eventId') eventId: string,
   ): Promise<{ message: string }> {
     const userId = req.user!.id;
-    const result = await this.commandBus.execute(new RemoveFavoriteCommand(userId, eventId));
+    const result = await this.commandBus.execute(
+      new RemoveFavoriteCommand(userId, eventId),
+    );
 
     return matchResult(result, (data: { message: string }) => data);
   }
 }
-

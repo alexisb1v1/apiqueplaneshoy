@@ -39,7 +39,10 @@ export class PrepareCulqiCheckoutResponseDto {
   culqiOrderId!: string;
 
   @Expose()
-  @ApiProperty({ example: 12000, description: 'Monto total calculado en céntimos' })
+  @ApiProperty({
+    example: 12000,
+    description: 'Monto total calculado en céntimos',
+  })
   amountInCents!: number;
 
   @Expose()
@@ -87,4 +90,3 @@ export class PrepareCulqiCheckoutResponseDto {
   @ApiProperty({ type: CulqiCustomerPreviewDto })
   customer!: CulqiCustomerPreviewDto;
 }
-

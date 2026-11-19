@@ -4,4 +4,3 @@ export class GetOrganizerEventForEditQuery {
     public readonly eventIdentifier: string,
   ) {}
 }
-

@@ -3,4 +3,3 @@ import { ResetPasswordRequestDto } from '@auth/interfaces/http/v1/reset-password
 export class ResetPasswordCommand {
   constructor(public readonly dto: ResetPasswordRequestDto) {}
 }
-

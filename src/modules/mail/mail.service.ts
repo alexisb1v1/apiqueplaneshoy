@@ -61,22 +61,30 @@ export class MailService implements EmailService {
     private readonly ticketPdfService: TicketPdfService,
   ) {
     this.apiUrl = (
-      this.configService.get<string>('RESEND_API_URL') || 'https://api.resend.com/emails'
+      this.configService.get<string>('RESEND_API_URL') ||
+      'https://api.resend.com/emails'
     )
       .trim()
       .replace(/\/+$/, '');
-    this.apiKey = (this.configService.get<string>('RESEND_API_KEY') || '').trim();
+    this.apiKey = (
+      this.configService.get<string>('RESEND_API_KEY') || ''
+    ).trim();
     this.fromEmail = (
       this.configService.get<string>('RESEND_FROM_EMAIL') ||
       'queplanhoy <onboarding@resend.dev>'
     ).trim();
     this.replyTo = (
-      this.configService.get<string>('RESEND_REPLY_TO') || 'contacto@queplanhoy.com'
+      this.configService.get<string>('RESEND_REPLY_TO') ||
+      'contacto@queplanhoy.com'
     ).trim();
 
-    const parsedTimeout = Number(this.configService.get<string>('RESEND_TIMEOUT_MS'));
+    const parsedTimeout = Number(
+      this.configService.get<string>('RESEND_TIMEOUT_MS'),
+    );
     this.timeoutMs =
-      Number.isFinite(parsedTimeout) && parsedTimeout >= 2000 && parsedTimeout <= 15000
+      Number.isFinite(parsedTimeout) &&
+      parsedTimeout >= 2000 &&
+      parsedTimeout <= 15000
         ? parsedTimeout
         : 5000;
 
@@ -86,7 +94,10 @@ export class MailService implements EmailService {
         ? 'https://queplanhoy.com'
         : 'https://dev.queplanhoy.com')
     ).trim();
-    this.primaryFrontendUrl = rawFrontendUrls.split(',')[0].trim().replace(/\/+$/, '');
+    this.primaryFrontendUrl = rawFrontendUrls
+      .split(',')[0]
+      .trim()
+      .replace(/\/+$/, '');
   }
 
   /**
@@ -130,7 +141,9 @@ export class MailService implements EmailService {
       subject: input.subject,
       html: input.html,
       ...(input.text ? { text: input.text } : {}),
-      ...(input.replyTo || this.replyTo ? { reply_to: input.replyTo || this.replyTo } : {}),
+      ...(input.replyTo || this.replyTo
+        ? { reply_to: input.replyTo || this.replyTo }
+        : {}),
       ...(input.tags && input.tags.length > 0 ? { tags: input.tags } : {}),
       ...(input.attachments && input.attachments.length > 0
         ? {
@@ -156,7 +169,10 @@ export class MailService implements EmailService {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
 
-      const data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+      const data = (await response.json().catch(() => null)) as Record<
+        string,
+        unknown
+      > | null;
 
       if (!response.ok || typeof data?.id !== 'string') {
         const providerError =
@@ -178,8 +194,11 @@ export class MailService implements EmailService {
         messageId: data.id,
       };
     } catch (error) {
-      const message = (error as Error)?.message || 'Error de conexión o timeout con Resend.';
-      this.logger.error(`[Resend] Excepción enviando correo a ${recipients.join(', ')}: ${message}`);
+      const message =
+        (error as Error)?.message || 'Error de conexión o timeout con Resend.';
+      this.logger.error(
+        `[Resend] Excepción enviando correo a ${recipients.join(', ')}: ${message}`,
+      );
       return {
         ok: false,
         mode: 'error',
@@ -191,7 +210,11 @@ export class MailService implements EmailService {
   /**
    * Envía el correo de verificación de cuenta al registrarse o al reenviar confirmación.
    */
-  async sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
+  async sendVerificationEmail(
+    to: string,
+    name: string,
+    token: string,
+  ): Promise<void> {
     const verificationUrl = `${this.primaryFrontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
     const content = buildVerificationEmailContent({
       name,
@@ -211,7 +234,11 @@ export class MailService implements EmailService {
   /**
    * Envía el correo de recuperación de contraseña con enlace efímero de 15 minutos.
    */
-  async sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
+  async sendPasswordResetEmail(
+    to: string,
+    name: string,
+    token: string,
+  ): Promise<void> {
     const resetUrl = `${this.primaryFrontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
     const content = buildPasswordResetEmailContent({
       name,
@@ -231,7 +258,10 @@ export class MailService implements EmailService {
   /**
    * Envía notificación de seguridad informando que la contraseña de la cuenta fue modificada.
    */
-  async sendPasswordChangedNotificationEmail(to: string, name: string): Promise<void> {
+  async sendPasswordChangedNotificationEmail(
+    to: string,
+    name: string,
+  ): Promise<void> {
     const content = buildPasswordChangedEmailContent({
       name,
       occurredAtIso: new Date().toISOString(),
@@ -250,14 +280,19 @@ export class MailService implements EmailService {
   /**
    * Envía la confirmación de compra junto con el detalle de boletos, códigos QR embebidos y PDF oficial adjunto.
    */
-  async sendOrderTicketsEmail(payload: SendOrderTicketsEmailPayload): Promise<EmailDeliveryResult> {
+  async sendOrderTicketsEmail(
+    payload: SendOrderTicketsEmailPayload,
+  ): Promise<EmailDeliveryResult> {
     const ticketsPortalUrl =
       payload.ticketsPortalUrl || `${this.primaryFrontendUrl}/profile/tickets`;
 
     const preparedTickets = payload.tickets.map((t) => ({ ...t }));
     const attachments: EmailAttachment[] = [...(payload.attachments || [])];
 
-    if (attachments.length === 0 && preparedTickets.some((t) => Boolean(t.qrPayload))) {
+    if (
+      attachments.length === 0 &&
+      preparedTickets.some((t) => Boolean(t.qrPayload))
+    ) {
       try {
         const precomputedQrs = new Map<number, Buffer>();
         const attachInlineQrs = preparedTickets.length <= 6;
@@ -265,7 +300,9 @@ export class MailService implements EmailService {
         for (let i = 0; i < preparedTickets.length; i++) {
           const item = preparedTickets[i];
           if (!item.qrPayload) continue;
-          const qrBuf = await this.ticketPdfService.generateQrPngBuffer(item.qrPayload);
+          const qrBuf = await this.ticketPdfService.generateQrPngBuffer(
+            item.qrPayload,
+          );
           precomputedQrs.set(i, qrBuf);
 
           if (attachInlineQrs) {
@@ -307,7 +344,10 @@ export class MailService implements EmailService {
           precomputedQrs,
         );
 
-        const safeOrderFileSuffix = payload.orderCode.replace(/[^A-Za-z0-9_-]/g, '');
+        const safeOrderFileSuffix = payload.orderCode.replace(
+          /[^A-Za-z0-9_-]/g,
+          '',
+        );
         attachments.push({
           filename: `entradas-${safeOrderFileSuffix || 'QPH'}.pdf`,
           content: pdfBuffer.toString('base64'),
@@ -352,7 +392,8 @@ export class MailService implements EmailService {
   async sendWelcomeGoogleEmail(
     payload: SendWelcomeGoogleEmailPayload,
   ): Promise<EmailDeliveryResult> {
-    const exploreUrl = payload.exploreUrl || `${this.primaryFrontendUrl}/events`;
+    const exploreUrl =
+      payload.exploreUrl || `${this.primaryFrontendUrl}/events`;
     const content = buildWelcomeGoogleEmailContent({
       name: payload.name,
       exploreUrl,
@@ -374,7 +415,8 @@ export class MailService implements EmailService {
   async sendOrganizerActivatedEmail(
     payload: SendOrganizerActivatedEmailPayload,
   ): Promise<EmailDeliveryResult> {
-    const dashboardUrl = payload.dashboardUrl || `${this.primaryFrontendUrl}/organizer/events`;
+    const dashboardUrl =
+      payload.dashboardUrl || `${this.primaryFrontendUrl}/organizer/events`;
     const content = buildOrganizerActivatedEmailContent({
       name: payload.name,
       organizerName: payload.organizerName,
@@ -399,7 +441,8 @@ export class MailService implements EmailService {
   async sendOrganizerKycVerifiedEmail(
     payload: SendOrganizerKycVerifiedEmailPayload,
   ): Promise<EmailDeliveryResult> {
-    const dashboardUrl = payload.dashboardUrl || `${this.primaryFrontendUrl}/organizer/events`;
+    const dashboardUrl =
+      payload.dashboardUrl || `${this.primaryFrontendUrl}/organizer/events`;
     const content = buildOrganizerKycVerifiedEmailContent({
       name: payload.name,
       organizerName: payload.organizerName,
@@ -499,7 +542,9 @@ export class MailService implements EmailService {
   /**
    * Notifica al organizador el desembolso bancario de un anticipo a cuenta.
    */
-  async sendAdvancePaidEmail(payload: SendAdvancePaidEmailPayload): Promise<EmailDeliveryResult> {
+  async sendAdvancePaidEmail(
+    payload: SendAdvancePaidEmailPayload,
+  ): Promise<EmailDeliveryResult> {
     const content = buildAdvancePaidEmailContent({
       name: payload.name,
       eventTitle: payload.eventTitle,

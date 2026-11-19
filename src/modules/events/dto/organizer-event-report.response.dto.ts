@@ -58,7 +58,8 @@ export class OrganizerEventReportEventDto {
   @Expose()
   @ApiProperty({
     example: 'buyer',
-    description: 'A quién se le cobra la comisión: "promoter", "buyer" o "mixed"',
+    description:
+      'A quién se le cobra la comisión: "promoter", "buyer" o "mixed"',
   })
   feeChargedTo!: 'promoter' | 'buyer' | 'mixed';
 
@@ -67,7 +68,11 @@ export class OrganizerEventReportEventDto {
   createdAt!: string;
 
   @Expose()
-  @ApiProperty({ example: 'requested', nullable: true, description: 'Estado actual de la liquidación de fondos' })
+  @ApiProperty({
+    example: 'requested',
+    nullable: true,
+    description: 'Estado actual de la liquidación de fondos',
+  })
   settlementStatus!: string | null;
 
   @Expose()
@@ -75,7 +80,7 @@ export class OrganizerEventReportEventDto {
   settlementStatusLabel!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 1850.50, nullable: true })
+  @ApiProperty({ example: 1850.5, nullable: true })
   settlementAmount!: number | null;
 
   @Expose()
@@ -90,15 +95,24 @@ export class OrganizerEventReportEventDto {
 @Exclude()
 export class OrganizerEventReportSummaryDto {
   @Expose()
-  @ApiProperty({ example: 5000, description: 'Aforo total del evento (suma de zonas)' })
+  @ApiProperty({
+    example: 5000,
+    description: 'Aforo total del evento (suma de zonas)',
+  })
   totalCapacity!: number;
 
   @Expose()
-  @ApiProperty({ example: 3420, description: 'Total de boletos confirmados vendidos (sold o used)' })
+  @ApiProperty({
+    example: 3420,
+    description: 'Total de boletos confirmados vendidos (sold o used)',
+  })
   ticketsSold!: number;
 
   @Expose()
-  @ApiProperty({ example: 1250, description: 'Boletos validados / escaneados en puerta (used)' })
+  @ApiProperty({
+    example: 1250,
+    description: 'Boletos validados / escaneados en puerta (used)',
+  })
   ticketsUsed!: number;
 
   @Expose()
@@ -106,11 +120,17 @@ export class OrganizerEventReportSummaryDto {
   ticketsRemaining!: number;
 
   @Expose()
-  @ApiProperty({ example: 68.4, description: 'Porcentaje de ocupación respecto a capacidad' })
+  @ApiProperty({
+    example: 68.4,
+    description: 'Porcentaje de ocupación respecto a capacidad',
+  })
   occupancyPercentage!: number;
 
   @Expose()
-  @ApiProperty({ example: 36.5, description: 'Porcentaje de boletos escaneados sobre los vendidos' })
+  @ApiProperty({
+    example: 36.5,
+    description: 'Porcentaje de boletos escaneados sobre los vendidos',
+  })
   checkInPercentage!: number;
 
   @Expose()
@@ -118,15 +138,24 @@ export class OrganizerEventReportSummaryDto {
   grossRevenue!: number;
 
   @Expose()
-  @ApiProperty({ example: 20520.0, description: 'Comisiones acumuladas de ticketera' })
+  @ApiProperty({
+    example: 20520.0,
+    description: 'Comisiones acumuladas de ticketera',
+  })
   totalServiceFee!: number;
 
   @Expose()
-  @ApiProperty({ example: 4500.0, description: 'Descuentos acumulados por cupones de compra' })
+  @ApiProperty({
+    example: 4500.0,
+    description: 'Descuentos acumulados por cupones de compra',
+  })
   couponsDiscountAmount!: number;
 
   @Expose()
-  @ApiProperty({ example: 337500.0, description: 'Recaudación neta de ventas (Bruto - Cupones)' })
+  @ApiProperty({
+    example: 337500.0,
+    description: 'Recaudación neta de ventas (Bruto - Cupones)',
+  })
   netSalesRevenue!: number;
 
   @Expose()
@@ -134,15 +163,24 @@ export class OrganizerEventReportSummaryDto {
   averageTicketPrice!: number;
 
   @Expose()
-  @ApiProperty({ example: 450000.0, description: 'Ingreso objetivo al 100% de venta regular' })
+  @ApiProperty({
+    example: 450000.0,
+    description: 'Ingreso objetivo al 100% de venta regular',
+  })
   targetRevenue!: number;
 
   @Expose()
-  @ApiProperty({ example: 75.0, description: 'Progreso hacia el objetivo de recaudación' })
+  @ApiProperty({
+    example: 75.0,
+    description: 'Progreso hacia el objetivo de recaudación',
+  })
   targetRevenuePercentage!: number;
 
   @Expose()
-  @ApiProperty({ example: 1650, description: 'Total de órdenes pagadas únicas' })
+  @ApiProperty({
+    example: 1650,
+    description: 'Total de órdenes pagadas únicas',
+  })
   totalOrdersCount!: number;
 }
 

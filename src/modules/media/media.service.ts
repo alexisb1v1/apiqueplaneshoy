@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { GetPresignedUrlDto } from './dto/get-presigned-url.dto';
@@ -17,15 +21,18 @@ export class MediaService {
   constructor(private readonly configService: ConfigService) {
     const endpoint = this.configService.get<string>('R2_ENDPOINT');
     const accessKeyId = this.configService.get<string>('R2_ACCESS_KEY_ID');
-    const secretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
-    this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'qph-media-dev';
+    const secretAccessKey = this.configService.get<string>(
+      'R2_SECRET_ACCESS_KEY',
+    );
+    this.bucketName =
+      this.configService.get<string>('R2_BUCKET_NAME') || 'qph-media-dev';
     this.publicUrl = (
       this.configService.get<string>('R2_PUBLIC_URL') || 'https://pub-r2.dev'
     ).replace(/\/$/, '');
 
     if (!endpoint || !accessKeyId || !secretAccessKey) {
       this.logger.warn(
-        'Las credenciales de Cloudflare R2 no están configuradas completamente en el archivo .env.'
+        'Las credenciales de Cloudflare R2 no están configuradas completamente en el archivo .env.',
       );
     }
 
@@ -40,7 +47,7 @@ export class MediaService {
   }
 
   async getPresignedUploadUrl(
-    dto: GetPresignedUrlDto
+    dto: GetPresignedUrlDto,
   ): Promise<PresignedUrlResponseDto> {
     const folder = (dto.folder || 'banners').replace(/^\/+|\/+$/g, '');
     const extension = this.extractExtension(dto.filename, dto.contentType);
@@ -100,7 +107,7 @@ export class MediaService {
     const key = this.extractKeyFromUrl(keyOrUrl);
     if (!key) {
       this.logger.warn(
-        `Solicitud de borrado ignorada: no se pudo resolver la key válida del recurso: ${keyOrUrl}`
+        `Solicitud de borrado ignorada: no se pudo resolver la key válida del recurso: ${keyOrUrl}`,
       );
       return new DeleteMediaResponseDto({ success: false, key: '' });
     }
@@ -119,7 +126,10 @@ export class MediaService {
         key,
       });
     } catch (error) {
-      this.logger.error(`Error al eliminar objeto de Cloudflare R2 (${key}):`, error);
+      this.logger.error(
+        `Error al eliminar objeto de Cloudflare R2 (${key}):`,
+        error,
+      );
       throw error;
     }
   }
@@ -137,7 +147,13 @@ export class MediaService {
       // Ignorar error si no estaba URI encoded
     }
 
-    const allowedFolders = ['banners', 'croquis', 'gallery', 'landings', 'organizers'];
+    const allowedFolders = [
+      'banners',
+      'croquis',
+      'gallery',
+      'landings',
+      'organizers',
+    ];
 
     // Caso 1: Si es una URL completa (ej: https://pub-r2.dev/landings/1730328900-uuid.webp?v=1)
     try {

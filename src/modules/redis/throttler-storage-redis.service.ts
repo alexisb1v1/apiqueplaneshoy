@@ -8,7 +8,7 @@ import { REDIS_CLIENT } from './redis.constants';
 export class ThrottlerStorageRedisService implements ThrottlerStorage {
   private readonly logger = new Logger(ThrottlerStorageRedisService.name);
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) { }
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
   async increment(
     key: string,
@@ -59,7 +59,9 @@ export class ThrottlerStorageRedisService implements ThrottlerStorage {
         timeToBlockExpire,
       };
     } catch (error) {
-      this.logger.warn(`Fallback de Rate Limit por error en Redis: ${error instanceof Error ? error.message : error}`);
+      this.logger.warn(
+        `Fallback de Rate Limit por error en Redis: ${error instanceof Error ? error.message : error}`,
+      );
       // Degradación elegante: si Redis no responde, permite pasar la petición sin tirar error 500
       return {
         totalHits: 1,

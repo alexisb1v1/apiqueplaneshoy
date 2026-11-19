@@ -47,9 +47,13 @@ export class UmamiAnalyticsService {
       '72325544-3428-4483-a104-de342a54b827'
     ).trim();
 
-    const parsedTimeout = Number(this.configService.get<string>('UMAMI_TIMEOUT_MS'));
+    const parsedTimeout = Number(
+      this.configService.get<string>('UMAMI_TIMEOUT_MS'),
+    );
     this.timeoutMs =
-      Number.isFinite(parsedTimeout) && parsedTimeout >= 2000 && parsedTimeout <= 15000
+      Number.isFinite(parsedTimeout) &&
+      parsedTimeout >= 2000 &&
+      parsedTimeout <= 15000
         ? parsedTimeout
         : 5000;
   }
@@ -68,7 +72,8 @@ export class UmamiAnalyticsService {
     const cacheKey = `qph:analytics:funnel:${params.eventId}`;
 
     if (this.redisService) {
-      const cached = await this.redisService.get<OrganizerEventReportFunnelDto>(cacheKey);
+      const cached =
+        await this.redisService.get<OrganizerEventReportFunnelDto>(cacheKey);
       if (cached) {
         return cached;
       }
@@ -97,7 +102,9 @@ export class UmamiAnalyticsService {
     ordersCount: number;
     paidOrdersCount: number;
   }): Promise<OrganizerEventReportFunnelDto> {
-    const startAt = new Date(params.createdAt).getTime() || Date.now() - 30 * 24 * 3600 * 1000;
+    const startAt =
+      new Date(params.createdAt).getTime() ||
+      Date.now() - 30 * 24 * 3600 * 1000;
     const endAt = Date.now();
     const urlLanding = `/e/${params.slug}`;
     const urlDetail = `/events/${params.slug}`;
@@ -112,16 +119,28 @@ export class UmamiAnalyticsService {
     const statsDetailUrl = `${this.apiUrl}/websites/${this.websiteId}/stats?startAt=${startAt}&endAt=${endAt}&url=${encodeURIComponent(urlDetail)}`;
 
     const [statsLandingRes, statsDetailRes] = await Promise.all([
-      fetch(statsLandingUrl, { headers, signal: AbortSignal.timeout(this.timeoutMs) }).catch(() => null),
-      fetch(statsDetailUrl, { headers, signal: AbortSignal.timeout(this.timeoutMs) }).catch(() => null),
+      fetch(statsLandingUrl, {
+        headers,
+        signal: AbortSignal.timeout(this.timeoutMs),
+      }).catch(() => null),
+      fetch(statsDetailUrl, {
+        headers,
+        signal: AbortSignal.timeout(this.timeoutMs),
+      }).catch(() => null),
     ]);
 
     let rawVisitors = 0;
     let rawPageviews = 0;
 
     const extractStats = (json: UmamiStatsResponse) => {
-      const v = typeof json.visitors === 'object' ? json.visitors?.value || 0 : json.visitors || 0;
-      const pv = typeof json.pageviews === 'object' ? json.pageviews?.value || 0 : json.pageviews || 0;
+      const v =
+        typeof json.visitors === 'object'
+          ? json.visitors?.value || 0
+          : json.visitors || 0;
+      const pv =
+        typeof json.pageviews === 'object'
+          ? json.pageviews?.value || 0
+          : json.pageviews || 0;
       return { v, pv };
     };
 
@@ -144,21 +163,39 @@ export class UmamiAnalyticsService {
     const queriesUrl = `${this.apiUrl}/websites/${this.websiteId}/metrics?startAt=${startAt}&endAt=${endAt}&type=query&url=${encodeURIComponent(urlLanding)}`;
 
     const [referrersRes, queriesRes] = await Promise.all([
-      fetch(referrersUrl, { headers, signal: AbortSignal.timeout(this.timeoutMs) }).catch(() => null),
-      fetch(queriesUrl, { headers, signal: AbortSignal.timeout(this.timeoutMs) }).catch(() => null),
+      fetch(referrersUrl, {
+        headers,
+        signal: AbortSignal.timeout(this.timeoutMs),
+      }).catch(() => null),
+      fetch(queriesUrl, {
+        headers,
+        signal: AbortSignal.timeout(this.timeoutMs),
+      }).catch(() => null),
     ]);
 
-    const referrers: UmamiMetricItem[] = referrersRes && referrersRes.ok ? await referrersRes.json() : [];
-    const queries: UmamiMetricItem[] = queriesRes && queriesRes.ok ? await queriesRes.json() : [];
+    const referrers: UmamiMetricItem[] =
+      referrersRes && referrersRes.ok ? await referrersRes.json() : [];
+    const queries: UmamiMetricItem[] =
+      queriesRes && queriesRes.ok ? await queriesRes.json() : [];
 
     // Ajuste de consistencia: las visitas no pueden ser menores a las órdenes realizadas
-    const effectiveVisitors = Math.max(rawVisitors, params.ordersCount > 0 ? params.ordersCount * 2 : 0);
+    const effectiveVisitors = Math.max(
+      rawVisitors,
+      params.ordersCount > 0 ? params.ordersCount * 2 : 0,
+    );
     const effectivePageviews = Math.max(rawPageviews, effectiveVisitors);
-    const checkoutInitiated = Math.max(params.ordersCount, Math.round(effectiveVisitors * 0.45));
+    const checkoutInitiated = Math.max(
+      params.ordersCount,
+      Math.round(effectiveVisitors * 0.45),
+    );
     const ordersPaid = params.paidOrdersCount;
 
     // Consolidación de fuentes de tráfico garantizando que cuadre exactamente con effectiveVisitors
-    const trafficSources = this.consolidateTrafficSources(referrers, queries, effectiveVisitors);
+    const trafficSources = this.consolidateTrafficSources(
+      referrers,
+      queries,
+      effectiveVisitors,
+    );
 
     const conversionRate =
       effectiveVisitors > 0
@@ -182,7 +219,13 @@ export class UmamiAnalyticsService {
             : 0,
         dropOffPercentage:
           effectiveVisitors > 0
-            ? Number((((effectiveVisitors - checkoutInitiated) / effectiveVisitors) * 100).toFixed(1))
+            ? Number(
+                (
+                  ((effectiveVisitors - checkoutInitiated) /
+                    effectiveVisitors) *
+                  100
+                ).toFixed(1),
+              )
             : 0,
       },
       {
@@ -194,7 +237,12 @@ export class UmamiAnalyticsService {
             : 0,
         dropOffPercentage:
           checkoutInitiated > 0
-            ? Number((((checkoutInitiated - ordersPaid) / checkoutInitiated) * 100).toFixed(1))
+            ? Number(
+                (
+                  ((checkoutInitiated - ordersPaid) / checkoutInitiated) *
+                  100
+                ).toFixed(1),
+              )
             : 0,
       },
     ];
@@ -249,9 +297,15 @@ export class UmamiAnalyticsService {
       const queryStr = (item.x || '').toLowerCase();
       const count = Number(item.y) || 0;
 
-      if (queryStr.includes('utm_source=instagram') || queryStr.includes('ig')) {
+      if (
+        queryStr.includes('utm_source=instagram') ||
+        queryStr.includes('ig')
+      ) {
         channelsMap.Instagram += count;
-      } else if (queryStr.includes('utm_source=facebook') || queryStr.includes('fb')) {
+      } else if (
+        queryStr.includes('utm_source=facebook') ||
+        queryStr.includes('fb')
+      ) {
         channelsMap.Facebook += count;
       } else if (queryStr.includes('utm_source=tiktok')) {
         channelsMap.TikTok += count;
@@ -261,14 +315,21 @@ export class UmamiAnalyticsService {
     });
 
     // Sumar el total categorizado
-    const sumCategorized = Object.values(channelsMap).reduce((acc, curr) => acc + curr, 0);
+    const sumCategorized = Object.values(channelsMap).reduce(
+      (acc, curr) => acc + curr,
+      0,
+    );
 
     // Si aún hay visitantes sin categorizar, asignarlos a Directo / Navegación Interna
     if (totalVisitors > sumCategorized) {
-      channelsMap['Directo / Navegación Interna'] += totalVisitors - sumCategorized;
+      channelsMap['Directo / Navegación Interna'] +=
+        totalVisitors - sumCategorized;
     }
 
-    const grandTotal = Math.max(1, Object.values(channelsMap).reduce((acc, curr) => acc + curr, 0));
+    const grandTotal = Math.max(
+      1,
+      Object.values(channelsMap).reduce((acc, curr) => acc + curr, 0),
+    );
 
     return Object.entries(channelsMap)
       .map(([source, visitors]) => ({
@@ -285,7 +346,10 @@ export class UmamiAnalyticsService {
     paidOrdersCount: number;
   }): OrganizerEventReportFunnelDto {
     const ordersPaid = params.paidOrdersCount;
-    const checkoutInitiated = Math.max(params.ordersCount, Math.round(ordersPaid * 1.35));
+    const checkoutInitiated = Math.max(
+      params.ordersCount,
+      Math.round(ordersPaid * 1.35),
+    );
     const uniqueVisitors = Math.max(checkoutInitiated * 3, 10);
     const pageviews = Math.round(uniqueVisitors * 1.5);
 
@@ -304,8 +368,15 @@ export class UmamiAnalyticsService {
       {
         step: 'Inicio de Checkout',
         count: checkoutInitiated,
-        percentage: Number(((checkoutInitiated / uniqueVisitors) * 100).toFixed(1)),
-        dropOffPercentage: Number((((uniqueVisitors - checkoutInitiated) / uniqueVisitors) * 100).toFixed(1)),
+        percentage: Number(
+          ((checkoutInitiated / uniqueVisitors) * 100).toFixed(1),
+        ),
+        dropOffPercentage: Number(
+          (
+            ((uniqueVisitors - checkoutInitiated) / uniqueVisitors) *
+            100
+          ).toFixed(1),
+        ),
       },
       {
         step: 'Órdenes Pagadas',
@@ -313,16 +384,37 @@ export class UmamiAnalyticsService {
         percentage: Number(((ordersPaid / uniqueVisitors) * 100).toFixed(1)),
         dropOffPercentage:
           checkoutInitiated > 0
-            ? Number((((checkoutInitiated - ordersPaid) / checkoutInitiated) * 100).toFixed(1))
+            ? Number(
+                (
+                  ((checkoutInitiated - ordersPaid) / checkoutInitiated) *
+                  100
+                ).toFixed(1),
+              )
             : 0,
       },
     ];
 
     const trafficSources: OrganizerEventReportTrafficSourceDto[] = [
-      { source: 'Directo / Orgánico', visitors: Math.round(uniqueVisitors * 0.45), percentage: 45.0 },
-      { source: 'Instagram', visitors: Math.round(uniqueVisitors * 0.3), percentage: 30.0 },
-      { source: 'Facebook', visitors: Math.round(uniqueVisitors * 0.15), percentage: 15.0 },
-      { source: 'WhatsApp', visitors: Math.round(uniqueVisitors * 0.1), percentage: 10.0 },
+      {
+        source: 'Directo / Orgánico',
+        visitors: Math.round(uniqueVisitors * 0.45),
+        percentage: 45.0,
+      },
+      {
+        source: 'Instagram',
+        visitors: Math.round(uniqueVisitors * 0.3),
+        percentage: 30.0,
+      },
+      {
+        source: 'Facebook',
+        visitors: Math.round(uniqueVisitors * 0.15),
+        percentage: 15.0,
+      },
+      {
+        source: 'WhatsApp',
+        visitors: Math.round(uniqueVisitors * 0.1),
+        percentage: 10.0,
+      },
     ];
 
     return {

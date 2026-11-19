@@ -84,7 +84,9 @@ const Controllers = [
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'qph-secret-jwt-key-2026-secure',
+        secret:
+          configService.get<string>('JWT_SECRET') ||
+          'qph-secret-jwt-key-2026-secure',
         signOptions: {
           expiresIn: '15m',
         },
@@ -120,4 +122,4 @@ const Controllers = [
     JwtModule,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

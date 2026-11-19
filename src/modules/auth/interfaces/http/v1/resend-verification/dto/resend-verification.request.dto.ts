@@ -4,7 +4,8 @@ import { Transform } from 'class-transformer';
 
 export class ResendVerificationRequestDto {
   @ApiProperty({
-    description: 'Correo electrónico de la cuenta a la cual reenviar la verificación',
+    description:
+      'Correo electrónico de la cuenta a la cual reenviar la verificación',
     example: 'alexis@queplanhoy.com',
   })
   @Transform(({ value }) => value?.trim().toLowerCase())

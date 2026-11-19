@@ -8,10 +8,10 @@ import { EventSettlementEntity } from '../../domain/entities/event-settlement.en
 import { AdminRejectSettlementCommand } from '../impl/admin-reject-settlement.command';
 
 @CommandHandler(AdminRejectSettlementCommand)
-export class AdminRejectSettlementHandler
-  implements
-    ICommandHandler<AdminRejectSettlementCommand, Result<EventSettlementEntity, AppError>>
-{
+export class AdminRejectSettlementHandler implements ICommandHandler<
+  AdminRejectSettlementCommand,
+  Result<EventSettlementEntity, AppError>
+> {
   private readonly logger = new Logger(AdminRejectSettlementHandler.name);
 
   constructor(

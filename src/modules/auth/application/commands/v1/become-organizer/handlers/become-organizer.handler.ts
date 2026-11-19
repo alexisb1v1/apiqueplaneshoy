@@ -107,4 +107,3 @@ export class BecomeOrganizerHandler implements ICommandHandler<BecomeOrganizerCo
     }
   }
 }
-

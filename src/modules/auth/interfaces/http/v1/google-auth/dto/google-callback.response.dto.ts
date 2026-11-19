@@ -35,7 +35,11 @@ export class GoogleAuthUserDto {
   @Expose()
   isOrganizer: boolean;
 
-  @ApiProperty({ example: 'Productora Musical SAC', required: false, nullable: true })
+  @ApiProperty({
+    example: 'Productora Musical SAC',
+    required: false,
+    nullable: true,
+  })
   @Expose()
   organizerName?: string | null;
 
@@ -47,7 +51,11 @@ export class GoogleAuthUserDto {
   @Expose()
   organizerDocumentNumber?: string | null;
 
-  @ApiProperty({ example: 'https://cdn.queplanhoy.com/logos/org.png', required: false, nullable: true })
+  @ApiProperty({
+    example: 'https://cdn.queplanhoy.com/logos/org.png',
+    required: false,
+    nullable: true,
+  })
   @Expose()
   organizerLogoUrl?: string | null;
 
@@ -70,7 +78,10 @@ export class GoogleCallbackResponseDto {
   @Expose()
   accessToken: string;
 
-  @ApiProperty({ example: 900, description: 'Vigencia del Access Token en segundos' })
+  @ApiProperty({
+    example: 900,
+    description: 'Vigencia del Access Token en segundos',
+  })
   @Expose()
   expiresInSeconds: number;
 

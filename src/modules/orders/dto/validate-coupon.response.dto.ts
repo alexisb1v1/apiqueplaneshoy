@@ -3,15 +3,25 @@ import { Exclude, Expose } from 'class-transformer';
 
 @Exclude()
 export class ValidateCouponResponseDto {
-  @ApiProperty({ example: 'PROMOQPH', description: 'Código normalizado del cupón' })
+  @ApiProperty({
+    example: 'PROMOQPH',
+    description: 'Código normalizado del cupón',
+  })
   @Expose()
   code!: string;
 
-  @ApiProperty({ example: 'percentage', enum: ['percentage', 'fixed'], description: 'Tipo de descuento aplicado' })
+  @ApiProperty({
+    example: 'percentage',
+    enum: ['percentage', 'fixed'],
+    description: 'Tipo de descuento aplicado',
+  })
   @Expose()
   discountType!: 'percentage' | 'fixed';
 
-  @ApiProperty({ example: 10.0, description: 'Valor del beneficio (porcentaje o soles)' })
+  @ApiProperty({
+    example: 10.0,
+    description: 'Valor del beneficio (porcentaje o soles)',
+  })
   @Expose()
   discountValue!: number;
 
@@ -23,8 +33,10 @@ export class ValidateCouponResponseDto {
   @Expose()
   newTotal!: number;
 
-  @ApiProperty({ example: 'Cupón aplicado con éxito (-10%)', description: 'Mensaje descriptivo' })
+  @ApiProperty({
+    example: 'Cupón aplicado con éxito (-10%)',
+    description: 'Mensaje descriptivo',
+  })
   @Expose()
   message!: string;
 }
-

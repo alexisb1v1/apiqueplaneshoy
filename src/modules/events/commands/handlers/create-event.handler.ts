@@ -79,7 +79,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       userModified = true;
     }
     if (dto.organizerDocumentNumber) {
-      const docType = dto.organizerDocumentType || user.organizerDocumentType || 'RUC';
+      const docType =
+        dto.organizerDocumentType || user.organizerDocumentType || 'RUC';
       if (docType === 'RUC' && !isValidRuc(dto.organizerDocumentNumber)) {
         return err('INVALID_INPUT');
       }
@@ -99,7 +100,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     }
 
     try {
-      const baseForSlug = dto.slug && dto.slug.trim() !== '' ? dto.slug.trim() : dto.title;
+      const baseForSlug =
+        dto.slug && dto.slug.trim() !== '' ? dto.slug.trim() : dto.title;
       const generatedSlug = slugify(baseForSlug);
 
       const resolvedEventLimit = Math.max(1, Number(dto.userTicketLimit) || 6);
@@ -125,8 +127,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       };
       const hasAnySocialLink = Boolean(
         resolvedSocialLinks.instagramUrl ||
-          resolvedSocialLinks.facebookUrl ||
-          resolvedSocialLinks.tiktokUrl,
+        resolvedSocialLinks.facebookUrl ||
+        resolvedSocialLinks.tiktokUrl,
       );
 
       // Si tiene landing, propagar también video y redes hacia landingConfig para compatibilidad
@@ -135,7 +137,9 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
             ...dto.landingConfig,
             header: {
               ...(dto.landingConfig.header || {}),
-              ...(resolvedPromoVideoUrl ? { videoTeaserUrl: resolvedPromoVideoUrl } : {}),
+              ...(resolvedPromoVideoUrl
+                ? { videoTeaserUrl: resolvedPromoVideoUrl }
+                : {}),
             },
             footer: {
               ...(dto.landingConfig.footer || {}),
@@ -189,7 +193,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
             eventId: savedEvent.id,
             name: s.name || null,
             startTime: isNaN(showDate.getTime()) ? new Date() : showDate,
-            salesEndAt: salesEnd && !isNaN(salesEnd.getTime()) ? salesEnd : null,
+            salesEndAt:
+              salesEnd && !isNaN(salesEnd.getTime()) ? salesEnd : null,
             durationHours: s.durationHours ? Number(s.durationHours) : 2,
             status: 'scheduled',
           });
@@ -210,7 +215,10 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       // 2. Guardar Zonas y Preventas Escalonadas (Tiers)
       if (dto.zones && dto.zones.length > 0) {
         for (const z of dto.zones) {
-          const requestedPerOrder = Math.max(1, Number(z.maxTicketsPerOrder) || 4);
+          const requestedPerOrder = Math.max(
+            1,
+            Number(z.maxTicketsPerOrder) || 4,
+          );
           const regularPriceNum = Number(z.regularPrice) || 0;
           const officialFee = calculatePlatformFee(regularPriceNum);
 
@@ -239,7 +247,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
                 name: t.name,
                 price: Number(t.price),
                 capacity: Number(t.capacity),
-                endAt: endAtDate && !isNaN(endAtDate.getTime()) ? endAtDate : null,
+                endAt:
+                  endAtDate && !isNaN(endAtDate.getTime()) ? endAtDate : null,
                 isActive: true,
               });
               await this.tierRepository.save(tier);

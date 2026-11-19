@@ -160,4 +160,3 @@ export interface SendSettlementPaidEmailPayload {
   voucherUrl?: string | null;
   attachments?: EmailAttachment[];
 }
-

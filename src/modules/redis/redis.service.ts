@@ -21,7 +21,9 @@ export class RedisService implements OnModuleDestroy {
       if (!data) return null;
       return JSON.parse(data) as T;
     } catch (error) {
-      this.logger.warn(`Error al leer clave [${key}] desde Redis: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error al leer clave [${key}] desde Redis: ${(error as Error).message}`,
+      );
       return null;
     }
   }
@@ -42,7 +44,9 @@ export class RedisService implements OnModuleDestroy {
       }
       return true;
     } catch (error) {
-      this.logger.warn(`Error al escribir clave [${key}] en Redis: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error al escribir clave [${key}] en Redis: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -55,7 +59,9 @@ export class RedisService implements OnModuleDestroy {
       const deleted = await this.client.del(key);
       return deleted > 0;
     } catch (error) {
-      this.logger.warn(`Error al eliminar clave [${key}] en Redis: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error al eliminar clave [${key}] en Redis: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -69,7 +75,9 @@ export class RedisService implements OnModuleDestroy {
       if (keys.length === 0) return 0;
       return await this.client.del(...keys);
     } catch (error) {
-      this.logger.warn(`Error al eliminar patrón [${pattern}] en Redis: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error al eliminar patrón [${pattern}] en Redis: ${(error as Error).message}`,
+      );
       return 0;
     }
   }
@@ -81,7 +89,9 @@ export class RedisService implements OnModuleDestroy {
     try {
       return await this.client.ttl(key);
     } catch (error) {
-      this.logger.warn(`Error al consultar TTL de [${key}] en Redis: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error al consultar TTL de [${key}] en Redis: ${(error as Error).message}`,
+      );
       return -1;
     }
   }
@@ -103,8 +113,9 @@ export class RedisService implements OnModuleDestroy {
         this.logger.log('Conexión con Redis cerrada correctamente.');
       }
     } catch (error) {
-      this.logger.warn(`Error al cerrar conexión de Redis: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error al cerrar conexión de Redis: ${(error as Error).message}`,
+      );
     }
   }
 }
-

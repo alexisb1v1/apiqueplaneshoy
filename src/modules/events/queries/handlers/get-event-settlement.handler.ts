@@ -27,13 +27,10 @@ const SETTLEMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 @QueryHandler(GetEventSettlementQuery)
-export class GetEventSettlementHandler
-  implements
-    IQueryHandler<
-      GetEventSettlementQuery,
-      Result<EventSettlementResponseDto, AppError>
-    >
-{
+export class GetEventSettlementHandler implements IQueryHandler<
+  GetEventSettlementQuery,
+  Result<EventSettlementResponseDto, AppError>
+> {
   private readonly logger = new Logger(GetEventSettlementHandler.name);
 
   constructor(
@@ -63,7 +60,10 @@ export class GetEventSettlementHandler
       return err('UNAUTHORIZED');
     }
 
-    if (!user.isOrganizer || (user.role !== 'customer' && user.role !== 'admin')) {
+    if (
+      !user.isOrganizer ||
+      (user.role !== 'customer' && user.role !== 'admin')
+    ) {
       return err('FORBIDDEN');
     }
 
@@ -109,7 +109,10 @@ export class GetEventSettlementHandler
     });
 
     if (existingSettlement) {
-      const breakdown = (existingSettlement.breakdownByZone || {}) as Record<string, any>;
+      const breakdown = (existingSettlement.breakdownByZone || {}) as Record<
+        string,
+        any
+      >;
       const rawZones = Array.isArray(breakdown.zones) ? breakdown.zones : [];
 
       const dto: EventSettlementResponseDto = {
@@ -119,7 +122,8 @@ export class GetEventSettlementHandler
         eventCode,
         status: existingSettlement.status,
         statusLabel:
-          SETTLEMENT_STATUS_LABELS[existingSettlement.status] || existingSettlement.status,
+          SETTLEMENT_STATUS_LABELS[existingSettlement.status] ||
+          existingSettlement.status,
         isSettlementRequested: true,
         totalTicketsSold: Number(existingSettlement.totalTicketsSold) || 0,
         grossAmount: Number(existingSettlement.grossAmount) || 0,
@@ -127,7 +131,8 @@ export class GetEventSettlementHandler
           Number(existingSettlement.totalCouponsDiscountAmount) || 0,
         platformFeeAmount: Number(existingSettlement.platformFeeAmount) || 0,
         gatewayFeeAmount: Number(existingSettlement.gatewayFeeAmount) || 0,
-        totalAdvancesAmount: Number(existingSettlement.totalAdvancesAmount) || 0,
+        totalAdvancesAmount:
+          Number(existingSettlement.totalAdvancesAmount) || 0,
         adjustmentsAmount: Number(existingSettlement.adjustmentsAmount) || 0,
         netPayoutAmount: Number(existingSettlement.netPayoutAmount) || 0,
         bankName: existingSettlement.bankName,
@@ -169,7 +174,9 @@ export class GetEventSettlementHandler
           .addSelect('COALESCE(SUM(t.paid_base_price), 0)', 'grossRevenue')
           .addSelect('COALESCE(SUM(t.paid_service_fee), 0)', 'serviceFeeTotal')
           .where('s.event_id = :eventId', { eventId })
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .groupBy('t.zone_id')
           .getRawMany<{
             zoneId: string;
@@ -185,7 +192,9 @@ export class GetEventSettlementHandler
           .select('DISTINCT o.id', 'orderId')
           .addSelect('COALESCE(o.discount_amount, 0)', 'discountAmount')
           .where('o.status = :paidStatus', { paidStatus: 'paid' })
-          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', { eventId })
+          .andWhere('(o.event_id = :eventId OR s.event_id = :eventId)', {
+            eventId,
+          })
           .getRawMany<{ orderId: string; discountAmount: string }>(),
       ]);
 
@@ -207,27 +216,32 @@ export class GetEventSettlementHandler
         zoneMap.set(String(z.id), { name: z.name });
       }
 
-      const breakdownZones: SettlementBreakdownZoneDto[] = zoneSalesRows.map((r) => {
-        const sold = Number(r.soldCount) || 0;
-        const rev = Math.round((Number(r.grossRevenue) || 0) * 100) / 100;
-        const fee = Math.round((Number(r.serviceFeeTotal) || 0) * 100) / 100;
+      const breakdownZones: SettlementBreakdownZoneDto[] = zoneSalesRows.map(
+        (r) => {
+          const sold = Number(r.soldCount) || 0;
+          const rev = Math.round((Number(r.grossRevenue) || 0) * 100) / 100;
+          const fee = Math.round((Number(r.serviceFeeTotal) || 0) * 100) / 100;
 
-        totalSold += sold;
-        totalGross += rev;
-        totalFee += fee;
+          totalSold += sold;
+          totalGross += rev;
+          totalFee += fee;
 
-        return {
-          zoneId: String(r.zoneId),
-          zoneName: zoneMap.get(String(r.zoneId))?.name || 'Zona',
-          ticketsSold: sold,
-          revenue: rev,
-          serviceFee: fee,
-        };
-      });
+          return {
+            zoneId: String(r.zoneId),
+            zoneName: zoneMap.get(String(r.zoneId))?.name || 'Zona',
+            ticketsSold: sold,
+            revenue: rev,
+            serviceFee: fee,
+          };
+        },
+      );
 
       totalGross = Math.round(totalGross * 100) / 100;
       totalFee = Math.round(totalFee * 100) / 100;
-      const netPayout = Math.max(0, Math.round((totalGross - totalCouponsDiscount - totalFee) * 100) / 100);
+      const netPayout = Math.max(
+        0,
+        Math.round((totalGross - totalCouponsDiscount - totalFee) * 100) / 100,
+      );
 
       const simulationDto: EventSettlementResponseDto = {
         publicUuid: '',

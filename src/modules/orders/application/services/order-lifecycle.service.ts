@@ -49,7 +49,8 @@ export function resolveZoneTicketPricing(
 
   if (zone.feeIncluded) {
     const unitServiceFee = Math.min(configuredFee, configuredPrice);
-    const unitBasePrice = Math.round((configuredPrice - unitServiceFee) * 100) / 100;
+    const unitBasePrice =
+      Math.round((configuredPrice - unitServiceFee) * 100) / 100;
     return {
       unitBasePrice,
       unitServiceFee,
@@ -73,7 +74,8 @@ export interface FinalizePaidOrderInput {
   successMessage?: string;
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class OrderLifecycleService {
@@ -82,7 +84,7 @@ export class OrderLifecycleService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   /**
    * Resuelve un evento por ID numérico, UUID público o slug.
@@ -118,7 +120,9 @@ export class OrderLifecycleService {
       return manager.findOne(ShowEntity, { where: { id: raw, eventId } });
     }
     if (UUID_REGEX.test(raw)) {
-      return manager.findOne(ShowEntity, { where: { publicUuid: raw, eventId } });
+      return manager.findOne(ShowEntity, {
+        where: { publicUuid: raw, eventId },
+      });
     }
     return null;
   }
@@ -200,7 +204,10 @@ export class OrderLifecycleService {
     ) {
       return err('COUPON_INVALID_OR_EXPIRED');
     }
-    if (coupon.minOrderAmount !== null && subtotal < Number(coupon.minOrderAmount)) {
+    if (
+      coupon.minOrderAmount !== null &&
+      subtotal < Number(coupon.minOrderAmount)
+    ) {
       return err('INVALID_INPUT');
     }
 
@@ -252,7 +259,10 @@ export class OrderLifecycleService {
     const tierReleaseCounts = new Map<string, number>();
 
     for (const ticket of lockedTickets) {
-      zoneReleaseCounts.set(ticket.zoneId, (zoneReleaseCounts.get(ticket.zoneId) || 0) + 1);
+      zoneReleaseCounts.set(
+        ticket.zoneId,
+        (zoneReleaseCounts.get(ticket.zoneId) || 0) + 1,
+      );
       if (ticket.pricingTierId) {
         tierReleaseCounts.set(
           ticket.pricingTierId,
@@ -398,7 +408,10 @@ export class OrderLifecycleService {
         ...input.gatewayResponse,
         approvedAt: new Date().toISOString(),
       };
-      const resolvedGatewayFee = this.resolveGatewayFeeAmount(input, mergedGatewayResponse);
+      const resolvedGatewayFee = this.resolveGatewayFeeAmount(
+        input,
+        mergedGatewayResponse,
+      );
 
       if (payment) {
         payment.paymentMethod = input.paymentMethod;
@@ -455,7 +468,9 @@ export class OrderLifecycleService {
             .getOne();
           if (tier) tiersCache.set(ticket.pricingTierId, tier);
         }
-        const tier = ticket.pricingTierId ? tiersCache.get(ticket.pricingTierId) : undefined;
+        const tier = ticket.pricingTierId
+          ? tiersCache.get(ticket.pricingTierId)
+          : undefined;
 
         if (!showsCache.has(ticket.showId)) {
           const show = await queryRunner.manager.findOne(ShowEntity, {
@@ -479,7 +494,10 @@ export class OrderLifecycleService {
 
         zoneTotals.set(ticket.zoneId, (zoneTotals.get(ticket.zoneId) || 0) + 1);
         if (ticket.pricingTierId) {
-          tierTotals.set(ticket.pricingTierId, (tierTotals.get(ticket.pricingTierId) || 0) + 1);
+          tierTotals.set(
+            ticket.pricingTierId,
+            (tierTotals.get(ticket.pricingTierId) || 0) + 1,
+          );
         }
 
         issuedTickets.push({
@@ -513,7 +531,8 @@ export class OrderLifecycleService {
         }
       }
 
-      const firstShow = showsCache.values().next().value as ShowEntity | undefined;
+      const firstShow = showsCache.values().next().value as
+        ShowEntity | undefined;
       if (!order.eventId && firstShow?.eventId) {
         order.eventId = firstShow.eventId;
         await queryRunner.manager.save(OrderEntity, order);
@@ -521,9 +540,13 @@ export class OrderLifecycleService {
 
       const [event, buyer] = await Promise.all([
         firstShow?.eventId
-          ? queryRunner.manager.findOne(EventEntity, { where: { id: firstShow.eventId } })
+          ? queryRunner.manager.findOne(EventEntity, {
+              where: { id: firstShow.eventId },
+            })
           : Promise.resolve(null),
-        queryRunner.manager.findOne(UserEntity, { where: { id: order.userId } }),
+        queryRunner.manager.findOne(UserEntity, {
+          where: { id: order.userId },
+        }),
       ]);
 
       await queryRunner.commitTransaction();
@@ -535,7 +558,9 @@ export class OrderLifecycleService {
       const orderCode = `#QPH-${String(order.id).padStart(6, '0')}`;
 
       if (buyer?.email) {
-        const showStartTime = firstShow?.startTime ? new Date(firstShow.startTime) : new Date();
+        const showStartTime = firstShow?.startTime
+          ? new Date(firstShow.startTime)
+          : new Date();
         const cityInfo = resolveCityFromUbigeo(event?.ubigeoCode);
         const rawEventDate = new Intl.DateTimeFormat('es-PE', {
           weekday: 'long',
@@ -583,7 +608,8 @@ export class OrderLifecycleService {
             city: cityInfo.name || 'Perú',
             totalAmountFormatted: `S/. ${Number(order.totalAmount).toFixed(2)}`,
             couponCode,
-            discountAmountFormatted: discountVal > 0 ? `S/. ${discountVal.toFixed(2)}` : null,
+            discountAmountFormatted:
+              discountVal > 0 ? `S/. ${discountVal.toFixed(2)}` : null,
             tickets: issuedTickets.map((t) => ({
               ticketCode: `QPH-TCK-${t.ticketUuid.substring(0, 8).toUpperCase()}`,
               zoneName: t.zoneName,
@@ -614,7 +640,8 @@ export class OrderLifecycleService {
           paymentMethod: input.paymentMethod,
           txCode: input.externalTransactionId,
           message:
-            input.successMessage || '¡Pago confirmado exitosamente con Culqi Multipago!',
+            input.successMessage ||
+            '¡Pago confirmado exitosamente con Culqi Multipago!',
           tickets: issuedTickets,
         },
         { excludeExtraneousValues: true },
@@ -652,16 +679,20 @@ export class OrderLifecycleService {
       ? await manager.findOne(CouponEntity, { where: { id: order.couponId } })
       : null;
 
-    const issuedTickets: IssuedTicketResponseDto[] = tickets.map((t, index) => ({
-      ticketId: t.id,
-      ticketUuid: t.publicUuid,
-      ticketNumber: index + 1,
-      zoneName: t.zone?.name || 'GENERAL',
-      tierName: t.pricingTier?.name || t.zone?.title || t.zone?.name || 'General',
-      unitPrice: Number(t.paidBasePrice || 0),
-      qrPayload:
-        t.qrCode || `QPH|ORD:${order.id}|TCK:${t.publicUuid}|TKT:${index + 1}`,
-    }));
+    const issuedTickets: IssuedTicketResponseDto[] = tickets.map(
+      (t, index) => ({
+        ticketId: t.id,
+        ticketUuid: t.publicUuid,
+        ticketNumber: index + 1,
+        zoneName: t.zone?.name || 'GENERAL',
+        tierName:
+          t.pricingTier?.name || t.zone?.title || t.zone?.name || 'General',
+        unitPrice: Number(t.paidBasePrice || 0),
+        qrPayload:
+          t.qrCode ||
+          `QPH|ORD:${order.id}|TCK:${t.publicUuid}|TKT:${index + 1}`,
+      }),
+    );
 
     return plainToInstance(
       SimulateOrderCheckoutResponseDto,
@@ -677,7 +708,9 @@ export class OrderLifecycleService {
         totalAmount: Number(order.totalAmount),
         paymentMethod: payment?.paymentMethod || 'card',
         txCode: payment?.externalTransactionId || `TX-${order.id}`,
-        message: successMessage || '¡Pago confirmado exitosamente con Culqi Multipago!',
+        message:
+          successMessage ||
+          '¡Pago confirmado exitosamente con Culqi Multipago!',
         tickets: issuedTickets,
       },
       { excludeExtraneousValues: true },
@@ -688,12 +721,17 @@ export class OrderLifecycleService {
     input: FinalizePaidOrderInput,
     gatewayResponse: Record<string, unknown>,
   ): number {
-    if (typeof input.gatewayFeeAmount === 'number' && !Number.isNaN(input.gatewayFeeAmount)) {
+    if (
+      typeof input.gatewayFeeAmount === 'number' &&
+      !Number.isNaN(input.gatewayFeeAmount)
+    ) {
       return Math.max(0, Math.round(input.gatewayFeeAmount * 100) / 100);
     }
 
-    const culqiCharge = gatewayResponse?.culqiCharge as Record<string, any> | undefined;
-    const culqiOrder = gatewayResponse?.culqiOrder as Record<string, any> | undefined;
+    const culqiCharge = gatewayResponse?.culqiCharge as
+      Record<string, any> | undefined;
+    const culqiOrder = gatewayResponse?.culqiOrder as
+      Record<string, any> | undefined;
 
     const rawCents =
       culqiCharge?.fee_details?.total_fee ??
@@ -701,11 +739,14 @@ export class OrderLifecycleService {
       culqiOrder?.total_fee ??
       null;
 
-    if (typeof rawCents === 'number' && !Number.isNaN(rawCents) && rawCents > 0) {
+    if (
+      typeof rawCents === 'number' &&
+      !Number.isNaN(rawCents) &&
+      rawCents > 0
+    ) {
       return Math.round((rawCents / 100) * 100) / 100;
     }
 
     return 0.0;
   }
 }
-

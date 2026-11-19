@@ -12,9 +12,10 @@ import { CulqiGatewayService } from '@orders/infrastructure/gateways/culqi-gatew
 import { OrderLifecycleService } from '../../application/services/order-lifecycle.service';
 
 @QueryHandler(GetCulqiOrderStatusQuery)
-export class GetCulqiOrderStatusHandler
-  implements IQueryHandler<GetCulqiOrderStatusQuery, Result<CulqiOrderStatusResponseDto, AppError>>
-{
+export class GetCulqiOrderStatusHandler implements IQueryHandler<
+  GetCulqiOrderStatusQuery,
+  Result<CulqiOrderStatusResponseDto, AppError>
+> {
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(OrderEntity)
@@ -56,7 +57,8 @@ export class GetCulqiOrderStatusHandler
       const finalized = await this.orderLifecycleService.finalizePaidOrder({
         orderIdOrUuid: order.publicUuid,
         paymentMethod: payment?.paymentMethod || 'culqi_order',
-        externalTransactionId: payment?.externalTransactionId || `TX-${order.id}`,
+        externalTransactionId:
+          payment?.externalTransactionId || `TX-${order.id}`,
         gatewayResponse: { provider: 'culqi' },
       });
 
@@ -71,7 +73,9 @@ export class GetCulqiOrderStatusHandler
             orderPublicUuid: order.publicUuid,
             status: 'paid',
             culqiState: 'paid',
-            paymentCode: (payment?.gatewayResponse?.culqiOrder?.payment_code as string) || null,
+            paymentCode:
+              (payment?.gatewayResponse?.culqiOrder?.payment_code as string) ||
+              null,
             expiresAt: order.expiresAt?.toISOString() || null,
             checkoutResult: finalized.value,
           },
@@ -105,10 +109,12 @@ export class GetCulqiOrderStatusHandler
 
     let culqiState: string | null = 'pending';
     let paymentCode: string | null =
-      (payment?.gatewayResponse?.culqiOrder?.payment_code as string | undefined) || null;
+      (payment?.gatewayResponse?.culqiOrder?.payment_code as
+        string | undefined) || null;
 
     if (culqiOrderId && this.culqiGatewayService.isConfigured()) {
-      const culqiOrderRes = await this.culqiGatewayService.getOrder(culqiOrderId);
+      const culqiOrderRes =
+        await this.culqiGatewayService.getOrder(culqiOrderId);
       if (culqiOrderRes.ok) {
         culqiState = culqiOrderRes.order.state;
         paymentCode = culqiOrderRes.order.payment_code || paymentCode;
@@ -143,7 +149,10 @@ export class GetCulqiOrderStatusHandler
           }
         }
 
-        if (culqiOrderRes.order.state === 'expired' || culqiOrderRes.order.state === 'deleted') {
+        if (
+          culqiOrderRes.order.state === 'expired' ||
+          culqiOrderRes.order.state === 'deleted'
+        ) {
           const queryRunner = this.dataSource.createQueryRunner();
           await queryRunner.connect();
           await queryRunner.startTransaction();
@@ -194,4 +203,3 @@ export class GetCulqiOrderStatusHandler
     );
   }
 }
-

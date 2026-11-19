@@ -5,7 +5,8 @@ import { Exclude, Expose } from 'class-transformer';
 export class DeleteMediaResponseDto {
   @Expose()
   @ApiProperty({
-    description: 'Indica si el archivo fue eliminado de Cloudflare R2 con éxito',
+    description:
+      'Indica si el archivo fue eliminado de Cloudflare R2 con éxito',
     example: true,
   })
   readonly success: boolean;
@@ -21,4 +22,3 @@ export class DeleteMediaResponseDto {
     Object.assign(this, partial);
   }
 }
-

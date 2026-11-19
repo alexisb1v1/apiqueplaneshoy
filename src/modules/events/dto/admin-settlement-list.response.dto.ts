@@ -107,7 +107,9 @@ export class AdminSettlementItemDto {
   @Expose()
   transferReference: string | null;
 
-  @ApiPropertyOptional({ example: 'https://cdn.queplanhoy.com/vouchers/v-123.pdf' })
+  @ApiPropertyOptional({
+    example: 'https://cdn.queplanhoy.com/vouchers/v-123.pdf',
+  })
   @Expose()
   transferVoucherUrl: string | null;
 
@@ -115,7 +117,10 @@ export class AdminSettlementItemDto {
   @Expose()
   notes: string | null;
 
-  @ApiProperty({ example: 14.5, description: 'Horas transcurridas desde la solicitud' })
+  @ApiProperty({
+    example: 14.5,
+    description: 'Horas transcurridas desde la solicitud',
+  })
   @Expose()
   hoursElapsed: number;
 }

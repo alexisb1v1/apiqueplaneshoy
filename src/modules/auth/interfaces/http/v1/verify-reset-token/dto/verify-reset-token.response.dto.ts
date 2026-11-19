@@ -22,4 +22,3 @@ export class VerifyResetTokenResponseDto {
     this.maskedEmail = maskedEmail;
   }
 }
-

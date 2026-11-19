@@ -3,12 +3,17 @@ import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class AdminPaySettlementRequestDto {
   @ApiProperty({
-    description: 'Número de operación o constancia bancaria de la transferencia',
+    description:
+      'Número de operación o constancia bancaria de la transferencia',
     example: 'OP-84920194',
   })
   @IsString()
-  @IsNotEmpty({ message: 'El número de operación bancaria es obligatorio para liquidar' })
-  @MaxLength(100, { message: 'El número de operación no debe exceder 100 caracteres' })
+  @IsNotEmpty({
+    message: 'El número de operación bancaria es obligatorio para liquidar',
+  })
+  @MaxLength(100, {
+    message: 'El número de operación no debe exceder 100 caracteres',
+  })
   transferReference: string;
 
   @ApiPropertyOptional({
@@ -21,7 +26,8 @@ export class AdminPaySettlementRequestDto {
   transferVoucherUrl?: string;
 
   @ApiPropertyOptional({
-    description: 'Observaciones internas o notas de contabilidad para el comprobante',
+    description:
+      'Observaciones internas o notas de contabilidad para el comprobante',
     example: 'Transferencia realizada con éxito vía BCP Telecrédito Soles',
   })
   @IsString()

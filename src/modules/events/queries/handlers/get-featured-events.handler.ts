@@ -6,7 +6,10 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { GetFeaturedEventsQuery } from '../impl/get-featured-events.query';
 import { FeaturedEventResponseDto } from '../../dto/featured-event.response.dto';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
 import { plainToInstance } from 'class-transformer';
 
 @QueryHandler(GetFeaturedEventsQuery)
@@ -19,7 +22,9 @@ export class GetFeaturedEventsHandler implements IQueryHandler<GetFeaturedEvents
     private readonly redisService: RedisService,
   ) {}
 
-  async execute(query: GetFeaturedEventsQuery): Promise<FeaturedEventResponseDto[]> {
+  async execute(
+    query: GetFeaturedEventsQuery,
+  ): Promise<FeaturedEventResponseDto[]> {
     const maxLimit = query.limit || 5;
 
     // 1. Intentar obtener desde Redis Cache (TTL 12 horas) a menos que se fuerce skipCache
@@ -29,12 +34,18 @@ export class GetFeaturedEventsHandler implements IQueryHandler<GetFeaturedEvents
       );
 
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        this.logger.debug(`[Redis Cache HIT] Recuperados ${cached.length} eventos destacados desde memoria.`);
+        this.logger.debug(
+          `[Redis Cache HIT] Recuperados ${cached.length} eventos destacados desde memoria.`,
+        );
         return cached;
       }
-      this.logger.debug('[Redis Cache MISS] No hay caché válida. Consultando PostgreSQL...');
+      this.logger.debug(
+        '[Redis Cache MISS] No hay caché válida. Consultando PostgreSQL...',
+      );
     } else {
-      this.logger.debug('[Redis Cache BYPASS] Forzada consulta fresca a PostgreSQL.');
+      this.logger.debug(
+        '[Redis Cache BYPASS] Forzada consulta fresca a PostgreSQL.',
+      );
     }
 
     // 2. Obtener eventos que tienen 'isFeatured = true' y status = 'published'
@@ -67,7 +78,9 @@ export class GetFeaturedEventsHandler implements IQueryHandler<GetFeaturedEvents
         .where('event.status = :status', { status: 'published' });
 
       if (excludeIds.length > 0) {
-        queryBuilder.andWhere('event.id NOT IN (:...excludeIds)', { excludeIds });
+        queryBuilder.andWhere('event.id NOT IN (:...excludeIds)', {
+          excludeIds,
+        });
       }
 
       const fillEvents = await queryBuilder
@@ -80,15 +93,22 @@ export class GetFeaturedEventsHandler implements IQueryHandler<GetFeaturedEvents
 
     // 4. Mapear a FeaturedEventResponseDto garantizando tipos estrictos
     const mappedResults = resultEvents.map((event) => {
-      const banner = event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
-      const prices = (event.zones || []).map((z) => Number(z.regularPrice)).filter((p) => !isNaN(p) && p >= 0);
+      const banner =
+        event.images?.find((img) => img.imageType === 'banner') ||
+        event.images?.[0];
+      const prices = (event.zones || [])
+        .map((z) => Number(z.regularPrice))
+        .filter((p) => !isNaN(p) && p >= 0);
       const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
       const firstShow = (event.shows || []).sort(
-        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        (a, b) =>
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
       )[0];
       const date = firstShow?.startTime
         ? new Date(firstShow.startTime).toISOString()
-        : (event.createdAt ? event.createdAt.toISOString() : null);
+        : event.createdAt
+          ? event.createdAt.toISOString()
+          : null;
 
       return plainToInstance(
         FeaturedEventResponseDto,
@@ -117,10 +137,11 @@ export class GetFeaturedEventsHandler implements IQueryHandler<GetFeaturedEvents
         mappedResults,
         REDIS_DEFAULT_TTL.FEATURED_EVENTS_SECONDS,
       );
-      this.logger.debug(`[Redis Cache SET] Guardados ${mappedResults.length} eventos destacados en [${REDIS_CACHE_KEYS.HOME.HERO}] con TTL de 12 horas.`);
+      this.logger.debug(
+        `[Redis Cache SET] Guardados ${mappedResults.length} eventos destacados en [${REDIS_CACHE_KEYS.HOME.HERO}] con TTL de 12 horas.`,
+      );
     }
 
     return mappedResults;
   }
 }
-

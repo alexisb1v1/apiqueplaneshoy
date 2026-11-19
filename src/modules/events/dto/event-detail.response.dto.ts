@@ -118,7 +118,10 @@ export class EventDetailResponseDto {
   venue!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'Pje. Sánchez Carrión 199, Barranco', nullable: true })
+  @ApiProperty({
+    example: 'Pje. Sánchez Carrión 199, Barranco',
+    nullable: true,
+  })
   address!: string | null;
 
   @Expose()
@@ -130,15 +133,24 @@ export class EventDetailResponseDto {
   hasLandingPage!: boolean;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/banners/bareto.webp', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/banners/bareto.webp',
+    nullable: true,
+  })
   bannerUrl!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/maps/croquis-recinto.webp', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/maps/croquis-recinto.webp',
+    nullable: true,
+  })
   zoneMapUrl!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxxx.r2.dev/docs/bases.pdf', nullable: true })
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/docs/bases.pdf',
+    nullable: true,
+  })
   termsAndConditionsUrl!: string | null;
 
   @Expose()
@@ -170,12 +182,19 @@ export class EventDetailResponseDto {
   addressReference!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx', nullable: true })
+  @ApiProperty({
+    example: 'https://www.youtube.com/watch?v=xxxx',
+    nullable: true,
+  })
   promoVideoUrl!: string | null;
 
   @Expose()
   @ApiProperty({
-    example: { instagramUrl: 'https://instagram.com/...', facebookUrl: 'https://facebook.com/...', tiktokUrl: 'https://tiktok.com/@...' },
+    example: {
+      instagramUrl: 'https://instagram.com/...',
+      facebookUrl: 'https://facebook.com/...',
+      tiktokUrl: 'https://tiktok.com/@...',
+    },
     nullable: true,
   })
   socialLinks!: {
@@ -194,4 +213,3 @@ export class EventDetailResponseDto {
   @ApiProperty({ type: [EventZoneDto] })
   zones!: EventZoneDto[];
 }
-

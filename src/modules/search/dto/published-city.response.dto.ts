@@ -25,10 +25,10 @@ export class PublishedCityResponseDto {
   departmentCode: string;
 
   @ApiProperty({
-    description: 'Cantidad de eventos actualmente en estado published en esta localidad',
+    description:
+      'Cantidad de eventos actualmente en estado published en esta localidad',
     example: 4,
   })
   @Expose()
   eventCount: number;
 }
-

@@ -24,9 +24,10 @@ export class RemoveFavoriteHandler implements ICommandHandler<RemoveFavoriteComm
       await this.favoriteRepository.removeFavorite(userId, eventId);
       return ok({ message: 'Evento eliminado de favoritos exitosamente.' });
     } catch (error) {
-      this.logger.error(`Error al eliminar favorito: ${(error as Error).message}`);
+      this.logger.error(
+        `Error al eliminar favorito: ${(error as Error).message}`,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

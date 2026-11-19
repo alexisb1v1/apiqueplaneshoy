@@ -68,4 +68,3 @@ export class SearchEventsResponseDto {
   @Expose()
   offset: number;
 }
-

@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class RegisterUserRequestDto {
@@ -14,7 +21,8 @@ export class RegisterUserRequestDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: 'Alias alternativo de nombre completo para compatibilidad con el cliente',
+    description:
+      'Alias alternativo de nombre completo para compatibilidad con el cliente',
     example: 'Alexis Bermúdez',
   })
   @IsOptional()
@@ -28,7 +36,9 @@ export class RegisterUserRequestDto {
   @Transform(({ value }) => value?.trim().toLowerCase())
   @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })
   @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })
-  @MaxLength(150, { message: 'El correo electrónico no puede exceder 150 caracteres' })
+  @MaxLength(150, {
+    message: 'El correo electrónico no puede exceder 150 caracteres',
+  })
   email: string;
 
   @ApiProperty({

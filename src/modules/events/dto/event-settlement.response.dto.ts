@@ -32,12 +32,15 @@ export class EventSettlementResponseDto {
   @Expose()
   eventTitle?: string;
 
-  @ApiPropertyOptional({ description: 'Código público del evento (ej: #EV-A1B2C3D4)' })
+  @ApiPropertyOptional({
+    description: 'Código público del evento (ej: #EV-A1B2C3D4)',
+  })
   @Expose()
   eventCode?: string;
 
   @ApiProperty({
-    description: 'Estado de la liquidación (requested, in_review, approved, paid, rejected)',
+    description:
+      'Estado de la liquidación (requested, in_review, approved, paid, rejected)',
     example: 'requested',
   })
   @Expose()
@@ -51,25 +54,34 @@ export class EventSettlementResponseDto {
   statusLabel: string;
 
   @ApiProperty({
-    description: 'Indica si ya existe una solicitud de liquidación formalmente enviada',
+    description:
+      'Indica si ya existe una solicitud de liquidación formalmente enviada',
     example: true,
   })
   @Expose()
   isSettlementRequested: boolean;
 
-  @ApiProperty({ description: 'Cantidad total de entradas confirmadas vendidas' })
+  @ApiProperty({
+    description: 'Cantidad total de entradas confirmadas vendidas',
+  })
   @Expose()
   totalTicketsSold: number;
 
-  @ApiProperty({ description: 'Recaudación bruta nominal por venta de entradas' })
+  @ApiProperty({
+    description: 'Recaudación bruta nominal por venta de entradas',
+  })
   @Expose()
   grossAmount: number;
 
-  @ApiProperty({ description: 'Descuento total aplicado por cupones de descuento' })
+  @ApiProperty({
+    description: 'Descuento total aplicado por cupones de descuento',
+  })
   @Expose()
   totalCouponsDiscountAmount: number;
 
-  @ApiProperty({ description: 'Comisión retenida por servicio de la ticketera' })
+  @ApiProperty({
+    description: 'Comisión retenida por servicio de la ticketera',
+  })
   @Expose()
   platformFeeAmount: number;
 
@@ -77,7 +89,9 @@ export class EventSettlementResponseDto {
   @Expose()
   gatewayFeeAmount: number;
 
-  @ApiProperty({ description: 'Total de adelantos o transferencias previas descontadas' })
+  @ApiProperty({
+    description: 'Total de adelantos o transferencias previas descontadas',
+  })
   @Expose()
   totalAdvancesAmount: number;
 
@@ -86,7 +100,8 @@ export class EventSettlementResponseDto {
   adjustmentsAmount: number;
 
   @ApiProperty({
-    description: 'Monto neto a transferir al organizador (gross - cupones - comisión)',
+    description:
+      'Monto neto a transferir al organizador (gross - cupones - comisión)',
   })
   @Expose()
   netPayoutAmount: number;
@@ -99,7 +114,9 @@ export class EventSettlementResponseDto {
   @Expose()
   bankAccountNumber: string | null;
 
-  @ApiPropertyOptional({ description: 'Código de Cuenta Interbancario (CCI) de 20 dígitos' })
+  @ApiPropertyOptional({
+    description: 'Código de Cuenta Interbancario (CCI) de 20 dígitos',
+  })
   @Expose()
   bankAccountCci: string | null;
 
@@ -119,19 +136,27 @@ export class EventSettlementResponseDto {
   @Expose()
   documentNumber?: string | null;
 
-  @ApiPropertyOptional({ description: 'Nro de operación bancaria de la transferencia definitiva' })
+  @ApiPropertyOptional({
+    description: 'Nro de operación bancaria de la transferencia definitiva',
+  })
   @Expose()
   transferReference: string | null;
 
-  @ApiPropertyOptional({ description: 'Comprobante o voucher bancario oficial de transferencia' })
+  @ApiPropertyOptional({
+    description: 'Comprobante o voucher bancario oficial de transferencia',
+  })
   @Expose()
   transferVoucherUrl: string | null;
 
-  @ApiPropertyOptional({ description: 'Fecha y hora en que se solicitó la liquidación' })
+  @ApiPropertyOptional({
+    description: 'Fecha y hora en que se solicitó la liquidación',
+  })
   @Expose()
   requestedAt: string | null;
 
-  @ApiPropertyOptional({ description: 'Fecha y hora en que se completó el pago' })
+  @ApiPropertyOptional({
+    description: 'Fecha y hora en que se completó el pago',
+  })
   @Expose()
   paidAt: string | null;
 

@@ -29,10 +29,13 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
     }
 
     // 1. Validar y rotar el Refresh Token atómicamente en Redis
-    const validData = await this.tokenService.verifyAndRotateRefreshToken(refreshToken);
+    const validData =
+      await this.tokenService.verifyAndRotateRefreshToken(refreshToken);
 
     if (!validData) {
-      this.logger.warn(`Intento de renovación con Refresh Token inválido o revocado.`);
+      this.logger.warn(
+        `Intento de renovación con Refresh Token inválido o revocado.`,
+      );
       return err('UNAUTHORIZED');
     }
 
@@ -67,7 +70,8 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
       publicUuid: user.publicUuid,
     });
 
-    return ok(new RefreshTokenResponseDto(newAccessToken, newRefreshToken, 900));
+    return ok(
+      new RefreshTokenResponseDto(newAccessToken, newRefreshToken, 900),
+    );
   }
 }
-

@@ -1,5 +1,8 @@
 import { EventEntity } from '@events/domain/entities/event.entity';
-import { HomeEventCardResponseDto, UrgencyBadgeDto } from '../dto/home-event-card.response.dto';
+import {
+  HomeEventCardResponseDto,
+  UrgencyBadgeDto,
+} from '../dto/home-event-card.response.dto';
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
 import { plainToInstance } from 'class-transformer';
 
@@ -7,9 +10,13 @@ import { plainToInstance } from 'class-transformer';
  * Mapea una entidad EventEntity al DTO optimizado HomeEventCardResponseDto
  * calculando precios mínimos, próxima función, badges de entrada y urgencia de aforo.
  */
-export function mapEventToHomeCard(event: EventEntity): HomeEventCardResponseDto {
+export function mapEventToHomeCard(
+  event: EventEntity,
+): HomeEventCardResponseDto {
   // 1. Imagen de Portada
-  const banner = event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
+  const banner =
+    event.images?.find((img) => img.imageType === 'banner') ||
+    event.images?.[0];
 
   // 2. Próxima Función (prioriza funciones futuras)
   const now = new Date();
@@ -20,11 +27,17 @@ export function mapEventToHomeCard(event: EventEntity): HomeEventCardResponseDto
   const selectedShow = futureShow || sortedShows[0];
   const date = selectedShow?.startTime
     ? new Date(selectedShow.startTime).toISOString()
-    : (event.createdAt ? event.createdAt.toISOString() : null);
+    : event.createdAt
+      ? event.createdAt.toISOString()
+      : null;
 
   // 3. Ubicación y Ciudad
   const cityInfo = resolveCityFromUbigeo(event.ubigeoCode);
-  const city = (cityInfo.name && cityInfo.name !== 'Perú' ? cityInfo.name : event.venue || 'LIMA').toUpperCase();
+  const city = (
+    cityInfo.name && cityInfo.name !== 'Perú'
+      ? cityInfo.name
+      : event.venue || 'LIMA'
+  ).toUpperCase();
 
   // 4. Precio Mínimo de Entrada
   const prices = (event.zones || [])
@@ -36,11 +49,19 @@ export function mapEventToHomeCard(event: EventEntity): HomeEventCardResponseDto
   let ticketType = 'GENERAL';
   let ticketBadgeStyle: 'general' | 'vip' | 'platinum' | 'error' = 'general';
 
-  const onlyNames = (event.zones || []).map((z) => (z.name || '').toUpperCase());
-  if (onlyNames.some((name) => name.includes('PLATINUM') || name.includes('PLATINO'))) {
+  const onlyNames = (event.zones || []).map((z) =>
+    (z.name || '').toUpperCase(),
+  );
+  if (
+    onlyNames.some(
+      (name) => name.includes('PLATINUM') || name.includes('PLATINO'),
+    )
+  ) {
     ticketType = 'PLATINUM';
     ticketBadgeStyle = 'platinum';
-  } else if (onlyNames.some((name) => name.includes('VIP') || name.includes('BOX'))) {
+  } else if (
+    onlyNames.some((name) => name.includes('VIP') || name.includes('BOX'))
+  ) {
     ticketType = 'VIP DISPONIBLE';
     ticketBadgeStyle = 'vip';
   } else if (onlyNames.length > 0 && onlyNames[0]) {
@@ -72,7 +93,8 @@ export function mapEventToHomeCard(event: EventEntity): HomeEventCardResponseDto
   }
 
   const remaining = Math.max(0, totalCapacity - totalSold - totalLocked);
-  const soldPercentage = totalCapacity > 0 ? (totalSold / totalCapacity) * 100 : 0;
+  const soldPercentage =
+    totalCapacity > 0 ? (totalSold / totalCapacity) * 100 : 0;
 
   let urgencyBadge: UrgencyBadgeDto;
 
@@ -131,4 +153,3 @@ export function mapEventToHomeCard(event: EventEntity): HomeEventCardResponseDto
     { excludeExtraneousValues: true },
   );
 }
-

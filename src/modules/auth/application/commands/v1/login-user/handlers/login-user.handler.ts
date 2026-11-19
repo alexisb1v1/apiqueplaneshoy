@@ -19,7 +19,7 @@ export class LoginUserHandler implements ICommandHandler<LoginUserCommand> {
     private readonly passwordHasher: PasswordHasher,
     @Inject('TokenService')
     private readonly tokenService: TokenService,
-  ) { }
+  ) {}
 
   /**
    * Autentica a un usuario verificando sus credenciales de acceso.
@@ -49,7 +49,10 @@ export class LoginUserHandler implements ICommandHandler<LoginUserCommand> {
       return err('FORBIDDEN');
     }
 
-    const isPasswordValid = await this.passwordHasher.compare(password, user.passwordHash);
+    const isPasswordValid = await this.passwordHasher.compare(
+      password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       return err('UNAUTHORIZED');
     }
@@ -84,6 +87,14 @@ export class LoginUserHandler implements ICommandHandler<LoginUserCommand> {
       publicUuid: user.publicUuid,
     });
 
-    return ok(new LoginUserResponseDto(token, userDto, 'Inicio de sesión exitoso', refreshToken, 900));
+    return ok(
+      new LoginUserResponseDto(
+        token,
+        userDto,
+        'Inicio de sesión exitoso',
+        refreshToken,
+        900,
+      ),
+    );
   }
 }

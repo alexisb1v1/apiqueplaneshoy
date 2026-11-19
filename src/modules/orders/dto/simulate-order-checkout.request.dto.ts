@@ -53,7 +53,8 @@ export class SimulateOrderCheckoutRequestDto {
   @IsIn(['card', 'yape', 'transfer', 'cuotealo', 'apple_pay', 'google_pay'], {
     message: 'Método de pago no válido',
   })
-  paymentMethod!: 'card' | 'yape' | 'transfer' | 'cuotealo' | 'apple_pay' | 'google_pay';
+  paymentMethod!:
+    'card' | 'yape' | 'transfer' | 'cuotealo' | 'apple_pay' | 'google_pay';
 
   @ApiProperty({ example: 'cliente@queplanhoy.com', required: false })
   @IsOptional()
@@ -102,4 +103,3 @@ export class SimulateOrderCheckoutRequestDto {
   @IsString({ message: 'termsVersion debe ser una cadena de texto' })
   termsVersion?: string;
 }
-

@@ -38,7 +38,9 @@ export class EventStatusCronService {
     timeZone: 'America/Lima',
   })
   async handleDailyExpiredStatusCron(): Promise<void> {
-    this.logger.log('⏰ [Cron 01:00 AM] Iniciando revisión automática de shows y eventos vencidos...');
+    this.logger.log(
+      '⏰ [Cron 01:00 AM] Iniciando revisión automática de shows y eventos vencidos...',
+    );
     try {
       const result = await this.syncExpiredShowsAndEvents();
       this.logger.log(
@@ -72,14 +74,18 @@ export class EventStatusCronService {
     // y su fecha de inicio + duración estimada en horas ya es menor o igual a 'now'.
     const activeShows = await this.showRepository
       .createQueryBuilder('show')
-      .where('show.status IN (:...statuses)', { statuses: ['scheduled', 'ongoing'] })
+      .where('show.status IN (:...statuses)', {
+        statuses: ['scheduled', 'ongoing'],
+      })
       .getMany();
 
     const showsToComplete: ShowEntity[] = [];
 
     for (const show of activeShows) {
       const durationHours = show.durationHours || 2;
-      const showEndTime = new Date(show.startTime.getTime() + durationHours * 60 * 60 * 1000);
+      const showEndTime = new Date(
+        show.startTime.getTime() + durationHours * 60 * 60 * 1000,
+      );
 
       if (showEndTime <= now) {
         show.status = 'completed';
@@ -94,7 +100,9 @@ export class EventStatusCronService {
         `[Paso 1] Se actualizaron ${showsToComplete.length} funciones (shows) a estado 'completed'.`,
       );
     } else {
-      this.logger.debug('[Paso 1] No se encontraron funciones (shows) pendientes de expirar.');
+      this.logger.debug(
+        '[Paso 1] No se encontraron funciones (shows) pendientes de expirar.',
+      );
     }
 
     // =========================================================================
@@ -125,10 +133,16 @@ export class EventStatusCronService {
 
         // Calcular hora de cierre de la función
         const durationHours = show.durationHours || 2;
-        const showEndTime = new Date(show.startTime.getTime() + durationHours * 60 * 60 * 1000);
+        const showEndTime = new Date(
+          show.startTime.getTime() + durationHours * 60 * 60 * 1000,
+        );
 
         // Si la función aún no termina o es futura, el evento continúa activo
-        return showEndTime > now || show.status === 'scheduled' || show.status === 'ongoing';
+        return (
+          showEndTime > now ||
+          show.status === 'scheduled' ||
+          show.status === 'ongoing'
+        );
       });
 
       // Si no queda NINGUNA función futura o activa, el evento pasa a 'completed'
@@ -166,7 +180,9 @@ export class EventStatusCronService {
             ubigeoCode: event.ubigeoCode,
             status: 'completed',
             minPrice: 0,
-            date: event.createdAt ? event.createdAt.toISOString() : new Date().toISOString(),
+            date: event.createdAt
+              ? event.createdAt.toISOString()
+              : new Date().toISOString(),
             hasLandingPage: event.hasLandingPage,
             isFeatured: event.isFeatured,
           })
@@ -178,10 +194,14 @@ export class EventStatusCronService {
 
         // Invalidar caché de detalle y landing del evento
         if (event.slug) {
-          await this.redisService.del(REDIS_CACHE_KEYS.EVENTS.LANDING(event.slug));
+          await this.redisService.del(
+            REDIS_CACHE_KEYS.EVENTS.LANDING(event.slug),
+          );
         }
         if (event.publicUuid) {
-          await this.redisService.del(REDIS_CACHE_KEYS.EVENTS.DETAIL(event.publicUuid));
+          await this.redisService.del(
+            REDIS_CACHE_KEYS.EVENTS.DETAIL(event.publicUuid),
+          );
         }
       }
 
@@ -193,7 +213,9 @@ export class EventStatusCronService {
         this.redisService.del(REDIS_CACHE_KEYS.HOME.WEEKEND),
       ]);
 
-      this.logger.log('🧹 Caché de portada y secciones en Redis invalidada tras cambio de estados.');
+      this.logger.log(
+        '🧹 Caché de portada y secciones en Redis invalidada tras cambio de estados.',
+      );
     } else if (result.updatedShowsCount > 0) {
       // Si solo cambiaron shows pero no eventos completos, también refrescamos la caché de shows próximos
       await Promise.allSettled([
@@ -205,4 +227,3 @@ export class EventStatusCronService {
     return result;
   }
 }
-

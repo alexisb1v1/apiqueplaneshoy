@@ -16,7 +16,8 @@ import { ThrottlerStorageRedisService } from './throttler-storage-redis.service'
         const logger = new Logger('RedisClient');
         const host = configService.get<string>('REDIS_HOST', 'localhost');
         const port = Number(configService.get<number>('REDIS_PORT', 6379));
-        const password = configService.get<string>('REDIS_PASSWORD') || undefined;
+        const password =
+          configService.get<string>('REDIS_PASSWORD') || undefined;
 
         const redis = new Redis({
           host,
@@ -49,7 +50,9 @@ import { ThrottlerStorageRedisService } from './throttler-storage-redis.service'
 
         // Intentamos conexión inicial sin bloquear el inicio del framework
         redis.connect().catch((err) => {
-          logger.warn(`No se pudo conectar inmediatamente a Redis (${host}:${port}): ${err.message}. La aplicación continuará funcionando con fallback directo a la base de datos.`);
+          logger.warn(
+            `No se pudo conectar inmediatamente a Redis (${host}:${port}): ${err.message}. La aplicación continuará funcionando con fallback directo a la base de datos.`,
+          );
         });
 
         return redis;
@@ -60,5 +63,4 @@ import { ThrottlerStorageRedisService } from './throttler-storage-redis.service'
   ],
   exports: [REDIS_CLIENT, RedisService, ThrottlerStorageRedisService],
 })
-export class RedisModule { }
-
+export class RedisModule {}

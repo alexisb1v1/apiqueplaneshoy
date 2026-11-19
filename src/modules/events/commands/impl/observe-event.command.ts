@@ -4,4 +4,3 @@ export class ObserveEventCommand {
     public readonly reason?: string,
   ) {}
 }
-

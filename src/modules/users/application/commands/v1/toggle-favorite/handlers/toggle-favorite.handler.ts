@@ -22,7 +22,10 @@ export class ToggleFavoriteHandler implements ICommandHandler<ToggleFavoriteComm
     const { userId, eventId } = command;
 
     try {
-      const result = await this.favoriteRepository.toggleFavorite(userId, eventId);
+      const result = await this.favoriteRepository.toggleFavorite(
+        userId,
+        eventId,
+      );
 
       if (!result) {
         return err('NOT_FOUND');
@@ -33,11 +36,19 @@ export class ToggleFavoriteHandler implements ICommandHandler<ToggleFavoriteComm
         ? 'Evento agregado a tus favoritos.'
         : 'Evento retirado de tus favoritos.';
 
-      return ok(new ToggleFavoriteResponseDto(isFavorite, event.id, event.publicUuid, message));
+      return ok(
+        new ToggleFavoriteResponseDto(
+          isFavorite,
+          event.id,
+          event.publicUuid,
+          message,
+        ),
+      );
     } catch (error) {
-      this.logger.error(`Error al alternar favorito: ${(error as Error).message}`);
+      this.logger.error(
+        `Error al alternar favorito: ${(error as Error).message}`,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

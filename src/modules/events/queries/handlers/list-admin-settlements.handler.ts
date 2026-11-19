@@ -20,13 +20,10 @@ const SETTLEMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 @QueryHandler(ListAdminSettlementsQuery)
-export class ListAdminSettlementsHandler
-  implements
-    IQueryHandler<
-      ListAdminSettlementsQuery,
-      Result<AdminSettlementListResponseDto, AppError>
-    >
-{
+export class ListAdminSettlementsHandler implements IQueryHandler<
+  ListAdminSettlementsQuery,
+  Result<AdminSettlementListResponseDto, AppError>
+> {
   constructor(
     @InjectRepository(EventSettlementEntity)
     private readonly settlementRepository: Repository<EventSettlementEntity>,
@@ -64,7 +61,8 @@ export class ListAdminSettlementsHandler
       const breakdown = (s.breakdownByZone || {}) as Record<string, any>;
 
       const reqTime = s.requestedAt ? new Date(s.requestedAt).getTime() : now;
-      const hoursElapsed = Math.round(((now - reqTime) / (1000 * 60 * 60)) * 10) / 10;
+      const hoursElapsed =
+        Math.round(((now - reqTime) / (1000 * 60 * 60)) * 10) / 10;
 
       const code = `#LIQ-${(s.publicUuid || '').replace(/-/g, '').substring(0, 8).toUpperCase()}`;
       const eventCode = event
@@ -81,7 +79,10 @@ export class ListAdminSettlementsHandler
         eventStatus: event?.status || '',
         organizerId: s.organizerId,
         organizerName:
-          organizer?.organizerName || s.bankAccountHolder || organizer?.name || 'Organizador',
+          organizer?.organizerName ||
+          s.bankAccountHolder ||
+          organizer?.name ||
+          'Organizador',
         organizerDocumentType:
           breakdown.documentType || organizer?.organizerDocumentType || 'RUC',
         organizerDocumentNumber:
@@ -98,7 +99,9 @@ export class ListAdminSettlementsHandler
         netPayoutAmount: Number(s.netPayoutAmount) || 0,
         status: s.status,
         statusLabel: SETTLEMENT_STATUS_LABELS[s.status] || s.status,
-        requestedAt: s.requestedAt ? new Date(s.requestedAt).toISOString() : new Date().toISOString(),
+        requestedAt: s.requestedAt
+          ? new Date(s.requestedAt).toISOString()
+          : new Date().toISOString(),
         paidAt: s.paidAt ? new Date(s.paidAt).toISOString() : null,
         transferReference: s.transferReference,
         transferVoucherUrl: s.transferVoucherUrl,

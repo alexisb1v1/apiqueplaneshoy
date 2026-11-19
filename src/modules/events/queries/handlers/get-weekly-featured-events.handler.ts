@@ -6,7 +6,10 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { GetWeeklyFeaturedEventsQuery } from '../impl/get-weekly-featured-events.query';
 import { HomeEventCardResponseDto } from '../../dto/home-event-card.response.dto';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
 import { mapEventToHomeCard } from '../../utils/home-event-card.mapper';
 
 @QueryHandler(GetWeeklyFeaturedEventsQuery)
@@ -19,7 +22,9 @@ export class GetWeeklyFeaturedEventsHandler implements IQueryHandler<GetWeeklyFe
     private readonly redisService: RedisService,
   ) {}
 
-  async execute(query: GetWeeklyFeaturedEventsQuery): Promise<HomeEventCardResponseDto[]> {
+  async execute(
+    query: GetWeeklyFeaturedEventsQuery,
+  ): Promise<HomeEventCardResponseDto[]> {
     const maxLimit = query.limit || 8;
 
     // 1. Verificar Caché en Memoria (Redis: qph:home:weekly_featured)
@@ -28,10 +33,14 @@ export class GetWeeklyFeaturedEventsHandler implements IQueryHandler<GetWeeklyFe
         REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED,
       );
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        this.logger.debug(`[Redis Cache HIT] Eventos destacados semanales desde [${REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED}].`);
+        this.logger.debug(
+          `[Redis Cache HIT] Eventos destacados semanales desde [${REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED}].`,
+        );
         return cached;
       }
-      this.logger.debug(`[Redis Cache MISS] No hay caché en [${REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED}]. Consultando PostgreSQL...`);
+      this.logger.debug(
+        `[Redis Cache MISS] No hay caché en [${REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED}]. Consultando PostgreSQL...`,
+      );
     }
 
     // 2. Prioridad A: Eventos marcados como destacados por administración (isFeatured = true)
@@ -66,7 +75,10 @@ export class GetWeeklyFeaturedEventsHandler implements IQueryHandler<GetWeeklyFe
         .leftJoinAndSelect('event.images', 'images')
         .leftJoinAndSelect('event.zones', 'zones')
         .where('event.status = :status', { status: 'published' })
-        .andWhere('shows.startTime BETWEEN :now AND :in30Days', { now, in30Days });
+        .andWhere('shows.startTime BETWEEN :now AND :in30Days', {
+          now,
+          in30Days,
+        });
 
       if (excludeIds.length > 0) {
         qb.andWhere('event.id NOT IN (:...excludeIds)', { excludeIds });
@@ -119,10 +131,11 @@ export class GetWeeklyFeaturedEventsHandler implements IQueryHandler<GetWeeklyFe
         mapped,
         REDIS_DEFAULT_TTL.HOME_SECTIONS_SECONDS,
       );
-      this.logger.debug(`[Redis Cache SET] Guardados ${mapped.length} destacados semanales en [${REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED}] (TTL: 15m).`);
+      this.logger.debug(
+        `[Redis Cache SET] Guardados ${mapped.length} destacados semanales en [${REDIS_CACHE_KEYS.HOME.WEEKLY_FEATURED}] (TTL: 15m).`,
+      );
     }
 
     return mapped;
   }
 }
-

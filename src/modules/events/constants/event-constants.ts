@@ -18,12 +18,42 @@ export interface EventCity {
 }
 
 export const EVENT_CATEGORIES: EventCategory[] = [
-  { id: 'CONCERTS', label: 'Conciertos', icon: '🎵', badgeStyle: 'bg-purple-100 text-purple-700' },
-  { id: 'THEATER', label: 'Teatro & Musicales', icon: '🎭', badgeStyle: 'bg-orange-100 text-orange-700' },
-  { id: 'SPORTS', label: 'Deportes', icon: '⚽', badgeStyle: 'bg-blue-100 text-blue-700' },
-  { id: 'FESTIVALS', label: 'Festivales', icon: '🎪', badgeStyle: 'bg-pink-100 text-pink-700' },
-  { id: 'COMEDY', label: 'Comedia & Stand Up', icon: '🎤', badgeStyle: 'bg-yellow-100 text-yellow-700' },
-  { id: 'GASTRONOMY', label: 'Gastronomía', icon: '🍔', badgeStyle: 'bg-green-100 text-green-700' },
+  {
+    id: 'CONCERTS',
+    label: 'Conciertos',
+    icon: '🎵',
+    badgeStyle: 'bg-purple-100 text-purple-700',
+  },
+  {
+    id: 'THEATER',
+    label: 'Teatro & Musicales',
+    icon: '🎭',
+    badgeStyle: 'bg-orange-100 text-orange-700',
+  },
+  {
+    id: 'SPORTS',
+    label: 'Deportes',
+    icon: '⚽',
+    badgeStyle: 'bg-blue-100 text-blue-700',
+  },
+  {
+    id: 'FESTIVALS',
+    label: 'Festivales',
+    icon: '🎪',
+    badgeStyle: 'bg-pink-100 text-pink-700',
+  },
+  {
+    id: 'COMEDY',
+    label: 'Comedia & Stand Up',
+    icon: '🎤',
+    badgeStyle: 'bg-yellow-100 text-yellow-700',
+  },
+  {
+    id: 'GASTRONOMY',
+    label: 'Gastronomía',
+    icon: '🍔',
+    badgeStyle: 'bg-green-100 text-green-700',
+  },
 ];
 
 export const EVENT_CITIES: EventCity[] = [
@@ -74,7 +104,8 @@ export const AGE_RESTRICTIONS: AgeRestriction[] = [
 ];
 
 export const getCategoryById = (id: string): EventCategory =>
-  EVENT_CATEGORIES.find((category) => category.id === id) || EVENT_CATEGORIES[0];
+  EVENT_CATEGORIES.find((category) => category.id === id) ||
+  EVENT_CATEGORIES[0];
 
 export const getAgeRestrictionById = (id: string): AgeRestriction =>
   AGE_RESTRICTIONS.find((item) => item.id === id) || AGE_RESTRICTIONS[0];
@@ -103,5 +134,3 @@ export {
   calculatePlatformFee,
   calculateQphFee,
 } from '@orders/application/services/platform-fee.service';
-
-

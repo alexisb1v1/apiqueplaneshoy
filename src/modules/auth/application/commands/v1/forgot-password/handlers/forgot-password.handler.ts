@@ -26,7 +26,7 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
     @Inject('EmailService')
     private readonly emailService: EmailService,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   /**
    * Procesa la solicitud de recuperación de contraseña.
@@ -46,10 +46,13 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
     try {
       // 1. Rate limiting por correo en Redis: máximo 3 solicitudes cada 15 minutos por email
       const emailRateLimitKey = `${EMAIL_RATE_LIMIT_PREFIX}${normalizedEmail}`;
-      const currentAttempts = (await this.redisService.get<number>(emailRateLimitKey)) || 0;
+      const currentAttempts =
+        (await this.redisService.get<number>(emailRateLimitKey)) || 0;
 
       if (currentAttempts >= MAX_REQUESTS_PER_EMAIL) {
-        this.logger.warn(`Límite de solicitudes alcanzado para el correo: ${normalizedEmail}`);
+        this.logger.warn(
+          `Límite de solicitudes alcanzado para el correo: ${normalizedEmail}`,
+        );
         // Retornamos éxito genérico para no dar pistas al atacante pero sin emitir más correos
         return ok(genericSuccessResponse);
       }
@@ -58,13 +61,23 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
 
       // Si el usuario no existe, incrementamos el contador para la clave y retornamos éxito genérico
       if (!user) {
-        this.logger.warn(`Intento de recuperación para correo no registrado: ${normalizedEmail}`);
-        await this.redisService.set(emailRateLimitKey, currentAttempts + 1, RESET_TOKEN_TTL_SECONDS);
+        this.logger.warn(
+          `Intento de recuperación para correo no registrado: ${normalizedEmail}`,
+        );
+        await this.redisService.set(
+          emailRateLimitKey,
+          currentAttempts + 1,
+          RESET_TOKEN_TTL_SECONDS,
+        );
         return ok(genericSuccessResponse);
       }
 
       // 2. Incrementar contador de solicitudes por este email
-      await this.redisService.set(emailRateLimitKey, currentAttempts + 1, RESET_TOKEN_TTL_SECONDS);
+      await this.redisService.set(
+        emailRateLimitKey,
+        currentAttempts + 1,
+        RESET_TOKEN_TTL_SECONDS,
+      );
 
       // 3. Generar token criptográficamente seguro
       const rawToken = crypto.randomBytes(32).toString('hex');
@@ -78,16 +91,26 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
       };
 
       // 4. Guardar en Redis con TTL de 15 minutos (900 segundos)
-      await this.redisService.set(redisKey, tokenPayload, RESET_TOKEN_TTL_SECONDS);
+      await this.redisService.set(
+        redisKey,
+        tokenPayload,
+        RESET_TOKEN_TTL_SECONDS,
+      );
 
       // 5. Enviar correo electrónico con el token seguro
-      await this.emailService.sendPasswordResetEmail(user.email, user.name, rawToken);
+      await this.emailService.sendPasswordResetEmail(
+        user.email,
+        user.name,
+        rawToken,
+      );
 
       return ok(genericSuccessResponse);
     } catch (error) {
-      this.logger.error(`Error en ForgotPasswordHandler: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `Error en ForgotPasswordHandler: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

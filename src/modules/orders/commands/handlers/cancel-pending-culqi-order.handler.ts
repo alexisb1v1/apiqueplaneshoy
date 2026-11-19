@@ -15,10 +15,10 @@ export interface CancelPendingOrderResult {
 }
 
 @CommandHandler(CancelPendingCulqiOrderCommand)
-export class CancelPendingCulqiOrderHandler
-  implements
-    ICommandHandler<CancelPendingCulqiOrderCommand, Result<CancelPendingOrderResult, AppError>>
-{
+export class CancelPendingCulqiOrderHandler implements ICommandHandler<
+  CancelPendingCulqiOrderCommand,
+  Result<CancelPendingOrderResult, AppError>
+> {
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(OrderEntity)
@@ -66,7 +66,8 @@ export class CancelPendingCulqiOrderHandler
         : undefined);
 
     if (culqiOrderId && this.culqiGatewayService.isConfigured()) {
-      const culqiOrderRes = await this.culqiGatewayService.getOrder(culqiOrderId);
+      const culqiOrderRes =
+        await this.culqiGatewayService.getOrder(culqiOrderId);
       if (culqiOrderRes.ok && culqiOrderRes.order.state === 'paid') {
         await this.orderLifecycleService.finalizePaidOrder({
           orderIdOrUuid: order.publicUuid,
@@ -101,4 +102,3 @@ export class CancelPendingCulqiOrderHandler
     }
   }
 }
-

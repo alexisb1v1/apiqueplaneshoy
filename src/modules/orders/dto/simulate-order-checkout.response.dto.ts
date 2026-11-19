@@ -59,11 +59,18 @@ export class SimulateOrderCheckoutResponseDto {
   subtotal!: number;
 
   @Expose()
-  @ApiProperty({ example: 10.0, description: 'Descuento total aplicado por cupón en soles' })
+  @ApiProperty({
+    example: 10.0,
+    description: 'Descuento total aplicado por cupón en soles',
+  })
   discountAmount!: number;
 
   @Expose()
-  @ApiProperty({ example: 'PROMOQPH', nullable: true, description: 'Código del cupón canjeado' })
+  @ApiProperty({
+    example: 'PROMOQPH',
+    nullable: true,
+    description: 'Código del cupón canjeado',
+  })
   couponCode!: string | null;
 
   @Expose()
@@ -79,7 +86,9 @@ export class SimulateOrderCheckoutResponseDto {
   txCode!: string;
 
   @Expose()
-  @ApiProperty({ example: 'Pago procesado exitosamente por la pasarela simulada.' })
+  @ApiProperty({
+    example: 'Pago procesado exitosamente por la pasarela simulada.',
+  })
   message!: string;
 
   @Expose()
@@ -87,4 +96,3 @@ export class SimulateOrderCheckoutResponseDto {
   @ApiProperty({ type: [IssuedTicketResponseDto] })
   tickets!: IssuedTicketResponseDto[];
 }
-

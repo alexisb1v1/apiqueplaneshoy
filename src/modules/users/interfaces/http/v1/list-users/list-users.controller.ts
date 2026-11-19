@@ -30,16 +30,25 @@ export class ListUsersController {
   @UseGuards(JwtAuthGuard, RolesAdminGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Listar usuarios paginados por rol y búsqueda (Exclusivo Backoffice)',
+    summary:
+      'Listar usuarios paginados por rol y búsqueda (Exclusivo Backoffice)',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista paginada de usuarios obtenida exitosamente',
     type: ListUsersResponseDto,
   })
-  @ApiResponse({ status: 401, description: 'Token de autenticación faltante o inválido' })
-  @ApiResponse({ status: 403, description: 'Acceso restringido solo para administradores' })
-  async execute(@Query() queryDto: ListUsersQueryDto): Promise<ListUsersResponseDto> {
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticación faltante o inválido',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Acceso restringido solo para administradores',
+  })
+  async execute(
+    @Query() queryDto: ListUsersQueryDto,
+  ): Promise<ListUsersResponseDto> {
     const result = await this.queryBus.execute(new ListUsersQuery(queryDto));
 
     return matchResult(result, (data: ListUsersResponseDto) => data, {
@@ -48,4 +57,3 @@ export class ListUsersController {
     });
   }
 }
-

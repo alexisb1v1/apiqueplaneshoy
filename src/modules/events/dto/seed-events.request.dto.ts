@@ -14,7 +14,8 @@ export class SeedEventsRequestDto {
   @Type(() => Number)
   @IsInt({ message: 'La cantidad debe ser un número entero' })
   @Min(1, { message: 'La cantidad mínima es 1 evento' })
-  @Max(100, { message: 'La cantidad máxima permitida por ejecución es 100 eventos' })
+  @Max(100, {
+    message: 'La cantidad máxima permitida por ejecución es 100 eventos',
+  })
   readonly count?: number = 10;
 }
-

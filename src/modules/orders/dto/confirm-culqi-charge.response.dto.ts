@@ -22,7 +22,10 @@ export class ConfirmCulqiChargeResponseDto {
 
   @Expose()
   @Type(() => SimulateOrderCheckoutResponseDto)
-  @ApiProperty({ type: SimulateOrderCheckoutResponseDto, nullable: true, required: false })
+  @ApiProperty({
+    type: SimulateOrderCheckoutResponseDto,
+    nullable: true,
+    required: false,
+  })
   checkoutResult!: SimulateOrderCheckoutResponseDto | null;
 }
-

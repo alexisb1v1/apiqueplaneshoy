@@ -6,7 +6,10 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { GetEventDetailQuery } from '../impl/get-event-detail.query';
 import { EventDetailResponseDto } from '../../dto/event-detail.response.dto';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
 import { plainToInstance } from 'class-transformer';
 
@@ -25,17 +28,29 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
 
     // 1. Verificar Caché en Redis
     if (!query.skipCache) {
-      const cached = await this.redisService.get<EventDetailResponseDto>(cacheKey);
-      if (cached && cached.coordinates !== undefined && cached.zoneMapUrl !== undefined) {
-        this.logger.debug(`[Redis Cache HIT] Detalle de evento [${query.identifier}] recuperado desde memoria.`);
+      const cached =
+        await this.redisService.get<EventDetailResponseDto>(cacheKey);
+      if (
+        cached &&
+        cached.coordinates !== undefined &&
+        cached.zoneMapUrl !== undefined
+      ) {
+        this.logger.debug(
+          `[Redis Cache HIT] Detalle de evento [${query.identifier}] recuperado desde memoria.`,
+        );
         return cached;
       }
-      this.logger.debug(`[Redis Cache MISS / Obsoleto] Consultando PostgreSQL para detalle [${query.identifier}]...`);
+      this.logger.debug(
+        `[Redis Cache MISS / Obsoleto] Consultando PostgreSQL para detalle [${query.identifier}]...`,
+      );
     }
 
     // 2. Determinar criterio de búsqueda (ID numérico, publicUuid o slug)
     const isNumeric = /^\d+$/.test(query.identifier);
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.identifier);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        query.identifier,
+      );
 
     let whereClause: Record<string, any>;
     if (isNumeric) {
@@ -59,28 +74,43 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     });
 
     if (!event) {
-      throw new NotFoundException(`Evento '${query.identifier}' no encontrado o no se encuentra publicado.`);
+      throw new NotFoundException(
+        `Evento '${query.identifier}' no encontrado o no se encuentra publicado.`,
+      );
     }
 
     // 4. Resolver Ciudad, Banner y Mapa de Zonas
     const cityInfo = resolveCityFromUbigeo(event.ubigeoCode);
-    const city = (cityInfo.name && cityInfo.name !== 'Perú' ? cityInfo.name : event.venue || 'LIMA').toUpperCase();
-    const banner = event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
-    const zoneMapImage = event.images?.find((img) => img.imageType === 'zone_map');
+    const city = (
+      cityInfo.name && cityInfo.name !== 'Perú'
+        ? cityInfo.name
+        : event.venue || 'LIMA'
+    ).toUpperCase();
+    const banner =
+      event.images?.find((img) => img.imageType === 'banner') ||
+      event.images?.[0];
+    const zoneMapImage = event.images?.find(
+      (img) => img.imageType === 'zone_map',
+    );
     const zoneMapUrl =
-      zoneMapImage?.imageUrl ||
-      event.landingConfig?.zoneMapUrl ||
-      null;
+      zoneMapImage?.imageUrl || event.landingConfig?.zoneMapUrl || null;
 
     // 5. Mapear Zonas y Precios Dinámicos (Preventas en Cascada)
     const now = new Date();
     const mappedZones = (event.zones || []).map((zone) => {
       const activeTiers = (zone.pricingTiers || [])
-        .filter((tier) => tier.isActive && (!tier.endAt || new Date(tier.endAt) >= now) && Number(tier.soldCount) < Number(tier.capacity))
+        .filter(
+          (tier) =>
+            tier.isActive &&
+            (!tier.endAt || new Date(tier.endAt) >= now) &&
+            Number(tier.soldCount) < Number(tier.capacity),
+        )
         .sort((a, b) => a.tierNumber - b.tierNumber);
 
       const currentTier = activeTiers[0];
-      const currentPrice = currentTier ? Number(currentTier.price) : Number(zone.regularPrice);
+      const currentPrice = currentTier
+        ? Number(currentTier.price)
+        : Number(zone.regularPrice);
       const activeTierName = currentTier ? currentTier.name : 'Venta Regular';
 
       const cap = Number(zone.capacity) || 0;
@@ -140,14 +170,19 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
         googleMapsUrl: event.googleMapsUrl,
         coordinates: event.coordinates || null,
         addressReference: event.addressReference || null,
-        promoVideoUrl: event.promoVideoUrl || event.landingConfig?.header?.videoTeaserUrl || null,
-        socialLinks: event.socialLinks || (event.landingConfig?.footer
-          ? {
-              instagramUrl: event.landingConfig.footer.instagramUrl || null,
-              facebookUrl: event.landingConfig.footer.facebookUrl || null,
-              tiktokUrl: event.landingConfig.footer.tiktokUrl || null,
-            }
-          : null),
+        promoVideoUrl:
+          event.promoVideoUrl ||
+          event.landingConfig?.header?.videoTeaserUrl ||
+          null,
+        socialLinks:
+          event.socialLinks ||
+          (event.landingConfig?.footer
+            ? {
+                instagramUrl: event.landingConfig.footer.instagramUrl || null,
+                facebookUrl: event.landingConfig.footer.facebookUrl || null,
+                tiktokUrl: event.landingConfig.footer.tiktokUrl || null,
+              }
+            : null),
         shows: mappedShows,
         zones: mappedZones,
       },
@@ -155,10 +190,15 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     );
 
     // 8. Guardar en Redis con TTL de 15 minutos
-    await this.redisService.set(cacheKey, responseDto, REDIS_DEFAULT_TTL.EVENT_DETAIL_SECONDS);
-    this.logger.debug(`[Redis Cache SET] Detalle de evento guardado en [${cacheKey}] con TTL de 15 minutos.`);
+    await this.redisService.set(
+      cacheKey,
+      responseDto,
+      REDIS_DEFAULT_TTL.EVENT_DETAIL_SECONDS,
+    );
+    this.logger.debug(
+      `[Redis Cache SET] Detalle de evento guardado en [${cacheKey}] con TTL de 15 minutos.`,
+    );
 
     return responseDto;
   }
 }
-

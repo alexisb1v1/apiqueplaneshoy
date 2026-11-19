@@ -69,10 +69,11 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
         emailVerified: false,
       });
 
-      const verificationToken = this.tokenService.generateEmailVerificationToken({
-        sub: savedUser.publicUuid,
-        email: savedUser.email,
-      });
+      const verificationToken =
+        this.tokenService.generateEmailVerificationToken({
+          sub: savedUser.publicUuid,
+          email: savedUser.email,
+        });
 
       await this.emailService.sendVerificationEmail(
         savedUser.email,

@@ -37,7 +37,9 @@ export interface RenderedEmailContent {
 
 function renderBrandedEmailLayout(params: BrandedLayoutParams): string {
   const safeCtaUrl = params.ctaUrl ? sanitizeHttpUrl(params.ctaUrl) : null;
-  const safeSupportEmail = escapeHtml(params.supportEmail || 'contacto@queplanhoy.com');
+  const safeSupportEmail = escapeHtml(
+    params.supportEmail || 'contacto@queplanhoy.com',
+  );
 
   const ctaBlock =
     safeCtaUrl && params.ctaLabel
@@ -149,7 +151,8 @@ export function buildVerificationEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Usuario');
   const html = renderBrandedEmailLayout({
-    preheader: 'Confirma tu correo para activar tus compras y eventos en queplanhoy.',
+    preheader:
+      'Confirma tu correo para activar tus compras y eventos en queplanhoy.',
     badge: 'Verificación',
     title: 'Confirma tu correo electrónico',
     greeting: `Hola, ${safeName}:`,
@@ -261,7 +264,8 @@ export function buildWelcomeGoogleEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Usuario');
   const html = renderBrandedEmailLayout({
-    preheader: 'Tu cuenta en queplanhoy quedó verificada automáticamente con Google.',
+    preheader:
+      'Tu cuenta en queplanhoy quedó verificada automáticamente con Google.',
     badge: 'Bienvenido',
     title: '¡Bienvenido a queplanhoy!',
     greeting: `Hola, ${safeName}:`,
@@ -302,7 +306,8 @@ export function buildOrganizerActivatedEmailContent(params: {
 }): RenderedEmailContent {
   const safeName = escapeHtml(params.name || 'Organizador');
   const html = renderBrandedEmailLayout({
-    preheader: 'Tu perfil comercial de Organizador ya está habilitado en queplanhoy.',
+    preheader:
+      'Tu perfil comercial de Organizador ya está habilitado en queplanhoy.',
     badge: 'Organizador',
     title: '¡Perfil de Organizador activado!',
     greeting: `Hola, ${safeName}:`,
@@ -396,7 +401,9 @@ export function buildEventPublishedEmailContent(params: {
   category?: string | null;
   supportEmail?: string;
 }): RenderedEmailContent {
-  const locationLine = [params.venueName, params.city].filter(Boolean).join(', ');
+  const locationLine = [params.venueName, params.city]
+    .filter(Boolean)
+    .join(', ');
   const html = renderBrandedEmailLayout({
     preheader: `Tu evento "${params.eventTitle}" ya está publicado y en venta.`,
     badge: 'Evento en vivo',
@@ -473,8 +480,10 @@ export function buildEventSubmittedForReviewEmailContent(params: {
       </p>
     `,
     ctaLabel: 'Revisar Evento en Backoffice',
-    ctaUrl: params.reviewUrl || 'https://backoffice.queplanhoy.com/events/approvals',
-    footerNote: 'Este correo se genera automáticamente al cambiar de estado Borrador a En Revisión.',
+    ctaUrl:
+      params.reviewUrl || 'https://backoffice.queplanhoy.com/events/approvals',
+    footerNote:
+      'Este correo se genera automáticamente al cambiar de estado Borrador a En Revisión.',
     supportEmail: params.supportEmail,
   });
 
@@ -516,7 +525,8 @@ export function buildEventObservedEmailContent(params: {
     `,
     ctaLabel: 'Editar y Subsanar Evento',
     ctaUrl: params.editUrl || 'https://queplanhoy.com/organizer/events',
-    footerNote: 'Si tienes dudas sobre las observaciones, puedes responder a este correo para comunicarte con nuestro equipo.',
+    footerNote:
+      'Si tienes dudas sobre las observaciones, puedes responder a este correo para comunicarte con nuestro equipo.',
     supportEmail: params.supportEmail,
   });
 
@@ -568,7 +578,9 @@ export function buildAdvancePaidEmailContent(params: {
         </tr>
       </table>
     `,
-    ctaLabel: params.voucherUrl ? 'Descargar constancia de transferencia' : undefined,
+    ctaLabel: params.voucherUrl
+      ? 'Descargar constancia de transferencia'
+      : undefined,
     ctaUrl: params.voucherUrl || undefined,
     footerNote:
       'Este anticipo se descontará automáticamente en el cierre contable de tu liquidación final.',
@@ -870,4 +882,3 @@ export function buildOrderTicketsEmailContent(params: {
     text,
   };
 }
-

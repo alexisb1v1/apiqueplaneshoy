@@ -4,7 +4,8 @@ import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ListEventApprovalsQueryDto {
   @ApiPropertyOptional({
-    description: 'Filtro por estado de aprobación: pending, in_review, published, observed, all',
+    description:
+      'Filtro por estado de aprobación: pending, in_review, published, observed, all',
     example: 'in_review',
     default: 'in_review',
   })
@@ -14,7 +15,8 @@ export class ListEventApprovalsQueryDto {
   status?: string = 'in_review';
 
   @ApiPropertyOptional({
-    description: 'Búsqueda por nombre del evento, recinto o nombre de organizador',
+    description:
+      'Búsqueda por nombre del evento, recinto o nombre de organizador',
     example: 'Cumbia',
   })
   @IsOptional()
@@ -44,4 +46,3 @@ export class ListEventApprovalsQueryDto {
   @Max(100)
   limit?: number = 10;
 }
-

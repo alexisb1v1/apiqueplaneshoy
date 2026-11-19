@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Res,
+} from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -15,7 +22,7 @@ import {
 @ApiTags('Auth')
 @Controller('auth')
 export class LoginUserController {
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -26,7 +33,10 @@ export class LoginUserController {
     type: LoginUserResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
-  @ApiResponse({ status: 401, description: 'Credenciales de acceso incorrectas' })
+  @ApiResponse({
+    status: 401,
+    description: 'Credenciales de acceso incorrectas',
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async execute(
     @Body() dto: LoginUserRequestDto,
@@ -42,13 +52,18 @@ export class LoginUserController {
             dto.origin === 'backoffice'
               ? ADMIN_REFRESH_TOKEN_COOKIE_NAME
               : REFRESH_TOKEN_COOKIE_NAME;
-          res.cookie(cookieName, response.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+          res.cookie(
+            cookieName,
+            response.refreshToken,
+            REFRESH_TOKEN_COOKIE_OPTIONS,
+          );
         }
         return response;
       },
       {
         UNAUTHORIZED: 'Credenciales de acceso inválidas',
-        FORBIDDEN: 'Acceso no permitido para este tipo de cuenta en esta plataforma',
+        FORBIDDEN:
+          'Acceso no permitido para este tipo de cuenta en esta plataforma',
       },
     );
   }

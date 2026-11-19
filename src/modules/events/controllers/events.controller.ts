@@ -13,7 +13,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateEventDto } from '../dto/create-event.dto';
 import { UpdateEventDto } from '../dto/update-event.dto';
 import { FeaturedEventResponseDto } from '../dto/featured-event.response.dto';
@@ -48,8 +53,14 @@ import { GetOrganizerEventReportQuery } from '../queries/impl/get-organizer-even
 import { GetEventSettlementQuery } from '../queries/impl/get-event-settlement.query';
 import { ListAdminSettlementsQuery } from '../queries/impl/list-admin-settlements.query';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
-import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
+import {
+  JwtAuthGuard,
+  AuthenticatedRequest,
+} from '@auth/infrastructure/guards/jwt-auth.guard';
 import { matchResult } from '@common/http/match-result';
 import { plainToInstance } from 'class-transformer';
 import { EventStatusCronService } from '../services/event-status-cron.service';
@@ -76,14 +87,18 @@ export class EventsController {
     private readonly redisService: RedisService,
     private readonly eventStatusCronService: EventStatusCronService,
     private readonly eventSeederService: EventSeederService,
-  ) { }
+  ) {}
 
   @Get('featured')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener eventos destacados para el Hero Carousel de portada (Caché Redis 12h)' })
+  @ApiOperation({
+    summary:
+      'Obtener eventos destacados para el Hero Carousel de portada (Caché Redis 12h)',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Lista de hasta 5 eventos estelares para la cabecera (desde Redis o BD)',
+    description:
+      'Lista de hasta 5 eventos estelares para la cabecera (desde Redis o BD)',
     type: [FeaturedEventResponseDto],
   })
   async getFeatured(): Promise<FeaturedEventResponseDto[]> {
@@ -92,10 +107,14 @@ export class EventsController {
 
   @Post('featured/cache/purge')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Invalidar la caché de Redis del Hero Carousel y recrearla inmediatamente' })
+  @ApiOperation({
+    summary:
+      'Invalidar la caché de Redis del Hero Carousel y recrearla inmediatamente',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Caché invalidada y regenerada en caliente con nuevo TTL de 12 horas',
+    description:
+      'Caché invalidada y regenerada en caliente con nuevo TTL de 12 horas',
     type: PurgeFeaturedCacheResponseDto,
   })
   async purgeAndRecreateFeaturedCache(): Promise<PurgeFeaturedCacheResponseDto> {
@@ -115,7 +134,8 @@ export class EventsController {
         count: freshEvents.length,
         cacheKey: REDIS_CACHE_KEYS.HOME.HERO,
         ttlSeconds: REDIS_DEFAULT_TTL.FEATURED_EVENTS_SECONDS,
-        message: 'Caché de eventos destacados invalidada y recreada exitosamente en Redis (qph:home:hero) con nuevo TTL de 12 horas.',
+        message:
+          'Caché de eventos destacados invalidada y recreada exitosamente en Redis (qph:home:hero) con nuevo TTL de 12 horas.',
       },
       { excludeExtraneousValues: true },
     );
@@ -123,7 +143,10 @@ export class EventsController {
 
   @Delete('featured/cache')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Eliminar a demanda la clave de caché de eventos destacados en Redis' })
+  @ApiOperation({
+    summary:
+      'Eliminar a demanda la clave de caché de eventos destacados en Redis',
+  })
   @ApiResponse({
     status: 200,
     description: 'Clave eliminada de Redis',
@@ -150,7 +173,10 @@ export class EventsController {
 
   @Get('upcoming')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener próximos eventos ordenados cronológicamente (Caché Redis: qph:home:upcoming)' })
+  @ApiOperation({
+    summary:
+      'Obtener próximos eventos ordenados cronológicamente (Caché Redis: qph:home:upcoming)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de eventos próximos para la sección Home',
@@ -162,7 +188,10 @@ export class EventsController {
 
   @Get('weekly-featured')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener eventos destacados de la semana (Caché Redis: qph:home:weekly_featured)' })
+  @ApiOperation({
+    summary:
+      'Obtener eventos destacados de la semana (Caché Redis: qph:home:weekly_featured)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de eventos destacados semanales para la sección Home',
@@ -174,7 +203,10 @@ export class EventsController {
 
   @Get('weekend')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener planes para el fin de semana (Caché Redis: qph:home:weekend)' })
+  @ApiOperation({
+    summary:
+      'Obtener planes para el fin de semana (Caché Redis: qph:home:weekend)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de eventos para el fin de semana para la sección Home',
@@ -186,27 +218,40 @@ export class EventsController {
 
   @Get('landing/:slug')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener configuración enriquecida de Landing Page por slug (Caché Redis: qph:events:landing:{slug})' })
+  @ApiOperation({
+    summary:
+      'Obtener configuración enriquecida de Landing Page por slug (Caché Redis: qph:events:landing:{slug})',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Configuración visual, zonas y contenido del Landing del evento',
+    description:
+      'Configuración visual, zonas y contenido del Landing del evento',
     type: EventLandingResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Evento no encontrado o no tiene landing habilitada' })
+  @ApiResponse({
+    status: 404,
+    description: 'Evento no encontrado o no tiene landing habilitada',
+  })
   async getLanding(
     @Param('slug') slug: string,
     @Query('previewTemp') previewTemp?: string,
   ): Promise<EventLandingResponseDto> {
     const isPreview = Boolean(previewTemp);
-    return this.queryBus.execute(new GetEventLandingQuery(slug, isPreview, previewTemp));
+    return this.queryBus.execute(
+      new GetEventLandingQuery(slug, isPreview, previewTemp),
+    );
   }
 
   @Post('home/cache/purge')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Invalidar todas las cachés de la Home (qph:home:*) y regenerarlas en caliente' })
+  @ApiOperation({
+    summary:
+      'Invalidar todas las cachés de la Home (qph:home:*) y regenerarlas en caliente',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Todas las secciones de la Home invalidadas y repobladas en Redis',
+    description:
+      'Todas las secciones de la Home invalidadas y repobladas en Redis',
   })
   async purgeAndRecreateHomeCache() {
     // 1. Borrar todas las claves bajo la carpeta qph:home:*
@@ -229,7 +274,8 @@ export class EventsController {
         weeklyFeaturedCount: (weekly as any[]).length,
         weekendCount: (weekend as any[]).length,
       },
-      message: 'Todas las secciones de la Home (qph:home:*) fueron invalidadas y precalentadas en Redis exitosamente.',
+      message:
+        'Todas las secciones de la Home (qph:home:*) fueron invalidadas y precalentadas en Redis exitosamente.',
     };
   }
 
@@ -238,11 +284,13 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Listar los eventos creados por el organizador autenticado con métricas reales por zona',
+    summary:
+      'Listar los eventos creados por el organizador autenticado con métricas reales por zona',
   })
   @ApiResponse({
     status: 200,
-    description: 'Listado de eventos del promotor con aforos, preventas activas y recaudación en S/.',
+    description:
+      'Listado de eventos del promotor con aforos, preventas activas y recaudación en S/.',
     type: [OrganizerEventResponseDto],
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
@@ -252,7 +300,12 @@ export class EventsController {
   ): Promise<OrganizerEventResponseDto[]> {
     const publicUuid = req.user?.sub as string;
     const result = await this.queryBus.execute(
-      new GetOrganizerEventsQuery(publicUuid, filters.status, filters.q, filters.period),
+      new GetOrganizerEventsQuery(
+        publicUuid,
+        filters.status,
+        filters.q,
+        filters.period,
+      ),
     );
     return matchResult(result, (events) => events);
   }
@@ -262,7 +315,8 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Obtener datos completos de un evento/borrador del organizador para su edición',
+    summary:
+      'Obtener datos completos de un evento/borrador del organizador para su edición',
   })
   @ApiResponse({
     status: 200,
@@ -270,7 +324,10 @@ export class EventsController {
     type: OrganizerEventEditResponseDto,
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permiso para editar este evento' })
+  @ApiResponse({
+    status: 403,
+    description: 'No tienes permiso para editar este evento',
+  })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async getOrganizerEventForEdit(
     @Req() req: AuthenticatedRequest,
@@ -288,15 +345,20 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Obtener reporte completo de ventas, recaudación, aforos y órdenes recientes del evento',
+    summary:
+      'Obtener reporte completo de ventas, recaudación, aforos y órdenes recientes del evento',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reporte de ventas y métricas operativas del evento para el organizador',
+    description:
+      'Reporte de ventas y métricas operativas del evento para el organizador',
     type: OrganizerEventReportResponseDto,
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permiso para ver este evento' })
+  @ApiResponse({
+    status: 403,
+    description: 'No tienes permiso para ver este evento',
+  })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async getOrganizerEventReport(
     @Req() req: AuthenticatedRequest,
@@ -314,7 +376,8 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Obtener resumen y estado de la liquidación del evento para el promotor',
+    summary:
+      'Obtener resumen y estado de la liquidación del evento para el promotor',
   })
   @ApiResponse({
     status: 200,
@@ -322,7 +385,10 @@ export class EventsController {
     type: EventSettlementResponseDto,
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permiso para ver este evento' })
+  @ApiResponse({
+    status: 403,
+    description: 'No tienes permiso para ver este evento',
+  })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async getOrganizerEventSettlement(
     @Req() req: AuthenticatedRequest,
@@ -340,18 +406,29 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Solicitar liquidación final y desembolso de fondos del evento indicando cuenta bancaria',
+    summary:
+      'Solicitar liquidación final y desembolso de fondos del evento indicando cuenta bancaria',
   })
   @ApiResponse({
     status: 201,
-    description: 'Solicitud de liquidación registrada exitosamente con estado requested',
+    description:
+      'Solicitud de liquidación registrada exitosamente con estado requested',
     type: EventSettlementResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Datos bancarios inválidos o sin fondos para liquidar' })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos bancarios inválidos o sin fondos para liquidar',
+  })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permiso para solicitar la liquidación' })
+  @ApiResponse({
+    status: 403,
+    description: 'No tienes permiso para solicitar la liquidación',
+  })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
-  @ApiResponse({ status: 409, description: 'Ya existe una solicitud de liquidación en proceso' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe una solicitud de liquidación en proceso',
+  })
   async requestOrganizerEventSettlement(
     @Req() req: AuthenticatedRequest,
     @Param('identifier') identifier: string,
@@ -361,16 +438,15 @@ export class EventsController {
     const result = await this.commandBus.execute(
       new RequestEventSettlementCommand(publicUuid, identifier, dto),
     );
-    return matchResult(
-      result,
-      (settlement) => settlement,
-      {
-        SETTLEMENT_ALREADY_REQUESTED: 'Ya existe una solicitud de liquidación registrada o en proceso para este evento.',
-        NO_FUNDS_TO_SETTLE: 'El evento no cuenta con entradas vendidas o recaudación neta positiva para liquidar.',
-        FORBIDDEN: 'No tienes permiso para solicitar la liquidación de este evento.',
-        NOT_FOUND: 'Evento no encontrado.',
-      },
-    );
+    return matchResult(result, (settlement) => settlement, {
+      SETTLEMENT_ALREADY_REQUESTED:
+        'Ya existe una solicitud de liquidación registrada o en proceso para este evento.',
+      NO_FUNDS_TO_SETTLE:
+        'El evento no cuenta con entradas vendidas o recaudación neta positiva para liquidar.',
+      FORBIDDEN:
+        'No tienes permiso para solicitar la liquidación de este evento.',
+      NOT_FOUND: 'Evento no encontrado.',
+    });
   }
 
   // =========================================================================
@@ -383,19 +459,28 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Listar eventos para moderación de forma ligera y paginada (Backoffice)',
+    summary:
+      'Listar eventos para moderación de forma ligera y paginada (Backoffice)',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista ligera de eventos para aprobación',
     type: ListEventApprovalsResponseDto,
   })
-  @ApiResponse({ status: 401, description: 'Token de autenticación faltante o inválido' })
-  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticación faltante o inválido',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Acceso restringido a administradores',
+  })
   async listEventApprovals(
     @Query() queryDto: ListEventApprovalsQueryDto,
   ): Promise<ListEventApprovalsResponseDto> {
-    const result = await this.queryBus.execute(new ListEventApprovalsQuery(queryDto));
+    const result = await this.queryBus.execute(
+      new ListEventApprovalsQuery(queryDto),
+    );
     return matchResult(result, (data: ListEventApprovalsResponseDto) => data, {
       FORBIDDEN: 'Acceso no permitido',
       INTERNAL_ERROR: 'Error al consultar aprobaciones de eventos',
@@ -409,14 +494,19 @@ export class EventsController {
   @ApiOperation({
     summary: 'Aprobar y publicar un evento desde el Backoffice',
   })
-  @ApiResponse({ status: 200, description: 'Evento aprobado y publicado exitosamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evento aprobado y publicado exitosamente',
+  })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async approveEvent(
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
   ) {
     const adminUser = req.user?.email || (req.user?.sub as string) || 'admin';
-    const result = await this.commandBus.execute(new ApproveEventCommand(id, adminUser));
+    const result = await this.commandBus.execute(
+      new ApproveEventCommand(id, adminUser),
+    );
     return matchResult(
       result,
       (event: EventEntity) => ({
@@ -440,11 +530,10 @@ export class EventsController {
   })
   @ApiResponse({ status: 200, description: 'Evento observado exitosamente' })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
-  async observeEvent(
-    @Param('id') id: string,
-    @Body() dto: ObserveEventDto,
-  ) {
-    const result = await this.commandBus.execute(new ObserveEventCommand(id, dto?.reason));
+  async observeEvent(@Param('id') id: string, @Body() dto: ObserveEventDto) {
+    const result = await this.commandBus.execute(
+      new ObserveEventCommand(id, dto?.reason),
+    );
     return matchResult(
       result,
       (event: EventEntity) => ({
@@ -467,20 +556,24 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesAdminGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Listar solicitudes de liquidación de eventos para el Backoffice' })
-  @ApiResponse({ status: 200, description: 'Listado de liquidaciones', type: [AdminSettlementListResponseDto] })
+  @ApiOperation({
+    summary: 'Listar solicitudes de liquidación de eventos para el Backoffice',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de liquidaciones',
+    type: [AdminSettlementListResponseDto],
+  })
   async listAdminSettlements(
     @Query('status') status?: string,
     @Query('search') search?: string,
   ) {
-    const result = await this.queryBus.execute(new ListAdminSettlementsQuery(status, search));
-    return matchResult(
-      result,
-      (data) => data,
-      {
-        INTERNAL_ERROR: 'Error al listar liquidaciones',
-      },
+    const result = await this.queryBus.execute(
+      new ListAdminSettlementsQuery(status, search),
     );
+    return matchResult(result, (data) => data, {
+      INTERNAL_ERROR: 'Error al listar liquidaciones',
+    });
   }
 
   @Post('admin/settlements/:id/pay')
@@ -488,14 +581,19 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Aprobar y pagar una solicitud de liquidación' })
-  @ApiResponse({ status: 200, description: 'Liquidación despachada y pagada exitosamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liquidación despachada y pagada exitosamente',
+  })
   async payAdminSettlement(
     @Param('id') id: string,
     @Body() dto: AdminPaySettlementRequestDto,
     @Req() req: AuthenticatedRequest,
   ) {
     const adminUserId = req.user?.id ?? null;
-    const result = await this.commandBus.execute(new AdminPaySettlementCommand(id, dto, adminUserId));
+    const result = await this.commandBus.execute(
+      new AdminPaySettlementCommand(id, dto, adminUserId),
+    );
     return matchResult(
       result,
       (data) => ({
@@ -515,14 +613,19 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rechazar una solicitud de liquidación' })
-  @ApiResponse({ status: 200, description: 'Liquidación rechazada exitosamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liquidación rechazada exitosamente',
+  })
   async rejectAdminSettlement(
     @Param('id') id: string,
     @Body() dto: AdminRejectSettlementRequestDto,
     @Req() req: AuthenticatedRequest,
   ) {
     const adminUserId = req.user?.id ?? null;
-    const result = await this.commandBus.execute(new AdminRejectSettlementCommand(id, dto, adminUserId));
+    const result = await this.commandBus.execute(
+      new AdminRejectSettlementCommand(id, dto, adminUserId),
+    );
     return matchResult(
       result,
       (data) => ({
@@ -539,18 +642,27 @@ export class EventsController {
 
   @Get(':identifier')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener detalle público completo de un evento por ID, UUID o slug (Caché Redis: qph:events:detail:{identifier})' })
+  @ApiOperation({
+    summary:
+      'Obtener detalle público completo de un evento por ID, UUID o slug (Caché Redis: qph:events:detail:{identifier})',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Detalle del evento con recintos, funciones y zonas con tarifas activas',
+    description:
+      'Detalle del evento con recintos, funciones y zonas con tarifas activas',
     type: EventDetailResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Evento no encontrado o no publicado' })
+  @ApiResponse({
+    status: 404,
+    description: 'Evento no encontrado o no publicado',
+  })
   async getDetail(
     @Param('identifier') identifier: string,
     @Query('skipCache') skipCache?: string,
   ): Promise<EventDetailResponseDto> {
-    return this.queryBus.execute(new GetEventDetailQuery(identifier, skipCache === 'true'));
+    return this.queryBus.execute(
+      new GetEventDetailQuery(identifier, skipCache === 'true'),
+    );
   }
 
   @Post()
@@ -558,27 +670,28 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear un nuevo evento en estado borrador (draft)' })
-  @ApiResponse({ status: 201, description: 'Evento creado exitosamente como borrador' })
+  @ApiResponse({
+    status: 201,
+    description: 'Evento creado exitosamente como borrador',
+  })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async create(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateEventDto,
-  ) {
+  async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateEventDto) {
     const publicUuid = req.user?.sub as string;
-    const result = await this.commandBus.execute(new CreateEventCommand(publicUuid, dto));
-    return matchResult(
-      result,
-      (event) => event,
+    const result = await this.commandBus.execute(
+      new CreateEventCommand(publicUuid, dto),
     );
+    return matchResult(result, (event) => event);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un evento o guardar cambios de un borrador existente' })
+  @ApiOperation({
+    summary: 'Actualizar un evento o guardar cambios de un borrador existente',
+  })
   @ApiResponse({ status: 200, description: 'Evento actualizado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
@@ -600,26 +713,33 @@ export class EventsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Publicar un evento (requiere correo verificado del organizador)' })
-  @ApiResponse({ status: 200, description: 'Evento publicado y puesto en venta exitosamente' })
+  @ApiOperation({
+    summary: 'Publicar un evento (requiere correo verificado del organizador)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Evento publicado y puesto en venta exitosamente',
+  })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Debes verificar tu correo antes de publicar el evento' })
+  @ApiResponse({
+    status: 403,
+    description: 'Debes verificar tu correo antes de publicar el evento',
+  })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async publish(
     @Req() req: AuthenticatedRequest,
     @Param('id') eventIdentifier: string,
   ) {
     const publicUuid = req.user?.sub as string;
-    const result = await this.commandBus.execute(new PublishEventCommand(publicUuid, eventIdentifier));
-    return matchResult(
-      result,
-      (event) => event,
-      {
-        EMAIL_NOT_VERIFIED: 'Debes confirmar tu correo electrónico antes de poder publicar un evento.',
-        FORBIDDEN: 'No tienes permisos para publicar este evento.',
-        NOT_FOUND: 'Evento no encontrado.',
-      },
+    const result = await this.commandBus.execute(
+      new PublishEventCommand(publicUuid, eventIdentifier),
     );
+    return matchResult(result, (event) => event, {
+      EMAIL_NOT_VERIFIED:
+        'Debes confirmar tu correo electrónico antes de poder publicar un evento.',
+      FORBIDDEN: 'No tienes permisos para publicar este evento.',
+      NOT_FOUND: 'Evento no encontrado.',
+    });
   }
 
   @Post('admin/sync-expired-status')
@@ -627,9 +747,18 @@ export class EventsController {
   @UseGuards(AdminKeyGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Ejecutar manualmente la sincronización de shows y eventos vencidos (Cron de 1:00 AM) [Requiere x-admin-key o admin]' })
-  @ApiResponse({ status: 200, description: 'Sincronización manual ejecutada exitosamente' })
-  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
+  @ApiOperation({
+    summary:
+      'Ejecutar manualmente la sincronización de shows y eventos vencidos (Cron de 1:00 AM) [Requiere x-admin-key o admin]',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Sincronización manual ejecutada exitosamente',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Acceso restringido a administradores',
+  })
   async syncExpiredStatus() {
     return this.eventStatusCronService.syncExpiredShowsAndEvents();
   }
@@ -640,15 +769,20 @@ export class EventsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Carga masiva de eventos de prueba (definir cantidad por query o body) [Requiere x-admin-key o admin]',
-    description: 'Genera N eventos de prueba completos (con funciones pasadas, de hoy y futuras, zonas, preventas y fotos). Sincroniza MeiliSearch y purga Redis.',
+    summary:
+      'Carga masiva de eventos de prueba (definir cantidad por query o body) [Requiere x-admin-key o admin]',
+    description:
+      'Genera N eventos de prueba completos (con funciones pasadas, de hoy y futuras, zonas, preventas y fotos). Sincroniza MeiliSearch y purga Redis.',
   })
   @ApiResponse({
     status: 201,
     description: 'Eventos generados exitosamente con sus relaciones completas',
     type: SeedEventsResponseDto,
   })
-  @ApiResponse({ status: 403, description: 'Acceso restringido a administradores' })
+  @ApiResponse({
+    status: 403,
+    description: 'Acceso restringido a administradores',
+  })
   async seedEvents(
     @Query() queryDto: SeedEventsRequestDto,
     @Body() bodyDto?: SeedEventsRequestDto,

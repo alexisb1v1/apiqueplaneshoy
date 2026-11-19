@@ -51,4 +51,3 @@ export class FeaturedEventResponseDto {
   @Expose()
   isFeatured: boolean;
 }
-

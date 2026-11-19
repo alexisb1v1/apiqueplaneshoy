@@ -10,11 +10,17 @@ export class EventApprovalZoneDto {
   @Expose()
   regularPrice: number;
 
-  @ApiProperty({ example: 12.0, description: 'Comisión oficial asignada de ticketera' })
+  @ApiProperty({
+    example: 12.0,
+    description: 'Comisión oficial asignada de ticketera',
+  })
   @Expose()
   serviceFee: number;
 
-  @ApiProperty({ example: false, description: 'Indica si la comisión está incluida en el precio' })
+  @ApiProperty({
+    example: false,
+    description: 'Indica si la comisión está incluida en el precio',
+  })
   @Expose()
   feeIncluded: boolean;
 
@@ -28,11 +34,17 @@ export class EventApprovalShowDto {
   @Expose()
   id: string;
 
-  @ApiProperty({ example: 'Función Principal', description: 'Nombre de la función' })
+  @ApiProperty({
+    example: 'Función Principal',
+    description: 'Nombre de la función',
+  })
   @Expose()
   name: string;
 
-  @ApiProperty({ example: '2026-11-20T20:00:00Z', description: 'Fecha y hora de inicio' })
+  @ApiProperty({
+    example: '2026-11-20T20:00:00Z',
+    description: 'Fecha y hora de inicio',
+  })
   @Expose()
   startTime: string;
 
@@ -64,7 +76,10 @@ export class EventApprovalFaqDto {
   @Expose()
   question: string;
 
-  @ApiProperty({ example: 'Sí, gratuito en el recinto.', description: 'Respuesta' })
+  @ApiProperty({
+    example: 'Sí, gratuito en el recinto.',
+    description: 'Respuesta',
+  })
   @Expose()
   answer: string;
 }
@@ -75,19 +90,31 @@ export class EventApprovalSummaryDto {
   @Expose()
   id: string;
 
-  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', description: 'UUID público' })
+  @ApiProperty({
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'UUID público',
+  })
   @Expose()
   publicUuid: string;
 
-  @ApiProperty({ example: 'festival-cumbia-all-stars-2026', description: 'Slug del evento' })
+  @ApiProperty({
+    example: 'festival-cumbia-all-stars-2026',
+    description: 'Slug del evento',
+  })
   @Expose()
   slug: string;
 
-  @ApiProperty({ example: 'Festival Cumbia All Stars 2026', description: 'Título comercial' })
+  @ApiProperty({
+    example: 'Festival Cumbia All Stars 2026',
+    description: 'Título comercial',
+  })
   @Expose()
   title: string;
 
-  @ApiPropertyOptional({ example: 'Gran festival de cumbia con orquestas en vivo...', description: 'Descripción o sinopsis' })
+  @ApiPropertyOptional({
+    example: 'Gran festival de cumbia con orquestas en vivo...',
+    description: 'Descripción o sinopsis',
+  })
   @Expose()
   description: string | null;
 
@@ -95,47 +122,80 @@ export class EventApprovalSummaryDto {
   @Expose()
   category: string;
 
-  @ApiProperty({ example: 'in_review', description: 'Estado: draft, in_review, published, observed' })
+  @ApiProperty({
+    example: 'in_review',
+    description: 'Estado: draft, in_review, published, observed',
+  })
   @Expose()
   status: string;
 
-  @ApiPropertyOptional({ example: 'Falta adjuntar contrato de recinto', description: 'Motivo de observación si aplica' })
+  @ApiPropertyOptional({
+    example: 'Falta adjuntar contrato de recinto',
+    description: 'Motivo de observación si aplica',
+  })
   @Expose()
   observationReason: string | null;
 
-  @ApiPropertyOptional({ example: 'Explanada Olguín - Jockey Club', description: 'Nombre del recinto' })
+  @ApiPropertyOptional({
+    example: 'Explanada Olguín - Jockey Club',
+    description: 'Nombre del recinto',
+  })
   @Expose()
   venue: string | null;
 
-  @ApiPropertyOptional({ example: 'Av. Manuel Olguín 200', description: 'Dirección física' })
+  @ApiPropertyOptional({
+    example: 'Av. Manuel Olguín 200',
+    description: 'Dirección física',
+  })
   @Expose()
   address: string | null;
 
-  @ApiPropertyOptional({ example: 'Frente a puerta 4', description: 'Referencia' })
+  @ApiPropertyOptional({
+    example: 'Frente a puerta 4',
+    description: 'Referencia',
+  })
   @Expose()
   addressReference: string | null;
 
-  @ApiProperty({ example: 'Lima', description: 'Ciudad / Departamento derivado de ubigeo' })
+  @ApiProperty({
+    example: 'Lima',
+    description: 'Ciudad / Departamento derivado de ubigeo',
+  })
   @Expose()
   city: string;
 
-  @ApiPropertyOptional({ example: 'https://maps.google.com/...', description: 'Link Google Maps' })
+  @ApiPropertyOptional({
+    example: 'https://maps.google.com/...',
+    description: 'Link Google Maps',
+  })
   @Expose()
   googleMapsUrl: string | null;
 
-  @ApiProperty({ example: 'Entretenimiento Viva SAC', description: 'Nombre o razón social del organizador' })
+  @ApiProperty({
+    example: 'Entretenimiento Viva SAC',
+    description: 'Nombre o razón social del organizador',
+  })
   @Expose()
   organizerName: string;
 
-  @ApiPropertyOptional({ example: '20601984210', description: 'RUC o documento del organizador' })
+  @ApiPropertyOptional({
+    example: '20601984210',
+    description: 'RUC o documento del organizador',
+  })
   @Expose()
   organizerDocumentNumber: string | null;
 
-  @ApiPropertyOptional({ example: 'contacto@viva.pe', description: 'Email del organizador' })
+  @ApiPropertyOptional({
+    example: 'contacto@viva.pe',
+    description: 'Email del organizador',
+  })
   @Expose()
   organizerEmail: string | null;
 
-  @ApiPropertyOptional({ example: '999888777', description: 'Teléfono del organizador' })
+  @ApiPropertyOptional({
+    example: '999888777',
+    description: 'Teléfono del organizador',
+  })
   @Expose()
   organizerPhone: string | null;
 
@@ -143,19 +203,31 @@ export class EventApprovalSummaryDto {
   @Expose()
   ageRestriction: string | null;
 
-  @ApiPropertyOptional({ example: 'DNI obligatorio en puerta', description: 'Requisitos de acceso' })
+  @ApiPropertyOptional({
+    example: 'DNI obligatorio en puerta',
+    description: 'Requisitos de acceso',
+  })
   @Expose()
   entryRequirements: string | null;
 
-  @ApiPropertyOptional({ example: 'Puertas abren 2 horas antes', description: 'Comentario horarios' })
+  @ApiPropertyOptional({
+    example: 'Puertas abren 2 horas antes',
+    description: 'Comentario horarios',
+  })
   @Expose()
   openingHoursComment: string | null;
 
-  @ApiPropertyOptional({ example: 'https://cdn.../terms.pdf', description: 'Términos y condiciones legales' })
+  @ApiPropertyOptional({
+    example: 'https://cdn.../terms.pdf',
+    description: 'Términos y condiciones legales',
+  })
   @Expose()
   termsAndConditionsUrl: string | null;
 
-  @ApiPropertyOptional({ example: 'https://cdn.../banner.webp', description: 'URL de imagen de portada' })
+  @ApiPropertyOptional({
+    example: 'https://cdn.../banner.webp',
+    description: 'URL de imagen de portada',
+  })
   @Expose()
   bannerImageUrl: string | null;
 
@@ -163,11 +235,17 @@ export class EventApprovalSummaryDto {
   @Expose()
   hasLandingPage: boolean;
 
-  @ApiPropertyOptional({ example: '2026-11-14T20:00:00Z', description: 'Fecha y hora del primer show' })
+  @ApiPropertyOptional({
+    example: '2026-11-14T20:00:00Z',
+    description: 'Fecha y hora del primer show',
+  })
   @Expose()
   firstShowDate: string | null;
 
-  @ApiProperty({ example: 12500, description: 'Aforo total sumado de todas las zonas' })
+  @ApiProperty({
+    example: 12500,
+    description: 'Aforo total sumado de todas las zonas',
+  })
   @Expose()
   totalCapacity: number;
 
@@ -175,31 +253,49 @@ export class EventApprovalSummaryDto {
   @Expose()
   minPrice: number;
 
-  @ApiProperty({ example: 280.0, description: 'Precio regular máximo de zonas' })
+  @ApiProperty({
+    example: 280.0,
+    description: 'Precio regular máximo de zonas',
+  })
   @Expose()
   maxPrice: number;
 
-  @ApiProperty({ type: () => [EventApprovalZoneDto], description: 'Zonas y tarifario del evento' })
+  @ApiProperty({
+    type: () => [EventApprovalZoneDto],
+    description: 'Zonas y tarifario del evento',
+  })
   @Expose()
   @Type(() => EventApprovalZoneDto)
   zones: EventApprovalZoneDto[];
 
-  @ApiProperty({ type: () => [EventApprovalShowDto], description: 'Shows y fechas programadas' })
+  @ApiProperty({
+    type: () => [EventApprovalShowDto],
+    description: 'Shows y fechas programadas',
+  })
   @Expose()
   @Type(() => EventApprovalShowDto)
   shows: EventApprovalShowDto[];
 
-  @ApiProperty({ type: () => [EventApprovalCouponDto], description: 'Cupones del evento' })
+  @ApiProperty({
+    type: () => [EventApprovalCouponDto],
+    description: 'Cupones del evento',
+  })
   @Expose()
   @Type(() => EventApprovalCouponDto)
   coupons: EventApprovalCouponDto[];
 
-  @ApiProperty({ type: () => [EventApprovalFaqDto], description: 'Preguntas frecuentes' })
+  @ApiProperty({
+    type: () => [EventApprovalFaqDto],
+    description: 'Preguntas frecuentes',
+  })
   @Expose()
   @Type(() => EventApprovalFaqDto)
   faqs: EventApprovalFaqDto[];
 
-  @ApiProperty({ example: '2026-11-12T10:00:00Z', description: 'Fecha de creación' })
+  @ApiProperty({
+    example: '2026-11-12T10:00:00Z',
+    description: 'Fecha de creación',
+  })
   @Expose()
   createdAt: string;
 }
@@ -222,11 +318,17 @@ export class EventApprovalsMetaDto {
   @Expose()
   totalPages: number;
 
-  @ApiProperty({ example: 12, description: 'Conteo total pendientes de revisión' })
+  @ApiProperty({
+    example: 12,
+    description: 'Conteo total pendientes de revisión',
+  })
   @Expose()
   pendingCount: number;
 
-  @ApiProperty({ example: 45, description: 'Conteo total publicados/aprobados' })
+  @ApiProperty({
+    example: 45,
+    description: 'Conteo total publicados/aprobados',
+  })
   @Expose()
   publishedCount: number;
 
@@ -247,4 +349,3 @@ export class ListEventApprovalsResponseDto {
   @Type(() => EventApprovalsMetaDto)
   meta: EventApprovalsMetaDto;
 }
-

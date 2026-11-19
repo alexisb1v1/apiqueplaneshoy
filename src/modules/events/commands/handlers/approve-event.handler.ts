@@ -13,7 +13,10 @@ import { MailService } from '@modules/mail/mail.service';
 import { QPH_FEE_RULES } from '../../../orders/application/services/platform-fee.service';
 
 @CommandHandler(ApproveEventCommand)
-export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand, Result<EventEntity, AppError>> {
+export class ApproveEventHandler implements ICommandHandler<
+  ApproveEventCommand,
+  Result<EventEntity, AppError>
+> {
   constructor(
     @InjectRepository(EventEntity)
     private readonly eventRepository: Repository<EventEntity>,
@@ -25,7 +28,9 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
     private readonly mailService: MailService,
   ) {}
 
-  async execute(command: ApproveEventCommand): Promise<Result<EventEntity, AppError>> {
+  async execute(
+    command: ApproveEventCommand,
+  ): Promise<Result<EventEntity, AppError>> {
     const { eventIdentifier, approvedBy } = command;
 
     let event: EventEntity | null = null;
@@ -59,7 +64,8 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
     const validPrices = (zones || [])
       .map((z) => Number(z.regularPrice))
       .filter((p) => !isNaN(p) && p > 0);
-    const calculatedMinPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
+    const calculatedMinPrice =
+      validPrices.length > 0 ? Math.min(...validPrices) : 0;
 
     let bannerUrl: string | null = null;
     let firstShowDate: string | null = null;
@@ -76,7 +82,8 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
         bannerUrl = bannerImg?.imageUrl || null;
 
         const firstShow = (eventWithMedia.shows || []).sort(
-          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         )[0];
         firstShowDate = firstShow?.startTime
           ? new Date(firstShow.startTime).toISOString()
@@ -90,7 +97,10 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
     if (!event.signingPublicKey) {
       try {
         const { publicKey } = crypto.generateKeyPairSync('ed25519');
-        event.signingPublicKey = publicKey.export({ type: 'spki', format: 'pem' }) as string;
+        event.signingPublicKey = publicKey.export({
+          type: 'spki',
+          format: 'pem',
+        }) as string;
         if (!event.signingKeyId) {
           event.signingKeyId = crypto.randomUUID();
         }
@@ -139,7 +149,11 @@ export class ApproveEventHandler implements ICommandHandler<ApproveEventCommand,
         address: updated.address || '',
         status: updated.status,
         minPrice: calculatedMinPrice,
-        date: firstShowDate || (updated.createdAt ? updated.createdAt.toISOString() : new Date().toISOString()),
+        date:
+          firstShowDate ||
+          (updated.createdAt
+            ? updated.createdAt.toISOString()
+            : new Date().toISOString()),
         bannerUrl: bannerUrl,
         hasLandingPage: updated.hasLandingPage,
         isFeatured: updated.isFeatured,

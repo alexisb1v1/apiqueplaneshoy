@@ -3,4 +3,3 @@ import { GoogleCallbackRequestDto } from '@auth/interfaces/http/v1/google-auth/d
 export class GoogleCallbackCommand {
   constructor(public readonly dto: GoogleCallbackRequestDto) {}
 }
-

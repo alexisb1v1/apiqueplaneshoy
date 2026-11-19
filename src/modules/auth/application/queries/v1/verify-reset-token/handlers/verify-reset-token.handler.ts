@@ -48,9 +48,10 @@ export class VerifyResetTokenHandler implements IQueryHandler<VerifyResetTokenQu
 
       return ok(new VerifyResetTokenResponseDto(true, maskedEmail));
     } catch (error) {
-      this.logger.error(`Error al verificar token: ${(error as Error).message}`);
+      this.logger.error(
+        `Error al verificar token: ${(error as Error).message}`,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

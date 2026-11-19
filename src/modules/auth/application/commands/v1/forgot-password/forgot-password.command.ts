@@ -3,4 +3,3 @@ import { ForgotPasswordRequestDto } from '@auth/interfaces/http/v1/forgot-passwo
 export class ForgotPasswordCommand {
   constructor(public readonly dto: ForgotPasswordRequestDto) {}
 }
-

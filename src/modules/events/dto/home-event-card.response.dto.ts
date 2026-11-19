@@ -4,7 +4,10 @@ import { ApiProperty } from '@nestjs/swagger';
 @Exclude()
 export class UrgencyBadgeDto {
   @Expose()
-  @ApiProperty({ example: 'Últimas 45 entradas', description: 'Texto del badge de urgencia' })
+  @ApiProperty({
+    example: 'Últimas 45 entradas',
+    description: 'Texto del badge de urgencia',
+  })
   text!: string;
 
   @Expose()
@@ -18,7 +21,8 @@ export class UrgencyBadgeDto {
   @Expose()
   @ApiProperty({
     example: 'hourglass_top',
-    description: 'Nombre del icono Material Symbols (hourglass_top, local_fire_department, stars, bolt)',
+    description:
+      'Nombre del icono Material Symbols (hourglass_top, local_fire_department, stars, bolt)',
   })
   icon!: string;
 }
@@ -26,27 +30,45 @@ export class UrgencyBadgeDto {
 @Exclude()
 export class HomeEventCardResponseDto {
   @Expose()
-  @ApiProperty({ example: '105', description: 'Identificador numérico del evento' })
+  @ApiProperty({
+    example: '105',
+    description: 'Identificador numérico del evento',
+  })
   id!: string;
 
   @Expose()
-  @ApiProperty({ example: 'a9b2c3d4-e5f6-4a1b-8c2d-9e0f1a2b3c4d', description: 'UUID público seguro' })
+  @ApiProperty({
+    example: 'a9b2c3d4-e5f6-4a1b-8c2d-9e0f1a2b3c4d',
+    description: 'UUID público seguro',
+  })
   publicUuid!: string;
 
   @Expose()
-  @ApiProperty({ example: 'cumbia-all-stars-amigos', description: 'Slug amigable para SEO' })
+  @ApiProperty({
+    example: 'cumbia-all-stars-amigos',
+    description: 'Slug amigable para SEO',
+  })
   slug!: string;
 
   @Expose()
-  @ApiProperty({ example: false, description: 'Indica si tiene Landing Page inmersiva' })
+  @ApiProperty({
+    example: false,
+    description: 'Indica si tiene Landing Page inmersiva',
+  })
   hasLandingPage!: boolean;
 
   @Expose()
-  @ApiProperty({ example: 'Cumbia All Stars & Amigos', description: 'Título comercial del evento' })
+  @ApiProperty({
+    example: 'Cumbia All Stars & Amigos',
+    description: 'Título comercial del evento',
+  })
   title!: string;
 
   @Expose()
-  @ApiProperty({ example: 'CONCERTS', description: 'Categoría oficial normalizada' })
+  @ApiProperty({
+    example: 'CONCERTS',
+    description: 'Categoría oficial normalizada',
+  })
   category!: string;
 
   @Expose()
@@ -66,23 +88,40 @@ export class HomeEventCardResponseDto {
   date!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'LIMA', description: 'Ciudad resuelta según código ubigeo INEI' })
+  @ApiProperty({
+    example: 'LIMA',
+    description: 'Ciudad resuelta según código ubigeo INEI',
+  })
   city!: string;
 
   @Expose()
-  @ApiProperty({ example: 'Explanada Estadio Nacional', description: 'Recinto o local', nullable: true })
+  @ApiProperty({
+    example: 'Explanada Estadio Nacional',
+    description: 'Recinto o local',
+    nullable: true,
+  })
   venue!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 'Una noche inolvidable al ritmo de la cumbia clásica...', description: 'Sinopsis corta' })
+  @ApiProperty({
+    example: 'Una noche inolvidable al ritmo de la cumbia clásica...',
+    description: 'Sinopsis corta',
+  })
   description!: string | null;
 
   @Expose()
-  @ApiProperty({ example: 35.0, description: 'Menor precio disponible entre las zonas activas' })
+  @ApiProperty({
+    example: 35.0,
+    description: 'Menor precio disponible entre las zonas activas',
+  })
   minPrice!: number;
 
   @Expose()
-  @ApiProperty({ example: 'GENERAL', description: 'Tipo de entrada destacada disponible (GENERAL, VIP DISPONIBLE, PLATINUM)' })
+  @ApiProperty({
+    example: 'GENERAL',
+    description:
+      'Tipo de entrada destacada disponible (GENERAL, VIP DISPONIBLE, PLATINUM)',
+  })
   ticketType!: string;
 
   @Expose()
@@ -95,7 +134,9 @@ export class HomeEventCardResponseDto {
 
   @Expose()
   @Type(() => UrgencyBadgeDto)
-  @ApiProperty({ type: UrgencyBadgeDto, description: 'Indicador dinámico de urgencia basado en aforo real' })
+  @ApiProperty({
+    type: UrgencyBadgeDto,
+    description: 'Indicador dinámico de urgencia basado en aforo real',
+  })
   urgencyBadge!: UrgencyBadgeDto;
 }
-

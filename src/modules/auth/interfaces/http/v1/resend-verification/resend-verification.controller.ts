@@ -13,7 +13,9 @@ export class ResendVerificationController {
 
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reenviar correo electrónico con token de verificación' })
+  @ApiOperation({
+    summary: 'Reenviar correo electrónico con token de verificación',
+  })
   @ApiResponse({
     status: 200,
     description: 'Correo de verificación reenviado exitosamente',
@@ -21,18 +23,24 @@ export class ResendVerificationController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  @ApiResponse({ status: 409, description: 'El correo electrónico ya se encuentra verificado' })
+  @ApiResponse({
+    status: 409,
+    description: 'El correo electrónico ya se encuentra verificado',
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async execute(
     @Body() dto: ResendVerificationRequestDto,
   ): Promise<ResendVerificationResponseDto> {
-    const result = await this.commandBus.execute(new ResendVerificationCommand(dto));
+    const result = await this.commandBus.execute(
+      new ResendVerificationCommand(dto),
+    );
 
     return matchResult(
       result,
       (response: ResendVerificationResponseDto) => response,
       {
-        NOT_FOUND: 'No se encontró ninguna cuenta asociada a este correo electrónico',
+        NOT_FOUND:
+          'No se encontró ninguna cuenta asociada a este correo electrónico',
         ALREADY_EXISTS: 'La cuenta ya se encuentra verificada previamente',
       },
     );

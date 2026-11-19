@@ -29,9 +29,15 @@ describe('GetOrganizerEventsHandler', () => {
   it('debe retornar err UNAUTHORIZED si el usuario del token no existe', async () => {
     const eventRepo = { find: jest.fn() } as any;
     const userRepo = { findOne: jest.fn().mockResolvedValue(null) } as any;
-    const dataSource = { createQueryBuilder: jest.fn() } as unknown as DataSource;
+    const dataSource = {
+      createQueryBuilder: jest.fn(),
+    } as unknown as DataSource;
 
-    const handler = new GetOrganizerEventsHandler(eventRepo, userRepo, dataSource);
+    const handler = new GetOrganizerEventsHandler(
+      eventRepo,
+      userRepo,
+      dataSource,
+    );
     const result = await handler.execute(new GetOrganizerEventsQuery(userUuid));
 
     expect(result.isErr()).toBe(true);
@@ -44,7 +50,9 @@ describe('GetOrganizerEventsHandler', () => {
   it('debe calcular eventCode desde publicUuid, precios de preventa, descuentos deduplicados y estados reales', async () => {
     const futureDate = new Date(Date.now() + 7 * 86400 * 1000);
     const userRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 9, publicUuid: userUuid, isOrganizer: true }),
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 9, publicUuid: userUuid, isOrganizer: true }),
     } as any;
 
     const eventRepo = {
@@ -61,7 +69,12 @@ describe('GetOrganizerEventsHandler', () => {
           venue: 'Estadio Aliardo Soria',
           address: 'Jr. Inmaculada 450',
           createdAt: new Date('2026-11-01T10:00:00.000Z'),
-          images: [{ imageType: 'banner', imageUrl: 'https://cdn.example.com/banner.webp' }],
+          images: [
+            {
+              imageType: 'banner',
+              imageUrl: 'https://cdn.example.com/banner.webp',
+            },
+          ],
           shows: [{ id: '1', startTime: futureDate }],
           settlement: null,
           advances: [{ id: '1' }],
@@ -142,7 +155,11 @@ describe('GetOrganizerEventsHandler', () => {
         .mockReturnValueOnce(orderDiscountsQb),
     } as unknown as DataSource;
 
-    const handler = new GetOrganizerEventsHandler(eventRepo, userRepo, dataSource);
+    const handler = new GetOrganizerEventsHandler(
+      eventRepo,
+      userRepo,
+      dataSource,
+    );
     const result = await handler.execute(new GetOrganizerEventsQuery(userUuid));
 
     expect(result.isOk()).toBe(true);
@@ -166,4 +183,3 @@ describe('GetOrganizerEventsHandler', () => {
     }
   });
 });
-

@@ -32,18 +32,34 @@ export class GoogleOAuthService {
   private readonly timeoutMs: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.clientId = (this.configService.get<string>('GOOGLE_CLIENT_ID') || '').trim();
-    this.clientSecret = (this.configService.get<string>('GOOGLE_CLIENT_SECRET') || '').trim();
+    this.clientId = (
+      this.configService.get<string>('GOOGLE_CLIENT_ID') || ''
+    ).trim();
+    this.clientSecret = (
+      this.configService.get<string>('GOOGLE_CLIENT_SECRET') || ''
+    ).trim();
 
-    const explicitCallback = (this.configService.get<string>('GOOGLE_CALLBACK_URL') || '').trim();
-    const rawFrontendUrls = (this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000').trim();
-    const primaryFrontendUrl = rawFrontendUrls.split(',')[0].trim().replace(/\/+$/, '');
+    const explicitCallback = (
+      this.configService.get<string>('GOOGLE_CALLBACK_URL') || ''
+    ).trim();
+    const rawFrontendUrls = (
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
+    ).trim();
+    const primaryFrontendUrl = rawFrontendUrls
+      .split(',')[0]
+      .trim()
+      .replace(/\/+$/, '');
 
-    this.callbackUrl = explicitCallback || `${primaryFrontendUrl}/auth/google/callback`;
+    this.callbackUrl =
+      explicitCallback || `${primaryFrontendUrl}/auth/google/callback`;
 
-    const parsedTimeout = Number(this.configService.get<string>('GOOGLE_TIMEOUT_MS'));
+    const parsedTimeout = Number(
+      this.configService.get<string>('GOOGLE_TIMEOUT_MS'),
+    );
     this.timeoutMs =
-      Number.isFinite(parsedTimeout) && parsedTimeout >= 2000 && parsedTimeout <= 15000
+      Number.isFinite(parsedTimeout) &&
+      parsedTimeout >= 2000 &&
+      parsedTimeout <= 15000
         ? parsedTimeout
         : 5000;
   }
@@ -75,7 +91,9 @@ export class GoogleOAuthService {
   /**
    * Intercambia el código de autorización recibido en `/auth/google/callback` por el perfil verificado de Google.
    */
-  async exchangeCodeForProfile(code: string): Promise<GoogleOAuthProfile | null> {
+  async exchangeCodeForProfile(
+    code: string,
+  ): Promise<GoogleOAuthProfile | null> {
     if (!this.isConfigured() || !code?.trim()) {
       return null;
     }
@@ -99,7 +117,9 @@ export class GoogleOAuthService {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
 
-      const tokenData = (await tokenResponse.json().catch(() => null)) as Record<string, unknown> | null;
+      const tokenData = (await tokenResponse
+        .json()
+        .catch(() => null)) as Record<string, unknown> | null;
       const accessToken =
         tokenResponse.ok && typeof tokenData?.access_token === 'string'
           ? tokenData.access_token
@@ -112,16 +132,21 @@ export class GoogleOAuthService {
         return null;
       }
 
-      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json',
+      const userInfoResponse = await fetch(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(this.timeoutMs),
         },
-        signal: AbortSignal.timeout(this.timeoutMs),
-      });
+      );
 
-      const userInfo = (await userInfoResponse.json().catch(() => null)) as Record<string, unknown> | null;
+      const userInfo = (await userInfoResponse
+        .json()
+        .catch(() => null)) as Record<string, unknown> | null;
       if (!userInfoResponse.ok || !userInfo) {
         this.logger.warn(
           `[Google OAuth] Fallo al consultar userinfo (status=${userInfoResponse.status}).`,
@@ -130,14 +155,26 @@ export class GoogleOAuthService {
       }
 
       const sub = typeof userInfo.sub === 'string' ? userInfo.sub.trim() : '';
-      const email = typeof userInfo.email === 'string' ? userInfo.email.trim().toLowerCase() : '';
+      const email =
+        typeof userInfo.email === 'string'
+          ? userInfo.email.trim().toLowerCase()
+          : '';
       const emailVerified = userInfo.email_verified === true;
-      const name = typeof userInfo.name === 'string' ? userInfo.name.trim() : '';
-      const givenName = typeof userInfo.given_name === 'string' ? userInfo.given_name.trim() : undefined;
-      const familyName = typeof userInfo.family_name === 'string' ? userInfo.family_name.trim() : undefined;
+      const name =
+        typeof userInfo.name === 'string' ? userInfo.name.trim() : '';
+      const givenName =
+        typeof userInfo.given_name === 'string'
+          ? userInfo.given_name.trim()
+          : undefined;
+      const familyName =
+        typeof userInfo.family_name === 'string'
+          ? userInfo.family_name.trim()
+          : undefined;
 
       if (!sub || !email || !emailVerified) {
-        this.logger.warn('[Google OAuth] Perfil sin sub o con correo electrónico no verificado por Google.');
+        this.logger.warn(
+          '[Google OAuth] Perfil sin sub o con correo electrónico no verificado por Google.',
+        );
         return null;
       }
 
@@ -145,7 +182,10 @@ export class GoogleOAuthService {
         sub,
         email,
         emailVerified,
-        name: name || `${givenName || ''} ${familyName || ''}`.trim() || email.split('@')[0],
+        name:
+          name ||
+          `${givenName || ''} ${familyName || ''}`.trim() ||
+          email.split('@')[0],
         givenName,
         familyName,
       };
@@ -157,4 +197,3 @@ export class GoogleOAuthService {
     }
   }
 }
-

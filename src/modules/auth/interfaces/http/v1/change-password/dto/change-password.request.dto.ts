@@ -8,7 +8,9 @@ export class ChangePasswordRequestDto {
   })
   @IsString({ message: 'La contraseña actual debe ser una cadena válida' })
   @IsNotEmpty({ message: 'La contraseña actual es obligatoria' })
-  @MaxLength(100, { message: 'La contraseña actual excede el límite permitido' })
+  @MaxLength(100, {
+    message: 'La contraseña actual excede el límite permitido',
+  })
   oldPassword: string;
 
   @ApiProperty({
@@ -18,8 +20,11 @@ export class ChangePasswordRequestDto {
   })
   @IsString({ message: 'La nueva contraseña debe ser una cadena válida' })
   @IsNotEmpty({ message: 'La nueva contraseña es obligatoria' })
-  @MinLength(6, { message: 'La nueva contraseña debe tener al menos 6 caracteres' })
-  @MaxLength(100, { message: 'La nueva contraseña no puede exceder 100 caracteres' })
+  @MinLength(6, {
+    message: 'La nueva contraseña debe tener al menos 6 caracteres',
+  })
+  @MaxLength(100, {
+    message: 'La nueva contraseña no puede exceder 100 caracteres',
+  })
   newPassword: string;
 }
-

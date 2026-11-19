@@ -21,15 +21,27 @@ export class ResetPasswordController {
     description: 'Contraseña actualizada exitosamente',
     type: ResetPasswordResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Token inválido, expirado o contraseña no cumple requisitos' })
-  @ApiResponse({ status: 429, description: 'Demasiadas solicitudes. Inténtalo más tarde.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Token inválido, expirado o contraseña no cumple requisitos',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Demasiadas solicitudes. Inténtalo más tarde.',
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async execute(@Body() dto: ResetPasswordRequestDto): Promise<ResetPasswordResponseDto> {
+  async execute(
+    @Body() dto: ResetPasswordRequestDto,
+  ): Promise<ResetPasswordResponseDto> {
     const result = await this.commandBus.execute(new ResetPasswordCommand(dto));
 
-    return matchResult(result, (response: ResetPasswordResponseDto) => response, {
-      TOKEN_EXPIRED_OR_INVALID: 'El enlace de recuperación ha expirado o ya ha sido utilizado.',
-    });
+    return matchResult(
+      result,
+      (response: ResetPasswordResponseDto) => response,
+      {
+        TOKEN_EXPIRED_OR_INVALID:
+          'El enlace de recuperación ha expirado o ya ha sido utilizado.',
+      },
+    );
   }
 }
-

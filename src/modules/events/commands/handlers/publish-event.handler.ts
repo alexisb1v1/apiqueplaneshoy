@@ -76,23 +76,27 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
 
       // Solo sincronizar en Meilisearch si pasa a published
       if (updatedEvent.status === 'published') {
-        this.searchService.indexEvent({
-          id: updatedEvent.id.toString(),
-          publicUuid: updatedEvent.publicUuid,
-          title: updatedEvent.name,
-          slug: updatedEvent.slug,
-          description: updatedEvent.description,
-          category: updatedEvent.category,
-          tags: updatedEvent.tags || [],
-          venue: updatedEvent.venue,
-          address: updatedEvent.address,
-          ubigeoCode: updatedEvent.ubigeoCode,
-          status: updatedEvent.status,
-          minPrice: 0,
-          date: updatedEvent.createdAt ? updatedEvent.createdAt.toISOString() : new Date().toISOString(),
-          hasLandingPage: updatedEvent.hasLandingPage,
-          isFeatured: updatedEvent.isFeatured,
-        }).catch(() => {});
+        this.searchService
+          .indexEvent({
+            id: updatedEvent.id.toString(),
+            publicUuid: updatedEvent.publicUuid,
+            title: updatedEvent.name,
+            slug: updatedEvent.slug,
+            description: updatedEvent.description,
+            category: updatedEvent.category,
+            tags: updatedEvent.tags || [],
+            venue: updatedEvent.venue,
+            address: updatedEvent.address,
+            ubigeoCode: updatedEvent.ubigeoCode,
+            status: updatedEvent.status,
+            minPrice: 0,
+            date: updatedEvent.createdAt
+              ? updatedEvent.createdAt.toISOString()
+              : new Date().toISOString(),
+            hasLandingPage: updatedEvent.hasLandingPage,
+            isFeatured: updatedEvent.isFeatured,
+          })
+          .catch(() => {});
       }
 
       // Notificación al organizador
@@ -137,4 +141,3 @@ export class PublishEventHandler implements ICommandHandler<PublishEventCommand>
     }
   }
 }
-
