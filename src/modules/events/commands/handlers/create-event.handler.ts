@@ -12,6 +12,7 @@ import { CouponEntity } from '@orders/domain/entities/coupon.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { AppError } from '@common/errors/app-errors';
 import { calculatePlatformFee } from '@orders/application/services/platform-fee.service';
+import { isValidRuc } from '@common/validators/sunat-validators';
 
 function slugify(text: string): string {
   const normalized = text
@@ -78,6 +79,10 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       userModified = true;
     }
     if (dto.organizerDocumentNumber) {
+      const docType = dto.organizerDocumentType || user.organizerDocumentType || 'RUC';
+      if (docType === 'RUC' && !isValidRuc(dto.organizerDocumentNumber)) {
+        return err('INVALID_INPUT');
+      }
       user.organizerDocumentNumber = dto.organizerDocumentNumber.trim();
       userModified = true;
     }

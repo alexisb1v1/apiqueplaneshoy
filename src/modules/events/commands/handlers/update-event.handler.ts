@@ -12,6 +12,7 @@ import { EventImageEntity } from '@events/domain/entities/event-image.entity';
 import { CouponEntity } from '@orders/domain/entities/coupon.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { calculatePlatformFee } from '@orders/application/services/platform-fee.service';
+import { isValidRuc } from '@common/validators/sunat-validators';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS } from '@modules/redis/redis.constants';
 import { SearchService } from '../../../search/services/search.service';
@@ -113,6 +114,10 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       userModified = true;
     }
     if (dto.organizerDocumentNumber) {
+      const docType = dto.organizerDocumentType || user.organizerDocumentType || 'RUC';
+      if (docType === 'RUC' && !isValidRuc(dto.organizerDocumentNumber)) {
+        return err('INVALID_INPUT');
+      }
       user.organizerDocumentNumber = dto.organizerDocumentNumber.trim();
       userModified = true;
     }

@@ -12,6 +12,7 @@ import { UserEntity } from '@users/domain/entities/user.entity';
 import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { EventSettlementEntity } from '../../domain/entities/event-settlement.entity';
+import { isValidRuc, isValidDni } from '@common/validators/sunat-validators';
 import { RequestEventSettlementCommand } from '../impl/request-event-settlement.command';
 import {
   EventSettlementResponseDto,
@@ -108,6 +109,18 @@ export class RequestEventSettlementHandler
 
     if (existingSettlement && existingSettlement.status !== 'rejected') {
       return err('SETTLEMENT_ALREADY_REQUESTED');
+    }
+
+    // Validación del documento fiscal (RUC con algoritmo SUNAT Módulo 11 o DNI)
+    if (dto.documentType === 'RUC' && dto.documentNumber) {
+      if (!isValidRuc(dto.documentNumber)) {
+        this.logger.warn(`RUC inválido según algoritmo SUNAT Módulo 11: ${dto.documentNumber}`);
+        return err('INVALID_INPUT');
+      }
+    } else if (dto.documentType === 'DNI' && dto.documentNumber) {
+      if (!isValidDni(dto.documentNumber)) {
+        return err('INVALID_INPUT');
+      }
     }
 
     try {
@@ -215,7 +228,7 @@ export class RequestEventSettlementHandler
       settlement.netPayoutAmount = netPayout;
       settlement.bankName = dto.bankName.trim();
       settlement.bankAccountNumber = dto.accountNumber.trim();
-      settlement.bankAccountCci = dto.accountCci.trim();
+      settlement.bankAccountCci = dto.accountCci ? dto.accountCci.trim() : null;
       settlement.bankAccountHolder = dto.accountHolder.trim();
       settlement.notes = dto.notes ? dto.notes.trim() : null;
       settlement.breakdownByZone = breakdownData;

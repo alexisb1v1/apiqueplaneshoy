@@ -7,6 +7,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class RequestEventSettlementRequestDto {
@@ -66,15 +67,16 @@ export class RequestEventSettlementRequestDto {
   @MaxLength(50, { message: 'El número de cuenta no debe exceder 50 caracteres' })
   accountNumber: string;
 
-  @ApiProperty({
-    description: 'Código de Cuenta Interbancario (CCI) de exactamente 20 dígitos',
+  @ApiPropertyOptional({
+    description: 'Código de Cuenta Interbancario (CCI) de exactamente 20 dígitos (Obligatorio para otros bancos, opcional para BCP)',
     example: '00219300987654320112',
   })
+  @ValidateIf((o: RequestEventSettlementRequestDto) => o.bankName !== 'BCP' || Boolean(o.accountCci && o.accountCci.trim().length > 0))
   @IsString()
-  @IsNotEmpty({ message: 'El código CCI interbancario es obligatorio' })
+  @IsNotEmpty({ message: 'El código CCI interbancario es obligatorio para transferencias a otros bancos' })
   @Length(20, 20, { message: 'El CCI debe tener exactamente 20 dígitos numéricos' })
   @Matches(/^\d{20}$/, { message: 'El CCI debe contener únicamente 20 dígitos numéricos' })
-  accountCci: string;
+  accountCci?: string;
 
   @ApiPropertyOptional({
     description: 'Notas adicionales u observaciones del organizador para la liquidación',
