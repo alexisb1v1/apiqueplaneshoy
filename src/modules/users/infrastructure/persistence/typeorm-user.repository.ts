@@ -13,7 +13,7 @@ export class TypeormUserRepository implements UserRepository {
   constructor(
     @InjectRepository(UserEntity)
     private readonly repository: Repository<UserEntity>,
-  ) { }
+  ) {}
 
   async findByUsername(username: string): Promise<UserEntity | null> {
     return this.repository.findOne({
@@ -44,7 +44,9 @@ export class TypeormUserRepository implements UserRepository {
     return this.repository.save(userEntity);
   }
 
-  async findPaginated(filters: UserSearchFilters): Promise<PaginatedUsersResult> {
+  async findPaginated(
+    filters: UserSearchFilters,
+  ): Promise<PaginatedUsersResult> {
     const { role, search, isOrganizer, page, limit } = filters;
     const skip = (page - 1) * limit;
 
@@ -74,7 +76,9 @@ export class TypeormUserRepository implements UserRepository {
     }
 
     if (typeof isOrganizer === 'boolean') {
-      queryBuilder.andWhere('user.is_organizer = :isOrganizer', { isOrganizer });
+      queryBuilder.andWhere('user.is_organizer = :isOrganizer', {
+        isOrganizer,
+      });
     }
 
     if (search && search.trim().length > 0) {
@@ -91,7 +95,9 @@ export class TypeormUserRepository implements UserRepository {
       countQueryBuilder.andWhere('user.role = :role', { role });
     }
     if (typeof isOrganizer === 'boolean') {
-      countQueryBuilder.andWhere('user.is_organizer = :isOrganizer', { isOrganizer });
+      countQueryBuilder.andWhere('user.is_organizer = :isOrganizer', {
+        isOrganizer,
+      });
     }
     if (search && search.trim().length > 0) {
       const term = `%${search.trim().toLowerCase()}%`;
@@ -104,10 +110,7 @@ export class TypeormUserRepository implements UserRepository {
     const total = await countQueryBuilder.getCount();
 
     // Paginación y orden
-    queryBuilder
-      .orderBy('user.created_at', 'DESC')
-      .offset(skip)
-      .limit(limit);
+    queryBuilder.orderBy('user.created_at', 'DESC').offset(skip).limit(limit);
 
     const rawResults = await queryBuilder.getRawMany();
 
@@ -124,7 +127,9 @@ export class TypeormUserRepository implements UserRepository {
       user.organizerDocumentType = raw.organizerDocumentType;
       user.organizerDocumentNumber = raw.organizerDocumentNumber;
       user.organizerPhone = raw.organizerPhone;
-      user.emailVerifiedAt = raw.emailVerifiedAt ? new Date(raw.emailVerifiedAt) : null;
+      user.emailVerifiedAt = raw.emailVerifiedAt
+        ? new Date(raw.emailVerifiedAt)
+        : null;
       user.createdAt = new Date(raw.createdAt);
 
       return {

@@ -14,4 +14,3 @@ export class ChangePasswordResponseDto {
     this.message = message;
   }
 }
-

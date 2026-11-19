@@ -13,7 +13,10 @@ import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 import { CulqiGatewayService } from '@orders/infrastructure/gateways/culqi-gateway.service';
 import { OrderLifecycleService } from '../../application/services/order-lifecycle.service';
 
-function extractNameParts(fullName?: string | null): { firstName: string; lastName: string } {
+function extractNameParts(fullName?: string | null): {
+  firstName: string;
+  lastName: string;
+} {
   const cleaned = (fullName || '').trim().replace(/\s+/g, ' ');
   if (!cleaned) return { firstName: 'Cliente', lastName: 'QPH' };
   const parts = cleaned.split(' ');
@@ -30,10 +33,10 @@ function extractLocalNineDigitPhone(rawPhone?: string | null): string {
 }
 
 @CommandHandler(ConfirmCulqiChargeCommand)
-export class ConfirmCulqiChargeHandler
-  implements
-    ICommandHandler<ConfirmCulqiChargeCommand, Result<ConfirmCulqiChargeResponseDto, AppError>>
-{
+export class ConfirmCulqiChargeHandler implements ICommandHandler<
+  ConfirmCulqiChargeCommand,
+  Result<ConfirmCulqiChargeResponseDto, AppError>
+> {
   private readonly logger = new Logger(ConfirmCulqiChargeHandler.name);
 
   constructor(
@@ -82,12 +85,13 @@ export class ConfirmCulqiChargeHandler
     }
 
     if (order.status === 'paid') {
-      const idempotentResult = await this.orderLifecycleService.finalizePaidOrder({
-        orderIdOrUuid: order.publicUuid,
-        paymentMethod: dto.paymentMethod || 'card',
-        externalTransactionId: dto.tokenId,
-        gatewayResponse: { provider: 'culqi' },
-      });
+      const idempotentResult =
+        await this.orderLifecycleService.finalizePaidOrder({
+          orderIdOrUuid: order.publicUuid,
+          paymentMethod: dto.paymentMethod || 'card',
+          externalTransactionId: dto.tokenId,
+          gatewayResponse: { provider: 'culqi' },
+        });
 
       if (idempotentResult.isErr()) {
         return err(idempotentResult.error);
@@ -163,7 +167,8 @@ export class ConfirmCulqiChargeHandler
     const { firstName, lastName } = extractNameParts(order.user?.name);
     const localPhone = extractLocalNineDigitPhone(order.user?.organizerPhone);
     const amountInCents = Math.round(Number(order.totalAmount) * 100);
-    const resolvedMethod = dto.paymentMethod || pendingPayment?.paymentMethod || 'card';
+    const resolvedMethod =
+      dto.paymentMethod || pendingPayment?.paymentMethod || 'card';
 
     const chargeResult = await this.culqiGatewayService.createCharge({
       amount: amountInCents,
@@ -186,8 +191,12 @@ export class ConfirmCulqiChargeHandler
         qph_order_id: String(order.id),
         qph_order_uuid: order.publicUuid,
         qph_user_id: String(order.userId),
-        ...(order.user?.publicUuid ? { qph_user_uuid: order.user.publicUuid } : {}),
-        ...(order.user?.email ? { qph_user_email: order.user.email.slice(0, 100) } : {}),
+        ...(order.user?.publicUuid
+          ? { qph_user_uuid: order.user.publicUuid }
+          : {}),
+        ...(order.user?.email
+          ? { qph_user_email: order.user.email.slice(0, 100) }
+          : {}),
         ...(culqiOrderId ? { culqi_order_id: culqiOrderId } : {}),
       },
     });
@@ -225,7 +234,8 @@ export class ConfirmCulqiChargeHandler
     }
 
     const detectedPaymentMethod =
-      chargeResult.charge.source?.object === 'yape' || dto.tokenId.startsWith('ype_')
+      chargeResult.charge.source?.object === 'yape' ||
+      dto.tokenId.startsWith('ype_')
         ? 'yape'
         : resolvedMethod;
 
@@ -264,4 +274,3 @@ export class ConfirmCulqiChargeHandler
     );
   }
 }
-

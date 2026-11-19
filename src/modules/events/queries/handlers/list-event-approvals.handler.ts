@@ -11,9 +11,10 @@ import {
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
 
 @QueryHandler(ListEventApprovalsQuery)
-export class ListEventApprovalsHandler
-  implements IQueryHandler<ListEventApprovalsQuery, Result<ListEventApprovalsResponseDto, AppError>>
-{
+export class ListEventApprovalsHandler implements IQueryHandler<
+  ListEventApprovalsQuery,
+  Result<ListEventApprovalsResponseDto, AppError>
+> {
   constructor(private readonly dataSource: DataSource) {}
 
   async execute(
@@ -199,7 +200,9 @@ export class ListEventApprovalsHandler
       item.organizerDocumentNumber = r.organizerDocumentNumber;
       item.organizerEmail = r.organizerEmail || null;
       item.organizerPhone = r.organizerPhone || null;
-      item.firstShowDate = r.firstShowDate ? new Date(r.firstShowDate).toISOString() : null;
+      item.firstShowDate = r.firstShowDate
+        ? new Date(r.firstShowDate).toISOString()
+        : null;
       item.totalCapacity = Number(r.totalCapacity || 0);
       item.minPrice = Number(r.minPrice || 0);
       item.maxPrice = Number(r.maxPrice || 0);
@@ -229,4 +232,3 @@ export class ListEventApprovalsHandler
     return ok(response);
   }
 }
-

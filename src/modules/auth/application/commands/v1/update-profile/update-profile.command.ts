@@ -6,4 +6,3 @@ export class UpdateProfileCommand {
     public readonly dto: UpdateProfileRequestDto,
   ) {}
 }
-

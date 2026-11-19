@@ -6,7 +6,8 @@ export type LoginOrigin = 'web' | 'backoffice';
 
 export class LoginUserRequestDto {
   @ApiProperty({
-    description: 'Nombre de usuario registrado (o correo en usuarios web legacy)',
+    description:
+      'Nombre de usuario registrado (o correo en usuarios web legacy)',
     example: 'abasilio',
   })
   @Transform(({ value }) => value?.trim().toLowerCase())
@@ -23,12 +24,15 @@ export class LoginUserRequestDto {
   password: string;
 
   @ApiPropertyOptional({
-    description: 'Origen de la solicitud de autenticación: web (portal cliente) o backoffice (consola administrativa)',
+    description:
+      'Origen de la solicitud de autenticación: web (portal cliente) o backoffice (consola administrativa)',
     example: 'web',
     enum: ['web', 'backoffice'],
     default: 'web',
   })
   @IsOptional()
-  @IsIn(['web', 'backoffice'], { message: 'El origen debe ser web o backoffice' })
+  @IsIn(['web', 'backoffice'], {
+    message: 'El origen debe ser web o backoffice',
+  })
   origin?: LoginOrigin = 'web';
 }

@@ -4,4 +4,3 @@ export class RemoveFavoriteCommand {
     public readonly eventId: string,
   ) {}
 }
-

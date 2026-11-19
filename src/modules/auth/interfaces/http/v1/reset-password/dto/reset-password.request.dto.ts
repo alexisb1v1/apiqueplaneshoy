@@ -18,7 +18,8 @@ export class ResetPasswordRequestDto {
   })
   @IsNotEmpty({ message: 'La nueva contraseña es obligatoria' })
   @IsString({ message: 'La contraseña debe ser una cadena válida' })
-  @MinLength(8, { message: 'La nueva contraseña debe tener al menos 8 caracteres' })
+  @MinLength(8, {
+    message: 'La nueva contraseña debe tener al menos 8 caracteres',
+  })
   newPassword: string;
 }
-

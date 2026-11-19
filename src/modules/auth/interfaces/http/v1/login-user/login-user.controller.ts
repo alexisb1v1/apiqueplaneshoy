@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Res,
+} from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -6,7 +13,11 @@ import { LoginUserRequestDto } from './dto/login-user.request.dto';
 import { LoginUserResponseDto } from './dto/login-user.response.dto';
 import { LoginUserCommand } from '@auth/application/commands/v1/login-user/login-user.command';
 import { matchResult } from '@common/http/match-result';
-import { REFRESH_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_OPTIONS } from '@auth/constants/cookie.constants';
+import {
+  REFRESH_TOKEN_COOKIE_NAME,
+  ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_OPTIONS,
+} from '@auth/constants/cookie.constants';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -22,7 +33,10 @@ export class LoginUserController {
     type: LoginUserResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
-  @ApiResponse({ status: 401, description: 'Credenciales de acceso incorrectas' })
+  @ApiResponse({
+    status: 401,
+    description: 'Credenciales de acceso incorrectas',
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async execute(
     @Body() dto: LoginUserRequestDto,
@@ -34,13 +48,22 @@ export class LoginUserController {
       result,
       (response: LoginUserResponseDto) => {
         if (response.refreshToken) {
-          res.cookie(REFRESH_TOKEN_COOKIE_NAME, response.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+          const cookieName =
+            dto.origin === 'backoffice'
+              ? ADMIN_REFRESH_TOKEN_COOKIE_NAME
+              : REFRESH_TOKEN_COOKIE_NAME;
+          res.cookie(
+            cookieName,
+            response.refreshToken,
+            REFRESH_TOKEN_COOKIE_OPTIONS,
+          );
         }
         return response;
       },
       {
         UNAUTHORIZED: 'Credenciales de acceso inválidas',
-        FORBIDDEN: 'Acceso no permitido para este tipo de cuenta en esta plataforma',
+        FORBIDDEN:
+          'Acceso no permitido para este tipo de cuenta en esta plataforma',
       },
     );
   }

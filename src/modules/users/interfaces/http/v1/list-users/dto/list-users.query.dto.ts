@@ -52,4 +52,3 @@ export class ListUsersQueryDto {
   @Max(100)
   limit?: number = 10;
 }
-

@@ -23,7 +23,8 @@ export class AdminKeyGuard implements CanActivate {
     // 1. Validar por cabecera secreta x-admin-key
     const adminKeyHeader = request.headers['x-admin-key'];
     const configuredKey =
-      this.configService.get<string>('ADMIN_API_KEY') || 'qph-admin-master-secret-key-2026';
+      this.configService.get<string>('ADMIN_API_KEY') ||
+      'qph-admin-master-secret-key-2026';
 
     if (adminKeyHeader && adminKeyHeader === configuredKey) {
       return true;
@@ -31,7 +32,11 @@ export class AdminKeyGuard implements CanActivate {
 
     // 2. Validar por token JWT con rol admin
     const authHeader = request.headers.authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Bearer ')
+    ) {
       const token = authHeader.split(' ')[1];
       const payload = this.tokenService.verifyToken(token);
       if (payload && payload.role === 'admin') {
@@ -44,4 +49,3 @@ export class AdminKeyGuard implements CanActivate {
     );
   }
 }
-

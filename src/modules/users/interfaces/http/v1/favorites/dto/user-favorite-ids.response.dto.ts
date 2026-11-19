@@ -23,4 +23,3 @@ export class UserFavoriteIdsResponseDto {
     this.favoritePublicUuids = favoritePublicUuids;
   }
 }
-

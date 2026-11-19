@@ -9,7 +9,10 @@ export class CulqiOrderStatusResponseDto {
   orderPublicUuid!: string;
 
   @Expose()
-  @ApiProperty({ example: 'pending', enum: ['pending', 'paid', 'expired', 'cancelled'] })
+  @ApiProperty({
+    example: 'pending',
+    enum: ['pending', 'paid', 'expired', 'cancelled'],
+  })
   status!: 'pending' | 'paid' | 'expired' | 'cancelled' | string;
 
   @Expose()
@@ -21,12 +24,19 @@ export class CulqiOrderStatusResponseDto {
   paymentCode?: string | null;
 
   @Expose()
-  @ApiProperty({ example: '2026-11-10T23:30:00.000Z', nullable: true, required: false })
+  @ApiProperty({
+    example: '2026-11-10T23:30:00.000Z',
+    nullable: true,
+    required: false,
+  })
   expiresAt?: string | null;
 
   @Expose()
   @Type(() => SimulateOrderCheckoutResponseDto)
-  @ApiProperty({ type: SimulateOrderCheckoutResponseDto, nullable: true, required: false })
+  @ApiProperty({
+    type: SimulateOrderCheckoutResponseDto,
+    nullable: true,
+    required: false,
+  })
   checkoutResult?: SimulateOrderCheckoutResponseDto | null;
 }
-

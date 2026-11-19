@@ -4,7 +4,10 @@ import { Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { GetMyOrdersQuery } from '../impl/get-my-orders.query';
-import { UserOrderResponseDto, UserOrderTicketDto } from '../../dto/user-order.response.dto';
+import {
+  UserOrderResponseDto,
+  UserOrderTicketDto,
+} from '../../dto/user-order.response.dto';
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
 import { plainToInstance } from 'class-transformer';
 
@@ -49,7 +52,9 @@ export class GetMyOrdersHandler implements IQueryHandler<GetMyOrdersQuery> {
           event?.images?.[0]?.imageUrl ||
           null;
 
-        const showStartTime = show?.startTime ? new Date(show.startTime) : order.createdAt;
+        const showStartTime = show?.startTime
+          ? new Date(show.startTime)
+          : order.createdAt;
         const isPast = showStartTime.getTime() < now.getTime();
 
         const cityInfo = resolveCityFromUbigeo(event?.ubigeoCode);
@@ -70,22 +75,26 @@ export class GetMyOrdersHandler implements IQueryHandler<GetMyOrdersQuery> {
 
         const payment = order.payments?.[0];
 
-        const mappedTickets: UserOrderTicketDto[] = order.tickets.map((t, index) => {
-          return plainToInstance(
-            UserOrderTicketDto,
-            {
-              ticketId: t.id,
-              ticketUuid: t.publicUuid,
-              ticketNumber: index + 1,
-              zoneName: t.zone?.name || 'GENERAL',
-              tierName: t.pricingTier?.name || t.zone?.name || 'General',
-              unitPrice: Number(t.paidBasePrice || 0),
-              qrPayload: t.qrCode || `QPH|ORD:${order.id}|TCK:${t.id}|SEC:${t.publicUuid.substring(0, 8)}`,
-              status: t.status,
-            },
-            { excludeExtraneousValues: true },
-          );
-        });
+        const mappedTickets: UserOrderTicketDto[] = order.tickets.map(
+          (t, index) => {
+            return plainToInstance(
+              UserOrderTicketDto,
+              {
+                ticketId: t.id,
+                ticketUuid: t.publicUuid,
+                ticketNumber: index + 1,
+                zoneName: t.zone?.name || 'GENERAL',
+                tierName: t.pricingTier?.name || t.zone?.name || 'General',
+                unitPrice: Number(t.paidBasePrice || 0),
+                qrPayload:
+                  t.qrCode ||
+                  `QPH|ORD:${order.id}|TCK:${t.id}|SEC:${t.publicUuid.substring(0, 8)}`,
+                status: t.status,
+              },
+              { excludeExtraneousValues: true },
+            );
+          },
+        );
 
         return plainToInstance(
           UserOrderResponseDto,
@@ -93,11 +102,15 @@ export class GetMyOrdersHandler implements IQueryHandler<GetMyOrdersQuery> {
             orderId: order.id,
             orderCode: `#QPH-${String(order.id).padStart(6, '0')}`,
             orderUuid: order.publicUuid,
-            orderDate: order.createdAt ? order.createdAt.toISOString() : new Date().toISOString(),
+            orderDate: order.createdAt
+              ? order.createdAt.toISOString()
+              : new Date().toISOString(),
             totalAmount: Number(order.totalAmount || 0),
             status: order.status,
             paymentMethod: payment?.paymentMethod || 'Tarjeta de crédito',
-            txCode: payment?.externalTransactionId || `TX-${String(order.id).padStart(6, '0')}`,
+            txCode:
+              payment?.externalTransactionId ||
+              `TX-${String(order.id).padStart(6, '0')}`,
             ticketCount: order.tickets.length,
             eventId: event ? String(event.id) : '1',
             eventTitle: event?.name || 'Evento Oficial',
@@ -106,10 +119,18 @@ export class GetMyOrdersHandler implements IQueryHandler<GetMyOrdersQuery> {
             category: event?.category || 'CONCERTS',
             venueName: event?.venue || 'Recinto Oficial',
             venueAddress: event?.address || 'Ubicación Confirmada, Perú',
+            googleMapsUrl:
+              event?.googleMapsUrl ||
+              (event?.coordinates
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.coordinates)}`
+                : event?.venue
+                  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.venue}, ${cityInfo.name}`)}`
+                  : null),
             city: cityInfo.name,
             bannerImageUrl: banner,
             eventDateFormatted:
-              eventDateFormatted.charAt(0).toUpperCase() + eventDateFormatted.slice(1),
+              eventDateFormatted.charAt(0).toUpperCase() +
+              eventDateFormatted.slice(1),
             eventTimeFormatted,
             showStartTimeIso: showStartTime.toISOString(),
             isPast,
@@ -120,9 +141,10 @@ export class GetMyOrdersHandler implements IQueryHandler<GetMyOrdersQuery> {
         );
       });
     } catch (error: any) {
-      this.logger.error(`Error al recuperar compras del usuario ${query.userId}: ${error.message || error}`);
+      this.logger.error(
+        `Error al recuperar compras del usuario ${query.userId}: ${error.message || error}`,
+      );
       return [];
     }
   }
 }
-

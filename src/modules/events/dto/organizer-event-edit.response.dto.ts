@@ -327,4 +327,3 @@ export class OrganizerEventEditResponseDto {
   @ApiPropertyOptional()
   organizerLogoUrl?: string;
 }
-

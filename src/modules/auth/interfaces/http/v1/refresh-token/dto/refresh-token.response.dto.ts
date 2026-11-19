@@ -25,14 +25,21 @@ export class RefreshTokenResponseDto {
   refreshToken: string;
 
   @Expose()
-  @ApiProperty({ example: 900, description: 'Segundos de vigencia del Access Token (15 minutos = 900s)' })
+  @ApiProperty({
+    example: 900,
+    description: 'Segundos de vigencia del Access Token (15 minutos = 900s)',
+  })
   expiresInSeconds: number;
 
   @Expose()
   @ApiProperty({ example: 'Token de acceso renovado exitosamente' })
   message: string;
 
-  constructor(accessToken: string, refreshToken: string, expiresInSeconds = 900) {
+  constructor(
+    accessToken: string,
+    refreshToken: string,
+    expiresInSeconds = 900,
+  ) {
     this.accessToken = accessToken;
     this.token = accessToken;
     this.refreshToken = refreshToken;
@@ -40,4 +47,3 @@ export class RefreshTokenResponseDto {
     this.message = 'Token de acceso renovado exitosamente';
   }
 }
-

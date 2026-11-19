@@ -6,4 +6,3 @@ export class PrepareCulqiCheckoutCommand {
     public readonly authenticatedUserId: number,
   ) {}
 }
-

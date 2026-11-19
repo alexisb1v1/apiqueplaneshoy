@@ -5,7 +5,10 @@ import { Repository } from 'typeorm';
 import { EventEntity } from '@events/domain/entities/event.entity';
 import { resolveCityFromUbigeo } from '@events/constants/event-constants';
 import { SearchEventsRequestDto } from '../dto/search-events.request.dto';
-import { SearchEventsResponseDto, EventSearchItemDto } from '../dto/search-events.response.dto';
+import {
+  SearchEventsResponseDto,
+  EventSearchItemDto,
+} from '../dto/search-events.response.dto';
 import { PublishedCityResponseDto } from '../dto/published-city.response.dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -61,7 +64,10 @@ export class SearchService implements OnModuleInit {
     }
 
     this.host = rawHost.replace(/\/+$/, '');
-    this.apiKey = rawApiKey && !rawApiKey.includes('tu_MEILI_MASTER_KEY') ? rawApiKey : null;
+    this.apiKey =
+      rawApiKey && !rawApiKey.includes('tu_MEILI_MASTER_KEY')
+        ? rawApiKey
+        : null;
 
     try {
       // 1. Validar salud del servidor con timeout explícito de 3 segundos (DevSecOps)
@@ -72,7 +78,9 @@ export class SearchService implements OnModuleInit {
       });
 
       if (!res.ok) {
-        this.logger.warn(`Meilisearch respondió con status ${res.status}: ${res.statusText}`);
+        this.logger.warn(
+          `Meilisearch respondió con status ${res.status}: ${res.statusText}`,
+        );
         return;
       }
 
@@ -86,11 +94,15 @@ export class SearchService implements OnModuleInit {
       await this.configureIndex();
 
       this.isConnected = true;
-      this.logger.log(`Conexión exitosa a Meilisearch en ${this.host}. Índice "events" listo.`);
+      this.logger.log(
+        `Conexión exitosa a Meilisearch en ${this.host}. Índice "events" listo.`,
+      );
 
       // 3. Sincronización inicial automática de eventos existentes
       this.syncAllEvents().catch((err) => {
-        this.logger.warn(`Sincronización inicial en segundo plano no completada: ${err.message || err}`);
+        this.logger.warn(
+          `Sincronización inicial en segundo plano no completada: ${err.message || err}`,
+        );
       });
     } catch (err: any) {
       this.isConnected = false;
@@ -162,7 +174,9 @@ export class SearchService implements OnModuleInit {
         signal: AbortSignal.timeout(4000),
       });
     } catch (err: any) {
-      this.logger.warn(`No se pudieron actualizar los settings de Meilisearch: ${err.message || err}`);
+      this.logger.warn(
+        `No se pudieron actualizar los settings de Meilisearch: ${err.message || err}`,
+      );
     }
   }
 
@@ -202,20 +216,29 @@ export class SearchService implements OnModuleInit {
       });
 
       if (!events || events.length === 0) {
-        this.logger.log('Sincronización Meilisearch: No se encontraron eventos publicados en PostgreSQL.');
+        this.logger.log(
+          'Sincronización Meilisearch: No se encontraron eventos publicados en PostgreSQL.',
+        );
         return { indexedCount: 0, totalFound: 0 };
       }
 
       const documents: EventIndexPayload[] = events.map((event) => {
-        const banner = event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
-        const prices = (event.zones || []).map((z) => Number(z.regularPrice)).filter((p) => !isNaN(p) && p >= 0);
+        const banner =
+          event.images?.find((img) => img.imageType === 'banner') ||
+          event.images?.[0];
+        const prices = (event.zones || [])
+          .map((z) => Number(z.regularPrice))
+          .filter((p) => !isNaN(p) && p >= 0);
         const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
         const firstShow = (event.shows || []).sort(
-          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         )[0];
         const date = firstShow?.startTime
           ? new Date(firstShow.startTime).toISOString()
-          : (event.createdAt ? event.createdAt.toISOString() : new Date().toISOString());
+          : event.createdAt
+            ? event.createdAt.toISOString()
+            : new Date().toISOString();
 
         const cityInfo = resolveCityFromUbigeo(event.ubigeoCode);
 
@@ -241,23 +264,32 @@ export class SearchService implements OnModuleInit {
         };
       });
 
-      const res = await fetch(`${this.host}/indexes/events/documents?primaryKey=id`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(documents),
-        signal: AbortSignal.timeout(10000),
-      });
+      const res = await fetch(
+        `${this.host}/indexes/events/documents?primaryKey=id`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(documents),
+          signal: AbortSignal.timeout(10000),
+        },
+      );
 
       if (res.ok) {
-        this.logger.log(`Sincronización Meilisearch completada: ${documents.length} eventos indexados.`);
+        this.logger.log(
+          `Sincronización Meilisearch completada: ${documents.length} eventos indexados.`,
+        );
         return { indexedCount: documents.length, totalFound: events.length };
       } else {
         const errText = await res.text();
-        this.logger.error(`Error en sincronización masiva a Meilisearch: ${errText}`);
+        this.logger.error(
+          `Error en sincronización masiva a Meilisearch: ${errText}`,
+        );
         return { indexedCount: 0, totalFound: events.length };
       }
     } catch (err: any) {
-      this.logger.error(`Excepción en sincronización masiva de eventos: ${err.message || err}`);
+      this.logger.error(
+        `Excepción en sincronización masiva de eventos: ${err.message || err}`,
+      );
       return { indexedCount: 0, totalFound: 0 };
     }
   }
@@ -283,26 +315,36 @@ export class SearchService implements OnModuleInit {
       if (!payload.city || !payload.departmentCode) {
         const cityInfo = resolveCityFromUbigeo(payload.ubigeoCode);
         payload.city = payload.city || cityInfo.name;
-        payload.departmentCode = payload.departmentCode || cityInfo.departmentCode;
+        payload.departmentCode =
+          payload.departmentCode || cityInfo.departmentCode;
       }
 
-      const res = await fetch(`${this.host}/indexes/events/documents?primaryKey=id`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify([payload]),
-        signal: AbortSignal.timeout(5000),
-      });
+      const res = await fetch(
+        `${this.host}/indexes/events/documents?primaryKey=id`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify([payload]),
+          signal: AbortSignal.timeout(5000),
+        },
+      );
 
       if (!res.ok) {
         const errorText = await res.text();
-        this.logger.error(`Error al indexar evento ${payload.id}: ${errorText}`);
+        this.logger.error(
+          `Error al indexar evento ${payload.id}: ${errorText}`,
+        );
         return false;
       }
 
-      this.logger.log(`Evento ${payload.id} (${payload.title}) indexado en Meilisearch.`);
+      this.logger.log(
+        `Evento ${payload.id} (${payload.title}) indexado en Meilisearch.`,
+      );
       return true;
     } catch (err: any) {
-      this.logger.error(`Error al indexar evento ${payload.id}: ${err.message || err}`);
+      this.logger.error(
+        `Error al indexar evento ${payload.id}: ${err.message || err}`,
+      );
       return false;
     }
   }
@@ -316,11 +358,14 @@ export class SearchService implements OnModuleInit {
     }
 
     try {
-      const res = await fetch(`${this.host}/indexes/events/documents/${eventId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-        signal: AbortSignal.timeout(4000),
-      });
+      const res = await fetch(
+        `${this.host}/indexes/events/documents/${eventId}`,
+        {
+          method: 'DELETE',
+          headers: this.getHeaders(),
+          signal: AbortSignal.timeout(4000),
+        },
+      );
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -331,7 +376,9 @@ export class SearchService implements OnModuleInit {
       this.logger.log(`Evento ${eventId} eliminado de Meilisearch.`);
       return true;
     } catch (err: any) {
-      this.logger.error(`Error al eliminar evento ${eventId}: ${err.message || err}`);
+      this.logger.error(
+        `Error al eliminar evento ${eventId}: ${err.message || err}`,
+      );
       return false;
     }
   }
@@ -339,7 +386,9 @@ export class SearchService implements OnModuleInit {
   /**
    * Búsqueda instantánea de eventos con tolerancia a errores y filtros facetados
    */
-  async searchEvents(dto: SearchEventsRequestDto): Promise<SearchEventsResponseDto> {
+  async searchEvents(
+    dto: SearchEventsRequestDto,
+  ): Promise<SearchEventsResponseDto> {
     const defaultResponse: SearchEventsResponseDto = {
       hits: [],
       totalHits: 0,
@@ -394,14 +443,23 @@ export class SearchService implements OnModuleInit {
       }
 
       const data = await res.json();
-      const processingTimeMs = data.processingTimeMs ?? (Date.now() - startTime);
+      const processingTimeMs = data.processingTimeMs ?? Date.now() - startTime;
 
       const hits = (data.hits || []).map((hit: any) =>
-        plainToInstance(EventSearchItemDto, hit, { excludeExtraneousValues: true }),
+        plainToInstance(EventSearchItemDto, hit, {
+          excludeExtraneousValues: true,
+        }),
       );
 
       // Si Meilisearch no arrojó resultados y no hay filtros restrictivos, respaldar con PostgreSQL
-      if (hits.length === 0 && !dto.q && !dto.category && !dto.city && dto.minPrice === undefined && dto.maxPrice === undefined) {
+      if (
+        hits.length === 0 &&
+        !dto.q &&
+        !dto.category &&
+        !dto.city &&
+        dto.minPrice === undefined &&
+        dto.maxPrice === undefined
+      ) {
         return this.searchEventsFromPostgres(dto);
       }
 
@@ -414,7 +472,9 @@ export class SearchService implements OnModuleInit {
         offset: dto.offset || 0,
       };
     } catch (err: any) {
-      this.logger.error(`Error al buscar en Meilisearch: ${err.message || err}. Usando fallback a PostgreSQL...`);
+      this.logger.error(
+        `Error al buscar en Meilisearch: ${err.message || err}. Usando fallback a PostgreSQL...`,
+      );
       return this.searchEventsFromPostgres(dto);
     }
   }
@@ -423,7 +483,9 @@ export class SearchService implements OnModuleInit {
    * Respaldo resiliente de búsqueda directamente en PostgreSQL cuando Meilisearch no está disponible.
    * Diseñado bajo directivas DevSecOps de Alta Disponibilidad y Tolerancia a Fallos.
    */
-  private async searchEventsFromPostgres(dto: SearchEventsRequestDto): Promise<SearchEventsResponseDto> {
+  private async searchEventsFromPostgres(
+    dto: SearchEventsRequestDto,
+  ): Promise<SearchEventsResponseDto> {
     const startTime = Date.now();
     try {
       const qb = this.eventRepository
@@ -441,7 +503,11 @@ export class SearchService implements OnModuleInit {
         );
       }
 
-      if (dto.category && dto.category !== 'Todas' && dto.category !== 'Todos') {
+      if (
+        dto.category &&
+        dto.category !== 'Todas' &&
+        dto.category !== 'Todos'
+      ) {
         qb.andWhere('UPPER(event.category) = :category', {
           category: dto.category.toUpperCase(),
         });
@@ -467,17 +533,21 @@ export class SearchService implements OnModuleInit {
       // Mapear a EventSearchItemDto
       let items: EventSearchItemDto[] = filtered.map((event) => {
         const banner =
-          event.images?.find((img) => img.imageType === 'banner') || event.images?.[0];
+          event.images?.find((img) => img.imageType === 'banner') ||
+          event.images?.[0];
         const prices = (event.zones || [])
           .map((z) => Number(z.regularPrice))
           .filter((p) => !isNaN(p) && p >= 0);
         const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
         const firstShow = (event.shows || []).sort(
-          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         )[0];
         const date = firstShow?.startTime
           ? new Date(firstShow.startTime).toISOString()
-          : (event.createdAt ? event.createdAt.toISOString() : new Date().toISOString());
+          : event.createdAt
+            ? event.createdAt.toISOString()
+            : new Date().toISOString();
 
         const cityInfo = resolveCityFromUbigeo(event.ubigeoCode);
 
@@ -527,7 +597,9 @@ export class SearchService implements OnModuleInit {
         offset,
       };
     } catch (err: any) {
-      this.logger.error(`Error en fallback PostgreSQL de búsqueda: ${err.message || err}`);
+      this.logger.error(
+        `Error en fallback PostgreSQL de búsqueda: ${err.message || err}`,
+      );
       return {
         hits: [],
         totalHits: 0,
@@ -583,9 +655,13 @@ export class SearchService implements OnModuleInit {
             { excludeExtraneousValues: true },
           ),
         )
-        .sort((a, b) => b.eventCount - a.eventCount || a.name.localeCompare(b.name));
+        .sort(
+          (a, b) => b.eventCount - a.eventCount || a.name.localeCompare(b.name),
+        );
     } catch (err: any) {
-      this.logger.error(`Error al obtener ciudades con eventos publicados: ${err.message || err}`);
+      this.logger.error(
+        `Error al obtener ciudades con eventos publicados: ${err.message || err}`,
+      );
       return [];
     }
   }

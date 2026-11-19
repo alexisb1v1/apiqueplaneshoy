@@ -6,7 +6,10 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { GetWeekendEventsQuery } from '../impl/get-weekend-events.query';
 import { HomeEventCardResponseDto } from '../../dto/home-event-card.response.dto';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
 import { mapEventToHomeCard } from '../../utils/home-event-card.mapper';
 
 @QueryHandler(GetWeekendEventsQuery)
@@ -19,7 +22,9 @@ export class GetWeekendEventsHandler implements IQueryHandler<GetWeekendEventsQu
     private readonly redisService: RedisService,
   ) {}
 
-  async execute(query: GetWeekendEventsQuery): Promise<HomeEventCardResponseDto[]> {
+  async execute(
+    query: GetWeekendEventsQuery,
+  ): Promise<HomeEventCardResponseDto[]> {
     const maxLimit = query.limit || 8;
 
     // 1. Verificar Caché en Memoria (Redis: qph:home:weekend)
@@ -28,17 +33,21 @@ export class GetWeekendEventsHandler implements IQueryHandler<GetWeekendEventsQu
         REDIS_CACHE_KEYS.HOME.WEEKEND,
       );
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        this.logger.debug(`[Redis Cache HIT] Planes de fin de semana desde [${REDIS_CACHE_KEYS.HOME.WEEKEND}].`);
+        this.logger.debug(
+          `[Redis Cache HIT] Planes de fin de semana desde [${REDIS_CACHE_KEYS.HOME.WEEKEND}].`,
+        );
         return cached;
       }
-      this.logger.debug(`[Redis Cache MISS] No hay caché en [${REDIS_CACHE_KEYS.HOME.WEEKEND}]. Consultando PostgreSQL...`);
+      this.logger.debug(
+        `[Redis Cache MISS] No hay caché en [${REDIS_CACHE_KEYS.HOME.WEEKEND}]. Consultando PostgreSQL...`,
+      );
     }
 
     // 2. Calcular ventana del fin de semana (Viernes 12:00 PM a Domingo 23:59:59)
     const now = new Date();
     const currentDay = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 5 = Viernes, 6 = Sábado
 
-    let fridayDate = new Date(now);
+    const fridayDate = new Date(now);
     if (currentDay === 5) {
       // Hoy es viernes
       fridayDate.setHours(0, 0, 0, 0);
@@ -58,7 +67,9 @@ export class GetWeekendEventsHandler implements IQueryHandler<GetWeekendEventsQu
     }
 
     const sundayDate = new Date(fridayDate);
-    sundayDate.setDate(fridayDate.getDate() + (currentDay === 6 ? 1 : currentDay === 0 ? 0 : 2));
+    sundayDate.setDate(
+      fridayDate.getDate() + (currentDay === 6 ? 1 : currentDay === 0 ? 0 : 2),
+    );
     sundayDate.setHours(23, 59, 59, 999);
 
     // Consulta de eventos en la ventana del fin de semana
@@ -146,10 +157,11 @@ export class GetWeekendEventsHandler implements IQueryHandler<GetWeekendEventsQu
         mapped,
         REDIS_DEFAULT_TTL.HOME_SECTIONS_SECONDS,
       );
-      this.logger.debug(`[Redis Cache SET] Guardados ${mapped.length} planes de fin de semana en [${REDIS_CACHE_KEYS.HOME.WEEKEND}] (TTL: 15m).`);
+      this.logger.debug(
+        `[Redis Cache SET] Guardados ${mapped.length} planes de fin de semana en [${REDIS_CACHE_KEYS.HOME.WEEKEND}] (TTL: 15m).`,
+      );
     }
 
     return mapped;
   }
 }
-

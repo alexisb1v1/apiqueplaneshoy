@@ -3,7 +3,7 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
 /**
  * Jerarquía de claves de Redis estructuradas por carpetas y secciones.
  * Convención estándar en Redis para visualización jerárquica en carpetas (Redis Insight / GUI):
- * 
+ *
  * qph
  *  └── home
  *       ├── hero            (Eventos destacados del Hero Carousel - TTL 12h)
@@ -28,7 +28,7 @@ export const REDIS_CACHE_KEYS = {
 
 export const REDIS_DEFAULT_TTL = {
   FEATURED_EVENTS_SECONDS: 12 * 60 * 60, // 12 horas = 43,200 segundos
-  HOME_SECTIONS_SECONDS: 15 * 60,        // 15 minutos = 900 segundos
-  EVENT_LANDING_SECONDS: 15 * 60,        // 15 minutos = 900 segundos
-  EVENT_DETAIL_SECONDS: 15 * 60,         // 15 minutos = 900 segundos
+  HOME_SECTIONS_SECONDS: 15 * 60, // 15 minutos = 900 segundos
+  EVENT_LANDING_SECONDS: 15 * 60, // 15 minutos = 900 segundos
+  EVENT_DETAIL_SECONDS: 15 * 60, // 15 minutos = 900 segundos
 } as const;

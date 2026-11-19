@@ -28,16 +28,22 @@ export class TypeormUserFavoriteRepository implements UserFavoriteRepository {
       if (byId) return byId;
     }
 
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(trimmed)) {
-      const byUuid = await this.eventRepo.findOne({ where: { publicUuid: trimmed } });
+      const byUuid = await this.eventRepo.findOne({
+        where: { publicUuid: trimmed },
+      });
       if (byUuid) return byUuid;
     }
 
     return this.eventRepo.findOne({ where: { slug: trimmed } });
   }
 
-  async findFavorite(userId: number, eventId: string): Promise<UserFavoriteEventEntity | null> {
+  async findFavorite(
+    userId: number,
+    eventId: string,
+  ): Promise<UserFavoriteEventEntity | null> {
     return this.favoriteRepo.findOne({
       where: { userId, eventId },
     });
@@ -81,7 +87,10 @@ export class TypeormUserFavoriteRepository implements UserFavoriteRepository {
   /**
    * Elimina un evento de favoritos
    */
-  async removeFavorite(userId: number, eventIdentifier: string): Promise<boolean> {
+  async removeFavorite(
+    userId: number,
+    eventIdentifier: string,
+  ): Promise<boolean> {
     const event = await this.resolveEvent(eventIdentifier);
     if (!event) return false;
 
@@ -96,7 +105,9 @@ export class TypeormUserFavoriteRepository implements UserFavoriteRepository {
   /**
    * Obtiene todos los IDs y publicUuids de los eventos favoritos de un usuario
    */
-  async getFavoriteIds(userId: number): Promise<{ ids: string[]; publicUuids: string[] }> {
+  async getFavoriteIds(
+    userId: number,
+  ): Promise<{ ids: string[]; publicUuids: string[] }> {
     const favorites = await this.favoriteRepo.find({
       where: { userId },
       relations: {

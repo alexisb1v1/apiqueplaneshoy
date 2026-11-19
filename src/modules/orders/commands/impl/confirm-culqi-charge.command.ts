@@ -6,4 +6,3 @@ export class ConfirmCulqiChargeCommand {
     public readonly authenticatedUserId: number,
   ) {}
 }
-

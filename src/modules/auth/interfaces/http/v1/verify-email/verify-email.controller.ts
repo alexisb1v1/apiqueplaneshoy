@@ -13,25 +13,28 @@ export class VerifyEmailController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verificar dirección de correo electrónico con token' })
+  @ApiOperation({
+    summary: 'Verificar dirección de correo electrónico con token',
+  })
   @ApiResponse({
     status: 200,
     description: 'Correo electrónico verificado exitosamente',
     type: VerifyEmailResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Token de verificación inválido o expirado' })
+  @ApiResponse({
+    status: 400,
+    description: 'Token de verificación inválido o expirado',
+  })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async execute(@Body() dto: VerifyEmailRequestDto): Promise<VerifyEmailResponseDto> {
+  async execute(
+    @Body() dto: VerifyEmailRequestDto,
+  ): Promise<VerifyEmailResponseDto> {
     const result = await this.commandBus.execute(new VerifyEmailCommand(dto));
 
-    return matchResult(
-      result,
-      (response: VerifyEmailResponseDto) => response,
-      {
-        INVALID_INPUT: 'El token de verificación es inválido o ha expirado',
-        NOT_FOUND: 'No se encontró la cuenta asociada al token',
-      },
-    );
+    return matchResult(result, (response: VerifyEmailResponseDto) => response, {
+      INVALID_INPUT: 'El token de verificación es inválido o ha expirado',
+      NOT_FOUND: 'No se encontró la cuenta asociada al token',
+    });
   }
 }

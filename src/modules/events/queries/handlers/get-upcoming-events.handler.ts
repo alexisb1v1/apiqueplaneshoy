@@ -6,7 +6,10 @@ import { EventEntity } from '@events/domain/entities/event.entity';
 import { GetUpcomingEventsQuery } from '../impl/get-upcoming-events.query';
 import { HomeEventCardResponseDto } from '../../dto/home-event-card.response.dto';
 import { RedisService } from '@modules/redis/redis.service';
-import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
+import {
+  REDIS_CACHE_KEYS,
+  REDIS_DEFAULT_TTL,
+} from '@modules/redis/redis.constants';
 import { mapEventToHomeCard } from '../../utils/home-event-card.mapper';
 
 @QueryHandler(GetUpcomingEventsQuery)
@@ -19,7 +22,9 @@ export class GetUpcomingEventsHandler implements IQueryHandler<GetUpcomingEvents
     private readonly redisService: RedisService,
   ) {}
 
-  async execute(query: GetUpcomingEventsQuery): Promise<HomeEventCardResponseDto[]> {
+  async execute(
+    query: GetUpcomingEventsQuery,
+  ): Promise<HomeEventCardResponseDto[]> {
     const maxLimit = query.limit || 8;
 
     // 1. Verificar Caché en Memoria (Redis: qph:home:upcoming)
@@ -28,10 +33,14 @@ export class GetUpcomingEventsHandler implements IQueryHandler<GetUpcomingEvents
         REDIS_CACHE_KEYS.HOME.UPCOMING,
       );
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        this.logger.debug(`[Redis Cache HIT] Próximos eventos recuperados desde [${REDIS_CACHE_KEYS.HOME.UPCOMING}].`);
+        this.logger.debug(
+          `[Redis Cache HIT] Próximos eventos recuperados desde [${REDIS_CACHE_KEYS.HOME.UPCOMING}].`,
+        );
         return cached;
       }
-      this.logger.debug(`[Redis Cache MISS] No hay caché en [${REDIS_CACHE_KEYS.HOME.UPCOMING}]. Consultando PostgreSQL...`);
+      this.logger.debug(
+        `[Redis Cache MISS] No hay caché en [${REDIS_CACHE_KEYS.HOME.UPCOMING}]. Consultando PostgreSQL...`,
+      );
     }
 
     // 2. Consultar eventos publicados con funciones cronológicas
@@ -86,10 +95,11 @@ export class GetUpcomingEventsHandler implements IQueryHandler<GetUpcomingEvents
         mapped,
         REDIS_DEFAULT_TTL.HOME_SECTIONS_SECONDS,
       );
-      this.logger.debug(`[Redis Cache SET] Guardados ${mapped.length} próximos eventos en [${REDIS_CACHE_KEYS.HOME.UPCOMING}] (TTL: 15m).`);
+      this.logger.debug(
+        `[Redis Cache SET] Guardados ${mapped.length} próximos eventos en [${REDIS_CACHE_KEYS.HOME.UPCOMING}] (TTL: 15m).`,
+      );
     }
 
     return mapped;
   }
 }
-

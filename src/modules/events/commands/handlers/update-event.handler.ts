@@ -12,6 +12,7 @@ import { EventImageEntity } from '@events/domain/entities/event-image.entity';
 import { CouponEntity } from '@orders/domain/entities/coupon.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { calculatePlatformFee } from '@orders/application/services/platform-fee.service';
+import { isValidRuc } from '@common/validators/sunat-validators';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS } from '@modules/redis/redis.constants';
 import { SearchService } from '../../../search/services/search.service';
@@ -97,6 +98,11 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       return err('FORBIDDEN');
     }
 
+    // Regla de Negocio: No se permite editar un evento en estado publicado (a menos que sea administrador)
+    if (event.status === 'published' && user.role !== 'admin') {
+      return err('EVENT_PUBLISHED_CANNOT_EDIT');
+    }
+
     // Actualizar datos del organizador si se proporcionaron
     let userModified = false;
     if (dto.organizerName && dto.organizerName.trim() !== '') {
@@ -108,6 +114,11 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       userModified = true;
     }
     if (dto.organizerDocumentNumber) {
+      const docType =
+        dto.organizerDocumentType || user.organizerDocumentType || 'RUC';
+      if (docType === 'RUC' && !isValidRuc(dto.organizerDocumentNumber)) {
+        return err('INVALID_INPUT');
+      }
       user.organizerDocumentNumber = dto.organizerDocumentNumber.trim();
       userModified = true;
     }
@@ -124,21 +135,22 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
     }
 
     try {
-      const resolvedEventLimit = dto.userTicketLimit !== undefined
-        ? Math.max(1, Number(dto.userTicketLimit))
-        : event.userTicketLimit;
+      const resolvedEventLimit =
+        dto.userTicketLimit !== undefined
+          ? Math.max(1, Number(dto.userTicketLimit))
+          : event.userTicketLimit;
 
       const resolvedPromoVideoUrl =
         dto.promoVideoUrl !== undefined
-          ? (dto.promoVideoUrl?.trim() || null)
+          ? dto.promoVideoUrl?.trim() || null
           : event.promoVideoUrl;
 
       let resolvedSocialLinks = event.socialLinks;
       if (dto.socialLinks !== undefined) {
         const hasLinks = Boolean(
           dto.socialLinks?.instagramUrl?.trim() ||
-            dto.socialLinks?.facebookUrl?.trim() ||
-            dto.socialLinks?.tiktokUrl?.trim(),
+          dto.socialLinks?.facebookUrl?.trim() ||
+          dto.socialLinks?.tiktokUrl?.trim(),
         );
         resolvedSocialLinks = hasLinks
           ? {
@@ -223,7 +235,8 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
               eventId: updatedEvent.id,
               name: s.name || null,
               startTime: isNaN(showDate.getTime()) ? new Date() : showDate,
-              salesEndAt: salesEnd && !isNaN(salesEnd.getTime()) ? salesEnd : null,
+              salesEndAt:
+                salesEnd && !isNaN(salesEnd.getTime()) ? salesEnd : null,
               durationHours: s.durationHours ? Number(s.durationHours) : 2,
               status: 'scheduled',
             });
@@ -247,7 +260,10 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
           await manager.delete(ZoneEntity, { eventId: updatedEvent.id });
 
           for (const z of dto.zones) {
-            const requestedPerOrder = Math.max(1, Number(z.maxTicketsPerOrder) || 4);
+            const requestedPerOrder = Math.max(
+              1,
+              Number(z.maxTicketsPerOrder) || 4,
+            );
             const regularPriceNum = Number(z.regularPrice) || 0;
             const officialFee = calculatePlatformFee(regularPriceNum);
 
@@ -261,7 +277,10 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
               serviceFee: officialFee,
               feeIncluded: Boolean(z.feeIncluded),
               benefits: z.benefits || null,
-              maxTicketsPerOrder: Math.min(requestedPerOrder, resolvedEventLimit),
+              maxTicketsPerOrder: Math.min(
+                requestedPerOrder,
+                resolvedEventLimit,
+              ),
               salesStartAt: z.salesStartAt ? new Date(z.salesStartAt) : null,
             });
             const savedZone = await manager.save(zone);
@@ -276,7 +295,8 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
                   name: t.name,
                   price: Number(t.price),
                   capacity: Number(t.capacity),
-                  endAt: endAtDate && !isNaN(endAtDate.getTime()) ? endAtDate : null,
+                  endAt:
+                    endAtDate && !isNaN(endAtDate.getTime()) ? endAtDate : null,
                   isActive: true,
                 });
                 await manager.save(tier);
@@ -295,11 +315,14 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
                 eventId: updatedEvent.id,
                 organizerId: user.id,
                 code: c.code.trim().toUpperCase(),
-                discountType: c.discountType === 'fixed' ? 'fixed' : 'percentage',
+                discountType:
+                  c.discountType === 'fixed' ? 'fixed' : 'percentage',
                 discountValue: Number(c.discountValue) || 0,
-                usageType: c.usageType === 'single_use' ? 'single_use' : 'reusable',
+                usageType:
+                  c.usageType === 'single_use' ? 'single_use' : 'reusable',
                 maxUses: c.maxUses ? Number(c.maxUses) : null,
-                expiresAt: expDate && !isNaN(expDate.getTime()) ? expDate : null,
+                expiresAt:
+                  expDate && !isNaN(expDate.getTime()) ? expDate : null,
                 isActive: true,
               });
               await manager.save(coupon);
@@ -336,32 +359,44 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       });
 
       // Invalidar Cachés de Redis
-      await this.redisService.del(REDIS_CACHE_KEYS.EVENTS.DETAIL(updatedEvent.publicUuid));
-      await this.redisService.del(REDIS_CACHE_KEYS.EVENTS.DETAIL(updatedEvent.id.toString()));
+      await this.redisService.del(
+        REDIS_CACHE_KEYS.EVENTS.DETAIL(updatedEvent.publicUuid),
+      );
+      await this.redisService.del(
+        REDIS_CACHE_KEYS.EVENTS.DETAIL(updatedEvent.id.toString()),
+      );
       if (updatedEvent.slug) {
-        await this.redisService.del(REDIS_CACHE_KEYS.EVENTS.LANDING(updatedEvent.slug));
-        await this.redisService.del(REDIS_CACHE_KEYS.EVENTS.DETAIL(updatedEvent.slug));
+        await this.redisService.del(
+          REDIS_CACHE_KEYS.EVENTS.LANDING(updatedEvent.slug),
+        );
+        await this.redisService.del(
+          REDIS_CACHE_KEYS.EVENTS.DETAIL(updatedEvent.slug),
+        );
       }
       if (updatedEvent.status === 'published') {
         await this.redisService.delPattern('qph:home:*');
         // Actualizar MeiliSearch si ya está publicado
-        this.searchService.indexEvent({
-          id: updatedEvent.id.toString(),
-          publicUuid: updatedEvent.publicUuid,
-          title: updatedEvent.name,
-          slug: updatedEvent.slug,
-          description: updatedEvent.description,
-          category: updatedEvent.category,
-          tags: updatedEvent.tags || [],
-          venue: updatedEvent.venue,
-          address: updatedEvent.address,
-          ubigeoCode: updatedEvent.ubigeoCode,
-          status: updatedEvent.status,
-          minPrice: 0,
-          date: updatedEvent.createdAt ? updatedEvent.createdAt.toISOString() : new Date().toISOString(),
-          hasLandingPage: updatedEvent.hasLandingPage,
-          isFeatured: updatedEvent.isFeatured,
-        }).catch(() => {});
+        this.searchService
+          .indexEvent({
+            id: updatedEvent.id.toString(),
+            publicUuid: updatedEvent.publicUuid,
+            title: updatedEvent.name,
+            slug: updatedEvent.slug,
+            description: updatedEvent.description,
+            category: updatedEvent.category,
+            tags: updatedEvent.tags || [],
+            venue: updatedEvent.venue,
+            address: updatedEvent.address,
+            ubigeoCode: updatedEvent.ubigeoCode,
+            status: updatedEvent.status,
+            minPrice: 0,
+            date: updatedEvent.createdAt
+              ? updatedEvent.createdAt.toISOString()
+              : new Date().toISOString(),
+            hasLandingPage: updatedEvent.hasLandingPage,
+            isFeatured: updatedEvent.isFeatured,
+          })
+          .catch(() => {});
       }
 
       return ok(updatedEvent);

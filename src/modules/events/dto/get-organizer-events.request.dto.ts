@@ -3,7 +3,8 @@ import { IsOptional, IsString, MaxLength, IsIn } from 'class-validator';
 
 export class GetOrganizerEventsRequestDto {
   @ApiPropertyOptional({
-    description: 'Filtrar por estado lógico: all, published, on_sale, sold_out, draft, completed, paused, cancelled',
+    description:
+      'Filtrar por estado lógico: all, published, on_sale, sold_out, draft, completed, paused, cancelled',
     example: 'all',
   })
   @IsOptional()
@@ -21,7 +22,8 @@ export class GetOrganizerEventsRequestDto {
   q?: string;
 
   @ApiPropertyOptional({
-    description: 'Filtro por rango temporal: 3m (últimos 3 meses), 6m (últimos 6 meses), 12m (último año), all (histórico)',
+    description:
+      'Filtro por rango temporal: 3m (últimos 3 meses), 6m (últimos 6 meses), 12m (último año), all (histórico)',
     example: '3m',
     default: '3m',
   })
@@ -30,4 +32,3 @@ export class GetOrganizerEventsRequestDto {
   @IsIn(['3m', '6m', '12m', 'all'])
   period?: '3m' | '6m' | '12m' | 'all';
 }
-

@@ -59,4 +59,4 @@ const QueryHandlers = [
     TypeormUserFavoriteRepository,
   ],
 })
-export class UsersModule { }
+export class UsersModule {}

@@ -14,17 +14,26 @@ import {
 import { OrderItemDto } from './simulate-order-checkout.request.dto';
 
 export class PrepareCulqiCheckoutRequestDto {
-  @ApiProperty({ example: '7f5ecd03-ebe9-498b-b068-f3c041b02e51', description: 'ID o publicUuid del evento' })
+  @ApiProperty({
+    example: '7f5ecd03-ebe9-498b-b068-f3c041b02e51',
+    description: 'ID o publicUuid del evento',
+  })
   @IsNotEmpty({ message: 'El eventId es obligatorio' })
   @IsString({ message: 'El eventId debe ser una cadena de texto' })
   eventId!: string;
 
-  @ApiProperty({ example: '1', description: 'ID o publicUuid de la función del evento' })
+  @ApiProperty({
+    example: '1',
+    description: 'ID o publicUuid de la función del evento',
+  })
   @IsNotEmpty({ message: 'El showId es obligatorio' })
   @IsString({ message: 'El showId debe ser una cadena de texto' })
   showId!: string;
 
-  @ApiProperty({ type: [OrderItemDto], description: 'Entradas seleccionadas por zona' })
+  @ApiProperty({
+    type: [OrderItemDto],
+    description: 'Entradas seleccionadas por zona',
+  })
   @IsArray({ message: 'Los items deben ser un arreglo' })
   @ArrayMinSize(1, { message: 'Debes seleccionar al menos una entrada' })
   @ValidateNested({ each: true })
@@ -54,16 +63,25 @@ export class PrepareCulqiCheckoutRequestDto {
 
   @ApiProperty({
     example: true,
-    description: 'Consentimiento expreso de Términos y Condiciones y Políticas de Privacidad',
+    description:
+      'Consentimiento expreso de Términos y Condiciones y Políticas de Privacidad',
   })
-  @IsNotEmpty({ message: 'La aceptación de los Términos y Condiciones es obligatoria' })
+  @IsNotEmpty({
+    message: 'La aceptación de los Términos y Condiciones es obligatoria',
+  })
   @IsBoolean({ message: 'acceptedTerms debe ser un valor booleano' })
-  @Equals(true, { message: 'Debes aceptar los Términos y Condiciones y las Políticas de Privacidad para proceder con el pago' })
+  @Equals(true, {
+    message:
+      'Debes aceptar los Términos y Condiciones y las Políticas de Privacidad para proceder con el pago',
+  })
   acceptedTerms!: boolean;
 
-  @ApiProperty({ example: 'v1.0-2026', required: false, description: 'Versión del marco legal aceptado' })
+  @ApiProperty({
+    example: 'v1.0-2026',
+    required: false,
+    description: 'Versión del marco legal aceptado',
+  })
   @IsOptional()
   @IsString({ message: 'termsVersion debe ser una cadena de texto' })
   termsVersion?: string;
 }
-

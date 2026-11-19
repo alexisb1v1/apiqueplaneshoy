@@ -43,12 +43,19 @@ export class ConfirmCulqiChargeRequestDto {
   @IsString()
   tokenId!: string;
 
-  @ApiProperty({ example: 'card', enum: ['card', 'yape', 'transfer', 'cuotealo'], required: false })
+  @ApiProperty({
+    example: 'card',
+    enum: ['card', 'yape', 'transfer', 'cuotealo'],
+    required: false,
+  })
   @IsOptional()
   @IsIn(['card', 'yape', 'transfer', 'cuotealo'])
   paymentMethod?: 'card' | 'yape' | 'transfer' | 'cuotealo';
 
-  @ApiProperty({ example: '8019959c-fab1-49eb-bbbe-b846d308d8df', required: false })
+  @ApiProperty({
+    example: '8019959c-fab1-49eb-bbbe-b846d308d8df',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   deviceFingerPrintId?: string;
@@ -65,4 +72,3 @@ export class ConfirmCulqiChargeRequestDto {
   @Type(() => Authentication3DSDto)
   authentication3DS?: Authentication3DSDto;
 }
-

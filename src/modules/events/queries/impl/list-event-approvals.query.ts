@@ -3,4 +3,3 @@ import { ListEventApprovalsQueryDto } from '@events/dto/list-event-approvals.que
 export class ListEventApprovalsQuery {
   constructor(public readonly dto: ListEventApprovalsQueryDto) {}
 }
-

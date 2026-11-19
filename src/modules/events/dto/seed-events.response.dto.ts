@@ -40,7 +40,11 @@ export class SeededEventSummaryDto {
   firstShowTime: string;
 
   @Expose()
-  @ApiProperty({ example: false, description: 'True si las funciones del evento ya concluyeron (para pruebas del cron)' })
+  @ApiProperty({
+    example: false,
+    description:
+      'True si las funciones del evento ya concluyeron (para pruebas del cron)',
+  })
   isPast: boolean;
 
   @Expose()
@@ -52,15 +56,24 @@ export class SeededEventSummaryDto {
   zonesCount: number;
 
   @Expose()
-  @ApiProperty({ example: true, description: 'True si tiene video de YouTube configurado en la landing' })
+  @ApiProperty({
+    example: true,
+    description: 'True si tiene video de YouTube configurado en la landing',
+  })
   hasYoutubeVideo: boolean;
 
   @Expose()
-  @ApiProperty({ example: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk', nullable: true })
+  @ApiProperty({
+    example: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
+    nullable: true,
+  })
   videoTeaserUrl: string | null;
 
   @Expose()
-  @ApiProperty({ example: ['QPH15', 'VIP20'], description: 'Códigos de cupones de descuento activos para este evento' })
+  @ApiProperty({
+    example: ['QPH15', 'VIP20'],
+    description: 'Códigos de cupones de descuento activos para este evento',
+  })
   coupons: string[];
 }
 
@@ -75,19 +88,32 @@ export class SeedEventsResponseDto {
   createdCount: number;
 
   @Expose()
-  @ApiProperty({ example: 30, description: 'Cantidad total de cupones promocionales generados' })
+  @ApiProperty({
+    example: 30,
+    description: 'Cantidad total de cupones promocionales generados',
+  })
   totalCouponsCount: number;
 
   @Expose()
-  @ApiProperty({ example: 4, description: 'Cantidad de eventos con funciones en el pasado (ideales para validar el Cron)' })
+  @ApiProperty({
+    example: 4,
+    description:
+      'Cantidad de eventos con funciones en el pasado (ideales para validar el Cron)',
+  })
   pastEventsCount: number;
 
   @Expose()
-  @ApiProperty({ example: 11, description: 'Cantidad de eventos vigentes en cartelera' })
+  @ApiProperty({
+    example: 11,
+    description: 'Cantidad de eventos vigentes en cartelera',
+  })
   upcomingEventsCount: number;
 
   @Expose()
-  @ApiProperty({ example: 'Carga masiva de eventos completada con éxito. Los índices de MeiliSearch y caché de Redis fueron sincronizados.' })
+  @ApiProperty({
+    example:
+      'Carga masiva de eventos completada con éxito. Los índices de MeiliSearch y caché de Redis fueron sincronizados.',
+  })
   message: string;
 
   @Expose()
@@ -95,4 +121,3 @@ export class SeedEventsResponseDto {
   @ApiProperty({ type: [SeededEventSummaryDto] })
   events: SeededEventSummaryDto[];
 }
-

@@ -66,6 +66,21 @@ export class OrganizerEventZoneResponseDto {
   @Expose()
   @ApiProperty({ example: 30400.0 })
   revenue!: number;
+
+  @Expose()
+  @ApiProperty({
+    example: false,
+    description:
+      'Indica si la comisión está incluida en el precio (asumida por promotor) o sumada al comprador',
+  })
+  feeIncluded!: boolean;
+
+  @Expose()
+  @ApiProperty({
+    example: 6.0,
+    description: 'Monto de la comisión por entrada',
+  })
+  serviceFee!: number;
 }
 
 @Exclude()
@@ -138,7 +153,26 @@ export class OrganizerEventResponseDto {
   hasLandingPage!: boolean;
 
   @Expose()
-  @ApiProperty({ example: 'https://pub-xxx.r2.dev/banners/event.webp', nullable: true })
+  @ApiProperty({
+    example: false,
+    description:
+      'Indica si todas o la mayoría de zonas tienen la comisión incluida en el precio',
+  })
+  feeIncluded!: boolean;
+
+  @Expose()
+  @ApiProperty({
+    example: 'buyer',
+    description:
+      'Destino del cobro de la comisión: buyer (sumada al comprador) o promoter (asumida por promotor/incluida)',
+  })
+  feeChargedTo!: 'buyer' | 'promoter' | 'mixed';
+
+  @Expose()
+  @ApiProperty({
+    example: 'https://pub-xxx.r2.dev/banners/event.webp',
+    nullable: true,
+  })
   imageUrl!: string | null;
 
   @Expose()
@@ -215,4 +249,3 @@ export class OrganizerEventResponseDto {
   @ApiProperty({ type: [OrganizerEventZoneResponseDto] })
   zones!: OrganizerEventZoneResponseDto[];
 }
-

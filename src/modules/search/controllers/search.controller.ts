@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SearchService } from '../services/search.service';
 import { SearchEventsRequestDto } from '../dto/search-events.request.dto';
@@ -12,10 +19,13 @@ export class SearchController {
 
   @Get('cities')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener ciudades que cuentan con eventos en estado published' })
+  @ApiOperation({
+    summary: 'Obtener ciudades que cuentan con eventos en estado published',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Listado dinámico de ciudades con eventos publicados y conteo activo',
+    description:
+      'Listado dinámico de ciudades con eventos publicados y conteo activo',
     type: [PublishedCityResponseDto],
   })
   async getPublishedCities(): Promise<PublishedCityResponseDto[]> {
@@ -24,20 +34,30 @@ export class SearchController {
 
   @Get('events')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Búsqueda instantánea de cartelera de eventos con Meilisearch' })
+  @ApiOperation({
+    summary: 'Búsqueda instantánea de cartelera de eventos con Meilisearch',
+  })
   @ApiResponse({
     status: 200,
     description: 'Resultados de eventos encontrados en milisegundos',
     type: SearchEventsResponseDto,
   })
-  async searchEvents(@Query() query: SearchEventsRequestDto): Promise<SearchEventsResponseDto> {
+  async searchEvents(
+    @Query() query: SearchEventsRequestDto,
+  ): Promise<SearchEventsResponseDto> {
     return this.searchService.searchEvents(query);
   }
 
   @Post('sync')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reindexar y sincronizar todos los eventos de PostgreSQL a Meilisearch' })
-  @ApiResponse({ status: 200, description: 'Resultado de la sincronización masiva' })
+  @ApiOperation({
+    summary:
+      'Reindexar y sincronizar todos los eventos de PostgreSQL a Meilisearch',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resultado de la sincronización masiva',
+  })
   async syncEvents() {
     const result = await this.searchService.syncAllEvents();
     return {
@@ -50,7 +70,10 @@ export class SearchController {
   @Get('health')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Estado del motor de búsqueda' })
-  @ApiResponse({ status: 200, description: 'Estado actual del motor de búsqueda' })
+  @ApiResponse({
+    status: 200,
+    description: 'Estado actual del motor de búsqueda',
+  })
   checkHealth() {
     return {
       status: this.searchService.isReady() ? 'available' : 'unavailable',
@@ -58,4 +81,3 @@ export class SearchController {
     };
   }
 }
-

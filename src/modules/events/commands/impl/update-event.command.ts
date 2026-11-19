@@ -7,4 +7,3 @@ export class UpdateEventCommand {
     public readonly dto: UpdateEventDto,
   ) {}
 }
-

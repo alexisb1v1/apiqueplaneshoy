@@ -68,4 +68,3 @@ export class PlatformFeeService {
     return calculatePlatformFee(price);
   }
 }
-

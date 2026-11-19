@@ -24,7 +24,8 @@ export class MediaController {
   @Post('presigned-url')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Generar URL prefirmada para subida directa de imágenes a Cloudflare R2',
+    summary:
+      'Generar URL prefirmada para subida directa de imágenes a Cloudflare R2',
     description:
       'Devuelve una URL prefirmada temporal de 5 minutos para subir el archivo vía PUT directo a Cloudflare R2 y la URL pública CDN resultante.',
   })
@@ -34,7 +35,7 @@ export class MediaController {
     type: PresignedUrlResponseDto,
   })
   async getPresignedUrl(
-    @Body() dto: GetPresignedUrlDto
+    @Body() dto: GetPresignedUrlDto,
   ): Promise<PresignedUrlResponseDto> {
     return this.mediaService.getPresignedUploadUrl(dto);
   }
@@ -53,12 +54,16 @@ export class MediaController {
   })
   async deleteMedia(
     @Query() queryDto?: DeleteMediaQueryDto,
-    @Body() bodyDto?: DeleteMediaRequestDto
+    @Body() bodyDto?: DeleteMediaRequestDto,
   ): Promise<DeleteMediaResponseDto> {
     const targetKeyOrUrl = queryDto?.url || bodyDto?.keyOrUrl;
-    if (!targetKeyOrUrl || typeof targetKeyOrUrl !== 'string' || !targetKeyOrUrl.trim()) {
+    if (
+      !targetKeyOrUrl ||
+      typeof targetKeyOrUrl !== 'string' ||
+      !targetKeyOrUrl.trim()
+    ) {
       throw new BadRequestException(
-        'Debe proporcionar la URL o clave del archivo a eliminar en query param (?url=...) o en el body ({ keyOrUrl: "..." }).'
+        'Debe proporcionar la URL o clave del archivo a eliminar en query param (?url=...) o en el body ({ keyOrUrl: "..." }).',
       );
     }
     return this.mediaService.deleteMediaObject(targetKeyOrUrl.trim());

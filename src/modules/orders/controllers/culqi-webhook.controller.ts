@@ -131,7 +131,10 @@ export class CulqiWebhookController {
       return;
     }
 
-    if (officialOrder.state === 'expired' || officialOrder.state === 'deleted') {
+    if (
+      officialOrder.state === 'expired' ||
+      officialOrder.state === 'deleted'
+    ) {
       const payment = await this.paymentRepository.findOne({
         where: { externalTransactionId: officialOrder.id },
       });
@@ -155,7 +158,9 @@ export class CulqiWebhookController {
     }
   }
 
-  private async processChargeSucceededWebhook(culqiChargeId: string): Promise<void> {
+  private async processChargeSucceededWebhook(
+    culqiChargeId: string,
+  ): Promise<void> {
     if (!this.culqiGatewayService.isConfigured()) return;
 
     const verifyRes = await this.culqiGatewayService.getCharge(culqiChargeId);
@@ -168,7 +173,8 @@ export class CulqiWebhookController {
 
     const officialCharge = verifyRes.charge;
     const isApproved =
-      !officialCharge.outcome?.type || officialCharge.outcome.type === 'venta_exitosa';
+      !officialCharge.outcome?.type ||
+      officialCharge.outcome.type === 'venta_exitosa';
 
     if (!isApproved) return;
 
@@ -221,4 +227,3 @@ export class CulqiWebhookController {
     return null;
   }
 }
-

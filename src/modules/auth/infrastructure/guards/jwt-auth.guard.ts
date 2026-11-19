@@ -30,7 +30,9 @@ export class JwtAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Token de autenticación no proporcionado o inválido');
+      throw new UnauthorizedException(
+        'Token de autenticación no proporcionado o inválido',
+      );
     }
 
     const token = authHeader.split(' ')[1];

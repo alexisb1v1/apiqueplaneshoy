@@ -10,7 +10,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { TokenService } from '@auth/domain/ports/token-service.port';
 import { SimulateOrderCheckoutRequestDto } from '../dto/simulate-order-checkout.request.dto';
 import { SimulateOrderCheckoutResponseDto } from '../dto/simulate-order-checkout.response.dto';
@@ -60,7 +65,8 @@ export class OrdersController {
       NOT_FOUND: 'El cupón ingresado no existe o no pertenece a este evento.',
       COUPON_INVALID_OR_EXPIRED:
         'El cupón no es válido, ha caducado por fecha o ya no cuenta con usos disponibles.',
-      INVALID_INPUT: 'El subtotal actual no cumple con el monto mínimo requerido para este cupón.',
+      INVALID_INPUT:
+        'El subtotal actual no cumple con el monto mínimo requerido para este cupón.',
     });
   }
 
@@ -78,7 +84,8 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Transacción simulada rechazada (fondos insuficientes o fallo bancario) o stock no disponible',
+    description:
+      'Transacción simulada rechazada (fondos insuficientes o fallo bancario) o stock no disponible',
   })
   async simulateCheckout(
     @Body() body: SimulateOrderCheckoutRequestDto,
@@ -88,7 +95,11 @@ export class OrdersController {
 
     // 1. Extraer usuario autenticado si se proporciona token Bearer en el encabezado
     const authHeader = req.headers?.authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Bearer ')
+    ) {
       const token = authHeader.split(' ')[1];
       const payload = this.tokenService.verifyToken(token);
       if (payload && payload.id) {
@@ -114,10 +125,12 @@ export class OrdersController {
     return matchResult(result, (data) => data, {
       PAYMENT_REJECTED:
         'La transacción ha sido rechazada por la pasarela de pagos (simulación de fallo: Fondos insuficientes o tarjeta declinada). Prueba con otro medio de pago.',
-      INVALID_INPUT: 'No hay aforo o stock suficiente disponible para las zonas seleccionadas.',
+      INVALID_INPUT:
+        'No hay aforo o stock suficiente disponible para las zonas seleccionadas.',
       TICKET_LIMIT_EXCEEDED:
         'Has superado el límite de entradas permitido para este evento o compra. Revisa tus compras anteriores en tu perfil.',
-      NOT_FOUND: 'El evento, función o zona seleccionada no existen o no están vigentes.',
+      NOT_FOUND:
+        'El evento, función o zona seleccionada no existen o no están vigentes.',
     });
   }
 
@@ -130,7 +143,8 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista histórica completa de compras y tickets oficiales emitidos',
+    description:
+      'Lista histórica completa de compras y tickets oficiales emitidos',
     type: [UserOrderResponseDto],
   })
   @ApiResponse({
@@ -142,7 +156,11 @@ export class OrdersController {
 
     // Extraer usuario autenticado mediante el token Bearer (Regla DevSecOps BOLA - API1)
     const authHeader = req.headers?.authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Bearer ')
+    ) {
       const token = authHeader.split(' ')[1];
       const payload = this.tokenService.verifyToken(token);
       if (payload && payload.id) {
@@ -163,4 +181,3 @@ export class OrdersController {
     return this.queryBus.execute(new GetMyOrdersQuery(authenticatedUserId));
   }
 }
-

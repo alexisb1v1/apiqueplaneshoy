@@ -4,4 +4,3 @@ export class ToggleFavoriteCommand {
     public readonly eventId: string,
   ) {}
 }
-

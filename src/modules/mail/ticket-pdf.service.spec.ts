@@ -55,8 +55,10 @@ describe('TicketPdfService', () => {
       eventDateFormatted: 'Sábado, 12 de diciembre de 2026',
       eventTimeFormatted: '08:30 p. m.',
       emissionDateFormatted: '11 de noviembre de 2026 a las 11:15 a. m.',
-      venueName: 'Gran Teatro Nacional del Perú y Explanada Cultural Principal de Lima',
-      venueAddress: 'Av. Javier Prado Este 2225, San Borja, Referencia Estación La Cultura',
+      venueName:
+        'Gran Teatro Nacional del Perú y Explanada Cultural Principal de Lima',
+      venueAddress:
+        'Av. Javier Prado Este 2225, San Borja, Referencia Estación La Cultura',
       city: 'Lima',
       customerName: 'ALEXIS FERNANDO BASILIO VERASTEGUI',
       customerEmail: 'alexis.basilio.corporativo.largo@queplanhoy.com',
@@ -86,4 +88,3 @@ describe('TicketPdfService', () => {
     expect(countPdfPages(pdfBuffer)).toBe(2);
   });
 });
-

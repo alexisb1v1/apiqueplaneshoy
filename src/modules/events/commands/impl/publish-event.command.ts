@@ -4,4 +4,3 @@ export class PublishEventCommand {
     public readonly eventIdentifier: string,
   ) {}
 }
-

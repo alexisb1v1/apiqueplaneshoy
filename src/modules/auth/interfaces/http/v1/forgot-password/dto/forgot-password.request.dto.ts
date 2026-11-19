@@ -12,4 +12,3 @@ export class ForgotPasswordRequestDto {
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   email: string;
 }
-

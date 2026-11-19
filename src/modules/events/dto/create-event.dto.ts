@@ -16,7 +16,11 @@ export class CreateEventDto {
   @IsNotEmpty()
   readonly title: string;
 
-  @ApiProperty({ example: 'concierto-de-rock-2026', description: 'Slug o URL amigable personalizado para la landing page', required: false })
+  @ApiProperty({
+    example: 'concierto-de-rock-2026',
+    description: 'Slug o URL amigable personalizado para la landing page',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly slug?: string;
@@ -36,32 +40,57 @@ export class CreateEventDto {
   @IsOptional()
   readonly location?: string;
 
-  @ApiProperty({ example: 'Explanada Ferial Yarinacocha', description: 'Nombre comercial del recinto o local', required: false })
+  @ApiProperty({
+    example: 'Explanada Ferial Yarinacocha',
+    description: 'Nombre comercial del recinto o local',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly venue?: string;
 
-  @ApiProperty({ example: 'Selva Central Producciones SAC', description: 'Razón social o nombre comercial del organizador', required: false })
+  @ApiProperty({
+    example: 'Selva Central Producciones SAC',
+    description: 'Razón social o nombre comercial del organizador',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly organizerName?: string;
 
-  @ApiProperty({ example: 'RUC', enum: ['DNI', 'RUC', 'CE'], description: 'Tipo de documento fiscal del organizador', required: false })
+  @ApiProperty({
+    example: 'RUC',
+    enum: ['DNI', 'RUC', 'CE'],
+    description: 'Tipo de documento fiscal del organizador',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly organizerDocumentType?: string;
 
-  @ApiProperty({ example: '20601234567', description: 'Número de documento fiscal o RUC', required: false })
+  @ApiProperty({
+    example: '20601234567',
+    description: 'Número de documento fiscal o RUC',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly organizerDocumentNumber?: string;
 
-  @ApiProperty({ example: '+51 987654321', description: 'Teléfono o WhatsApp de contacto comercial', required: false })
+  @ApiProperty({
+    example: '+51 987654321',
+    description: 'Teléfono o WhatsApp de contacto comercial',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly organizerPhone?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplanhoy.com/organizers/logo.png', description: 'Logotipo de la productora', required: false })
+  @ApiProperty({
+    example: 'https://cdn.queplanhoy.com/organizers/logo.png',
+    description: 'Logotipo de la productora',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly organizerLogoUrl?: string;
@@ -83,7 +112,10 @@ export class CreateEventDto {
   @IsOptional()
   readonly category?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplanhoy.com/banners/rock.jpg', required: false })
+  @ApiProperty({
+    example: 'https://cdn.queplanhoy.com/banners/rock.jpg',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly bannerUrl?: string;
@@ -98,28 +130,46 @@ export class CreateEventDto {
   @IsOptional()
   readonly addressReference?: string;
 
-  @ApiProperty({ example: '150101', description: 'Código INEI de ubigeo (6 dígitos)', required: false })
+  @ApiProperty({
+    example: '150101',
+    description: 'Código INEI de ubigeo (6 dígitos)',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly ubigeoCode?: string;
 
-  @ApiProperty({ example: '-12.046374, -77.042793', description: 'Coordenadas latitud, longitud', required: false })
+  @ApiProperty({
+    example: '-12.046374, -77.042793',
+    description: 'Coordenadas latitud, longitud',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly coordinates?: string;
 
-  @ApiProperty({ example: 'https://maps.google.com/?q=-12.046374,-77.042793', required: false })
+  @ApiProperty({
+    example: 'https://maps.google.com/?q=-12.046374,-77.042793',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly googleMapsUrl?: string;
 
-  @ApiProperty({ example: ['musica', 'festival', 'pucallpa', 'rock'], required: false })
+  @ApiProperty({
+    example: ['musica', 'festival', 'pucallpa', 'rock'],
+    required: false,
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   readonly tags?: string[];
 
-  @ApiProperty({ example: 'ALL_AGES', enum: ['ALL_AGES', 'PLUS_14', 'PLUS_18'], required: false })
+  @ApiProperty({
+    example: 'ALL_AGES',
+    enum: ['ALL_AGES', 'PLUS_14', 'PLUS_18'],
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly ageRestriction?: string;
@@ -129,22 +179,34 @@ export class CreateEventDto {
   @IsOptional()
   readonly userTicketLimit?: number;
 
-  @ApiProperty({ example: 'DNI físico obligatorio para el ingreso', required: false })
+  @ApiProperty({
+    example: 'DNI físico obligatorio para el ingreso',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly entryRequirements?: string;
 
-  @ApiProperty({ example: 'Apertura de puertas a las 18:00 hrs', required: false })
+  @ApiProperty({
+    example: 'Apertura de puertas a las 18:00 hrs',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly openingHoursComment?: string;
 
-  @ApiProperty({ example: 'https://cdn.queplanhoy.com/legal/terminos.pdf', required: false })
+  @ApiProperty({
+    example: 'https://cdn.queplanhoy.com/legal/terminos.pdf',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly termsAndConditionsUrl?: string;
 
-  @ApiProperty({ example: [{ question: '¿Hay estacionamiento?', answer: 'Sí, gratuito.' }], required: false })
+  @ApiProperty({
+    example: [{ question: '¿Hay estacionamiento?', answer: 'Sí, gratuito.' }],
+    required: false,
+  })
   @IsArray()
   @IsOptional()
   readonly faqs?: Array<{ question: string; answer: string }>;
@@ -154,16 +216,31 @@ export class CreateEventDto {
   @IsOptional()
   readonly hasLandingPage?: boolean;
 
-  @ApiProperty({ example: { header: {}, body: {}, footer: {}, theme: {} }, required: false })
+  @ApiProperty({
+    example: { header: {}, body: {}, footer: {}, theme: {} },
+    required: false,
+  })
   @IsOptional()
   readonly landingConfig?: Record<string, any>;
 
-  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx', description: 'URL de video promocional o teaser (YouTube, Vimeo o MP4 directo)', required: false })
+  @ApiProperty({
+    example: 'https://www.youtube.com/watch?v=xxxx',
+    description:
+      'URL de video promocional o teaser (YouTube, Vimeo o MP4 directo)',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   readonly promoVideoUrl?: string;
 
-  @ApiProperty({ example: { instagramUrl: 'https://instagram.com/...', facebookUrl: 'https://facebook.com/...', tiktokUrl: 'https://tiktok.com/@...' }, required: false })
+  @ApiProperty({
+    example: {
+      instagramUrl: 'https://instagram.com/...',
+      facebookUrl: 'https://facebook.com/...',
+      tiktokUrl: 'https://tiktok.com/@...',
+    },
+    required: false,
+  })
   @IsOptional()
   readonly socialLinks?: {
     instagramUrl?: string;
@@ -171,7 +248,10 @@ export class CreateEventDto {
     tiktokUrl?: string;
   };
 
-  @ApiProperty({ description: 'Funciones u horarios del evento', required: false })
+  @ApiProperty({
+    description: 'Funciones u horarios del evento',
+    required: false,
+  })
   @IsArray()
   @IsOptional()
   readonly shows?: Array<{
@@ -205,7 +285,10 @@ export class CreateEventDto {
     }>;
   }>;
 
-  @ApiProperty({ description: 'Cupones de descuento iniciales', required: false })
+  @ApiProperty({
+    description: 'Cupones de descuento iniciales',
+    required: false,
+  })
   @IsArray()
   @IsOptional()
   readonly coupons?: Array<{

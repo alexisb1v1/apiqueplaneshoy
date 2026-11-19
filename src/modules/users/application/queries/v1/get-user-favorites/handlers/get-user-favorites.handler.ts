@@ -22,7 +22,9 @@ export class GetUserFavoritesHandler implements IQueryHandler<GetUserFavoritesQu
     query: GetUserFavoritesQuery,
   ): Promise<Result<UserFavoriteEventItemResponseDto[], AppError>> {
     try {
-      const favorites = await this.favoriteRepository.getFavoriteEvents(query.userId);
+      const favorites = await this.favoriteRepository.getFavoriteEvents(
+        query.userId,
+      );
 
       const items: UserFavoriteEventItemResponseDto[] = favorites
         .filter((fav) => Boolean(fav.event))
@@ -30,7 +32,9 @@ export class GetUserFavoritesHandler implements IQueryHandler<GetUserFavoritesQu
           const event = fav.event;
 
           // 1. Imagen de portada o banner
-          const bannerImage = event.images?.find((img) => img.imageType === 'banner');
+          const bannerImage = event.images?.find(
+            (img) => img.imageType === 'banner',
+          );
           const imageUrl =
             bannerImage?.imageUrl ||
             event.images?.[0]?.imageUrl ||
@@ -40,7 +44,11 @@ export class GetUserFavoritesHandler implements IQueryHandler<GetUserFavoritesQu
           let city = 'Perú';
           if (event.ubigeoCode && ubigeoPeru?.reniec) {
             try {
-              const info = ubigeoPeru.reniec.find((u: any) => u.departamento === event.ubigeoCode?.slice(0, 2) && u.provincia === event.ubigeoCode?.slice(2, 4));
+              const info = ubigeoPeru.reniec.find(
+                (u: any) =>
+                  u.departamento === event.ubigeoCode?.slice(0, 2) &&
+                  u.provincia === event.ubigeoCode?.slice(2, 4),
+              );
               if (info) city = info.provincia;
             } catch {
               city = event.addressReference || 'Perú';
@@ -56,12 +64,17 @@ export class GetUserFavoritesHandler implements IQueryHandler<GetUserFavoritesQu
             .filter((d) => d >= now)
             .sort((a, b) => a.getTime() - b.getTime());
 
-          const nextShowDate = upcomingShows[0]?.toISOString() || event.shows?.[0]?.startTime?.toISOString() || null;
+          const nextShowDate =
+            upcomingShows[0]?.toISOString() ||
+            event.shows?.[0]?.startTime?.toISOString() ||
+            null;
 
           // 4. Precio más bajo
           let minPrice = 0;
           if (event.zones && event.zones.length > 0) {
-            const prices = event.zones.map((z) => Number(z.regularPrice || 0)).filter((p) => p > 0);
+            const prices = event.zones
+              .map((z) => Number(z.regularPrice || 0))
+              .filter((p) => p > 0);
             if (prices.length > 0) {
               minPrice = Math.min(...prices);
             }
@@ -78,15 +91,18 @@ export class GetUserFavoritesHandler implements IQueryHandler<GetUserFavoritesQu
             city,
             nextShowDate,
             minPrice,
-            favoritedAt: fav.createdAt ? new Date(fav.createdAt).toISOString() : new Date().toISOString(),
+            favoritedAt: fav.createdAt
+              ? new Date(fav.createdAt).toISOString()
+              : new Date().toISOString(),
           };
         });
 
       return ok(items);
     } catch (error) {
-      this.logger.error(`Error al listar favoritos del usuario: ${(error as Error).message}`);
+      this.logger.error(
+        `Error al listar favoritos del usuario: ${(error as Error).message}`,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

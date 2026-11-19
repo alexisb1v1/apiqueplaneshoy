@@ -10,4 +10,3 @@ export class GoogleAuthUrlResponseDto {
   @Expose()
   url: string;
 }
-

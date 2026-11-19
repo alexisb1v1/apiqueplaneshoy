@@ -8,19 +8,31 @@ export class UserOrderTicketDto {
   ticketId: string;
 
   @Expose()
-  @ApiProperty({ description: 'UUID público del boleto', example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d' })
+  @ApiProperty({
+    description: 'UUID público del boleto',
+    example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+  })
   ticketUuid: string;
 
   @Expose()
-  @ApiProperty({ description: 'Número correlativo dentro de la orden', example: 1 })
+  @ApiProperty({
+    description: 'Número correlativo dentro de la orden',
+    example: 1,
+  })
   ticketNumber: number;
 
   @Expose()
-  @ApiProperty({ description: 'Nombre de la zona asignada', example: 'Zona VIP' })
+  @ApiProperty({
+    description: 'Nombre de la zona asignada',
+    example: 'Zona VIP',
+  })
   zoneName: string;
 
   @Expose()
-  @ApiProperty({ description: 'Nombre de la tarifa o preventa', example: 'Preventa Early Bird' })
+  @ApiProperty({
+    description: 'Nombre de la tarifa o preventa',
+    example: 'Preventa Early Bird',
+  })
   tierName: string;
 
   @Expose()
@@ -28,11 +40,17 @@ export class UserOrderTicketDto {
   unitPrice: number;
 
   @Expose()
-  @ApiProperty({ description: 'Payload del código QR firmado', example: 'QPH|ORD:12|TCK:101|SIG:...' })
+  @ApiProperty({
+    description: 'Payload del código QR firmado',
+    example: 'QPH|ORD:12|TCK:101|SIG:...',
+  })
   qrPayload: string;
 
   @Expose()
-  @ApiProperty({ description: 'Estado del ticket: sold, used, cancelled', example: 'sold' })
+  @ApiProperty({
+    description: 'Estado del ticket: sold, used, cancelled',
+    example: 'sold',
+  })
   status: string;
 }
 
@@ -43,11 +61,17 @@ export class UserOrderResponseDto {
   orderId: string;
 
   @Expose()
-  @ApiProperty({ description: 'Código institucional visible de la orden', example: '#QPH-000005' })
+  @ApiProperty({
+    description: 'Código institucional visible de la orden',
+    example: '#QPH-000005',
+  })
   orderCode: string;
 
   @Expose()
-  @ApiProperty({ description: 'UUID público de la orden', example: 'f391a27e-8c54-4b9f-b98a-1123456789ab' })
+  @ApiProperty({
+    description: 'UUID público de la orden',
+    example: 'f391a27e-8c54-4b9f-b98a-1123456789ab',
+  })
   orderUuid: string;
 
   @Expose()
@@ -55,7 +79,10 @@ export class UserOrderResponseDto {
   orderDate: string;
 
   @Expose()
-  @ApiProperty({ description: 'Monto total pagado en Soles (S/.)', example: 240.0 })
+  @ApiProperty({
+    description: 'Monto total pagado en Soles (S/.)',
+    example: 240.0,
+  })
   totalAmount: number;
 
   @Expose()
@@ -63,15 +90,24 @@ export class UserOrderResponseDto {
   status: string;
 
   @Expose()
-  @ApiProperty({ description: 'Método de pago procesado', example: 'Tarjeta de crédito' })
+  @ApiProperty({
+    description: 'Método de pago procesado',
+    example: 'Tarjeta de crédito',
+  })
   paymentMethod: string;
 
   @Expose()
-  @ApiProperty({ description: 'Código de transacción de pago', example: 'TX-535861' })
+  @ApiProperty({
+    description: 'Código de transacción de pago',
+    example: 'TX-535861',
+  })
   txCode: string;
 
   @Expose()
-  @ApiProperty({ description: 'Cantidad total de entradas en la orden', example: 2 })
+  @ApiProperty({
+    description: 'Cantidad total de entradas en la orden',
+    example: 2,
+  })
   ticketCount: number;
 
   @Expose()
@@ -79,15 +115,24 @@ export class UserOrderResponseDto {
   eventId: string;
 
   @Expose()
-  @ApiProperty({ description: 'Título del evento', example: 'Bareto en Concierto' })
+  @ApiProperty({
+    description: 'Título del evento',
+    example: 'Bareto en Concierto',
+  })
   eventTitle: string;
 
   @Expose()
-  @ApiProperty({ description: 'Slug del evento para enlaces amigables', example: 'bareto-en-concierto' })
+  @ApiProperty({
+    description: 'Slug del evento para enlaces amigables',
+    example: 'bareto-en-concierto',
+  })
   eventSlug: string;
 
   @Expose()
-  @ApiProperty({ description: 'Indica si el evento tiene landing page inmersiva habilitada', example: true })
+  @ApiProperty({
+    description: 'Indica si el evento tiene landing page inmersiva habilitada',
+    example: true,
+  })
   hasLandingPage: boolean;
 
   @Expose()
@@ -95,15 +140,32 @@ export class UserOrderResponseDto {
   category: string;
 
   @Expose()
-  @ApiProperty({ description: 'Recinto o local oficial', example: 'Campo Ferial' })
+  @ApiProperty({
+    description: 'Recinto o local oficial',
+    example: 'Campo Ferial',
+  })
   venueName: string;
 
   @Expose()
-  @ApiProperty({ description: 'Dirección física del recinto', example: 'Av. Yarinacocha 954' })
+  @ApiProperty({
+    description: 'Dirección física del recinto',
+    example: 'Av. Yarinacocha 954',
+  })
   venueAddress: string;
 
   @Expose()
-  @ApiProperty({ description: 'Ciudad donde se realiza el evento', example: 'Pucallpa' })
+  @ApiProperty({
+    description: 'URL de navegación a Google Maps o Waze',
+    nullable: true,
+    example: 'https://maps.google.com/?q=-8.3791,-74.5539',
+  })
+  googleMapsUrl: string | null;
+
+  @Expose()
+  @ApiProperty({
+    description: 'Ciudad donde se realiza el evento',
+    example: 'Pucallpa',
+  })
   city: string;
 
   @Expose()
@@ -111,28 +173,44 @@ export class UserOrderResponseDto {
   bannerImageUrl: string | null;
 
   @Expose()
-  @ApiProperty({ description: 'Fecha legible del espectáculo', example: 'Lunes, 30 de noviembre, 2026' })
+  @ApiProperty({
+    description: 'Fecha legible del espectáculo',
+    example: 'Lunes, 30 de noviembre, 2026',
+  })
   eventDateFormatted: string;
 
   @Expose()
-  @ApiProperty({ description: 'Horario oficial de la función', example: '10:00 p. m.' })
+  @ApiProperty({
+    description: 'Horario oficial de la función',
+    example: '10:00 p. m.',
+  })
   eventTimeFormatted: string;
 
   @Expose()
-  @ApiProperty({ description: 'Fecha ISO de la función para ordenación y filtros' })
+  @ApiProperty({
+    description: 'Fecha ISO de la función para ordenación y filtros',
+  })
   showStartTimeIso: string;
 
   @Expose()
-  @ApiProperty({ description: 'Indica si el evento ya pasó de fecha', example: false })
+  @ApiProperty({
+    description: 'Indica si el evento ya pasó de fecha',
+    example: false,
+  })
   isPast: boolean;
 
   @Expose()
-  @ApiProperty({ description: 'Nombre de la zona adquirida', example: 'GENERAL' })
+  @ApiProperty({
+    description: 'Nombre de la zona adquirida',
+    example: 'GENERAL',
+  })
   zoneName: string;
 
   @Expose()
   @Type(() => UserOrderTicketDto)
-  @ApiProperty({ description: 'Lista de tickets oficiales asociados a esta orden', type: [UserOrderTicketDto] })
+  @ApiProperty({
+    description: 'Lista de tickets oficiales asociados a esta orden',
+    type: [UserOrderTicketDto],
+  })
   tickets: UserOrderTicketDto[];
 }
-

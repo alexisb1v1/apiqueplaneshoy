@@ -20,7 +20,9 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
    * @param command Contiene el `publicUuid` y el DTO con los datos actualizables
    * @returns Result con AuthUserDto actualizado o AppError
    */
-  async execute(command: UpdateProfileCommand): Promise<Result<AuthUserDto, AppError>> {
+  async execute(
+    command: UpdateProfileCommand,
+  ): Promise<Result<AuthUserDto, AppError>> {
     const { publicUuid, dto } = command;
 
     const user = await this.userRepository.findByPublicUuid(publicUuid);
@@ -34,7 +36,8 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
       resolvedName = dto.name;
     } else if (dto.firstName || dto.lastName) {
       const first = dto.firstName || user.name.split(' ')[0] || '';
-      const last = dto.lastName || user.name.split(' ').slice(1).join(' ') || '';
+      const last =
+        dto.lastName || user.name.split(' ').slice(1).join(' ') || '';
       resolvedName = `${first} ${last}`.trim();
     }
 
@@ -50,15 +53,21 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
     }
 
     if (dto.organizerDocumentType !== undefined) {
-      user.organizerDocumentType = dto.organizerDocumentType ? dto.organizerDocumentType.trim() : null;
+      user.organizerDocumentType = dto.organizerDocumentType
+        ? dto.organizerDocumentType.trim()
+        : null;
     }
 
     if (dto.organizerDocumentNumber !== undefined) {
-      user.organizerDocumentNumber = dto.organizerDocumentNumber ? dto.organizerDocumentNumber.trim() : null;
+      user.organizerDocumentNumber = dto.organizerDocumentNumber
+        ? dto.organizerDocumentNumber.trim()
+        : null;
     }
 
     if (dto.organizerLogoUrl !== undefined) {
-      user.organizerLogoUrl = dto.organizerLogoUrl ? dto.organizerLogoUrl.trim() : null;
+      user.organizerLogoUrl = dto.organizerLogoUrl
+        ? dto.organizerLogoUrl.trim()
+        : null;
     }
 
     try {
@@ -91,4 +100,3 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
     }
   }
 }
-

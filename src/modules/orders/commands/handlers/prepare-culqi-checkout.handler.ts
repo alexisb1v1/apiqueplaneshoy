@@ -28,7 +28,10 @@ interface ResolvedZoneLine {
   quantity: number;
 }
 
-function splitFullName(fullName?: string | null): { firstName: string; lastName: string } {
+function splitFullName(fullName?: string | null): {
+  firstName: string;
+  lastName: string;
+} {
   const cleaned = (fullName || '').trim().replace(/\s+/g, ' ');
   if (!cleaned) return { firstName: 'Cliente', lastName: 'QPH' };
   const parts = cleaned.split(' ');
@@ -49,16 +52,17 @@ function normalizePeruPhone(rawPhone?: string | null): string {
 }
 
 @CommandHandler(PrepareCulqiCheckoutCommand)
-export class PrepareCulqiCheckoutHandler
-  implements
-  ICommandHandler<PrepareCulqiCheckoutCommand, Result<PrepareCulqiCheckoutResponseDto, AppError>> {
+export class PrepareCulqiCheckoutHandler implements ICommandHandler<
+  PrepareCulqiCheckoutCommand,
+  Result<PrepareCulqiCheckoutResponseDto, AppError>
+> {
   private readonly logger = new Logger(PrepareCulqiCheckoutHandler.name);
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly culqiGatewayService: CulqiGatewayService,
     private readonly orderLifecycleService: OrderLifecycleService,
-  ) { }
+  ) {}
 
   /**
    * Reserva stock de forma atómica en PostgreSQL y crea la orden correspondiente en Culqi API v2.
@@ -98,7 +102,9 @@ export class PrepareCulqiCheckoutHandler
         dto.eventId,
       );
       if (!event) {
-        this.logger.warn(`[Culqi Prepare] Evento no encontrado para eventId='${dto.eventId}'.`);
+        this.logger.warn(
+          `[Culqi Prepare] Evento no encontrado para eventId='${dto.eventId}'.`,
+        );
         await queryRunner.rollbackTransaction();
         return err('EVENT_NOT_FOUND');
       }
@@ -162,11 +168,14 @@ export class PrepareCulqiCheckoutHandler
         .innerJoin('t.show', 's')
         .where('s.eventId = :eventId', { eventId: event.id })
         .andWhere('o.userId = :userId', { userId: user.id })
-        .andWhere('(o.status = :paidStatus OR (o.status = :pendingStatus AND o.expiresAt > :now))', {
-          paidStatus: 'paid',
-          pendingStatus: 'pending',
-          now,
-        })
+        .andWhere(
+          '(o.status = :paidStatus OR (o.status = :pendingStatus AND o.expiresAt > :now))',
+          {
+            paidStatus: 'paid',
+            pendingStatus: 'pending',
+            now,
+          },
+        )
         .andWhere('t.status IN (:...ticketStatuses)', {
           ticketStatuses: ['sold', 'used', 'locked'],
         })
@@ -207,7 +216,9 @@ export class PrepareCulqiCheckoutHandler
 
         const remainingZone = Math.max(
           0,
-          Number(zone.capacity) - Number(zone.soldCount) - Number(zone.lockedCount),
+          Number(zone.capacity) -
+            Number(zone.soldCount) -
+            Number(zone.lockedCount),
         );
         if (remainingZone < item.quantity) {
           await queryRunner.rollbackTransaction();
@@ -226,7 +237,8 @@ export class PrepareCulqiCheckoutHandler
             (t) =>
               t.isActive &&
               (!t.endAt || new Date(t.endAt) >= now) &&
-              Number(t.soldCount) + Number(t.lockedCount) + item.quantity <= Number(t.capacity),
+              Number(t.soldCount) + Number(t.lockedCount) + item.quantity <=
+                Number(t.capacity),
           ) || null;
 
         const pricing = resolveZoneTicketPricing(zone, currentTier);
@@ -235,7 +247,8 @@ export class PrepareCulqiCheckoutHandler
         await queryRunner.manager.save(ZoneEntity, zone);
 
         if (currentTier) {
-          currentTier.lockedCount = Number(currentTier.lockedCount) + item.quantity;
+          currentTier.lockedCount =
+            Number(currentTier.lockedCount) + item.quantity;
           await queryRunner.manager.save(ZonePricingTierEntity, currentTier);
         }
 
@@ -271,7 +284,10 @@ export class PrepareCulqiCheckoutHandler
       }
 
       const { coupon, discountAmount } = couponEval.value;
-      const finalTotal = Math.max(0, Math.round((subtotalBuyer - discountAmount) * 100) / 100);
+      const finalTotal = Math.max(
+        0,
+        Math.round((subtotalBuyer - discountAmount) * 100) / 100,
+      );
       const amountInCents = Math.round(finalTotal * 100);
 
       // Culqi exige un importe mínimo cobrable (desde S/ 1.00 = 100 céntimos)
@@ -280,7 +296,8 @@ export class PrepareCulqiCheckoutHandler
         return err('INVALID_INPUT');
       }
 
-      const expirationSeconds = this.culqiGatewayService.getOrderExpirationSeconds();
+      const expirationSeconds =
+        this.culqiGatewayService.getOrderExpirationSeconds();
       const expiresAt = new Date(Date.now() + expirationSeconds * 1000);
 
       const order = queryRunner.manager.create(OrderEntity, {
@@ -324,7 +341,9 @@ export class PrepareCulqiCheckoutHandler
 
       // Crear Orden oficial en Culqi API v2 (/v2/orders) para habilitar Checkout Multipago
       const { firstName, lastName } = splitFullName(user.name);
-      const phone = normalizePeruPhone(dto.customerPhone || user.organizerPhone);
+      const phone = normalizePeruPhone(
+        dto.customerPhone || user.organizerPhone,
+      );
       const orderNumber = `QPH-${savedOrder.id}-${Date.now().toString().slice(-5)}`;
       const description = `${totalOrderTickets} ${totalOrderTickets === 1 ? 'entrada' : 'entradas'} - ${event.name}`;
 
@@ -414,4 +433,3 @@ export class PrepareCulqiCheckoutHandler
     }
   }
 }
-

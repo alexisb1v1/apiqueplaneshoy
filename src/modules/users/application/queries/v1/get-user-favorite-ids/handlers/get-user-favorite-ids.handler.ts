@@ -20,12 +20,15 @@ export class GetUserFavoriteIdsHandler implements IQueryHandler<GetUserFavoriteI
     query: GetUserFavoriteIdsQuery,
   ): Promise<Result<UserFavoriteIdsResponseDto, AppError>> {
     try {
-      const { ids, publicUuids } = await this.favoriteRepository.getFavoriteIds(query.userId);
+      const { ids, publicUuids } = await this.favoriteRepository.getFavoriteIds(
+        query.userId,
+      );
       return ok(new UserFavoriteIdsResponseDto(ids, publicUuids));
     } catch (error) {
-      this.logger.error(`Error al obtener IDs de favoritos: ${(error as Error).message}`);
+      this.logger.error(
+        `Error al obtener IDs de favoritos: ${(error as Error).message}`,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

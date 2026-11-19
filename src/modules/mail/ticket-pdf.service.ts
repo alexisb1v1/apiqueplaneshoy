@@ -52,28 +52,29 @@ type VectorIconType =
 
 const DECORATIVE_BARCODE_WIDTHS = [3, 1, 4, 2, 1, 3, 5, 1, 2, 4, 2, 1, 3, 5, 2];
 
-const LEGAL_CONDITIONS: Array<{ number: string; title: string; body: string }> = [
-  {
-    number: '1.',
-    title: 'Entrada al Portador:',
-    body: 'El boleto es al portador. El portador del código QR digital único oficial tiene derecho al acceso.',
-  },
-  {
-    number: '2.',
-    title: 'Validez del Código:',
-    body: 'Cada código QR permite un único acceso en puerta. Prohibida su duplicación o reventa no autorizada.',
-  },
-  {
-    number: '3.',
-    title: 'Apertura y Puntualidad:',
-    body: 'Se recomienda llegar con antelación al inicio de la función para el control de seguridad.',
-  },
-  {
-    number: '4.',
-    title: 'Soporte y Devoluciones:',
-    body: 'En caso de incidencias en tornos o devoluciones, contacte a soporte@queplanhoy.com o al +51 992 884 054.',
-  },
-];
+const LEGAL_CONDITIONS: Array<{ number: string; title: string; body: string }> =
+  [
+    {
+      number: '1.',
+      title: 'Entrada al Portador:',
+      body: 'El boleto es al portador. El portador del código QR digital único oficial tiene derecho al acceso.',
+    },
+    {
+      number: '2.',
+      title: 'Validez del Código:',
+      body: 'Cada código QR permite un único acceso en puerta. Prohibida su duplicación o reventa no autorizada.',
+    },
+    {
+      number: '3.',
+      title: 'Apertura y Puntualidad:',
+      body: 'Se recomienda llegar con antelación al inicio de la función para el control de seguridad.',
+    },
+    {
+      number: '4.',
+      title: 'Soporte y Devoluciones:',
+      body: 'En caso de incidencias en tornos o devoluciones, contacte a soporte@queplanhoy.com o al +51 992 884 054.',
+    },
+  ];
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PNG } = require('pngjs');
@@ -96,7 +97,14 @@ function embedQphLogoInPng(pngBuffer: Buffer): Buffer {
     const radiusOuter = 6;
     const radiusInner = 5;
 
-    const setPixel = (px: number, py: number, r: number, g: number, b: number, a = 255) => {
+    const setPixel = (
+      px: number,
+      py: number,
+      r: number,
+      g: number,
+      b: number,
+      a = 255,
+    ) => {
       if (px < 0 || px >= width || py < 0 || py >= height) return;
       const idx = (width * py + px) << 2;
       data[idx] = r;
@@ -141,7 +149,17 @@ function embedQphLogoInPng(pngBuffer: Buffer): Buffer {
     // 1. Fondo exterior blanco
     for (let y = cy - outerHalf; y <= cy + outerHalf; y++) {
       for (let x = cx - outerHalf; x <= cx + outerHalf; x++) {
-        if (isInsideRoundedRect(x, y, cx - outerHalf, cy - outerHalf, cx + outerHalf, cy + outerHalf, radiusOuter)) {
+        if (
+          isInsideRoundedRect(
+            x,
+            y,
+            cx - outerHalf,
+            cy - outerHalf,
+            cx + outerHalf,
+            cy + outerHalf,
+            radiusOuter,
+          )
+        ) {
           setPixel(x, y, 255, 255, 255);
         }
       }
@@ -150,7 +168,17 @@ function embedQphLogoInPng(pngBuffer: Buffer): Buffer {
     // 2. Fondo interior índigo eléctrico (#6366F1: 99, 102, 241)
     for (let y = cy - innerHalf; y <= cy + innerHalf; y++) {
       for (let x = cx - innerHalf; x <= cx + innerHalf; x++) {
-        if (isInsideRoundedRect(x, y, cx - innerHalf, cy - innerHalf, cx + innerHalf, cy + innerHalf, radiusInner)) {
+        if (
+          isInsideRoundedRect(
+            x,
+            y,
+            cx - innerHalf,
+            cy - innerHalf,
+            cx + innerHalf,
+            cy + innerHalf,
+            radiusInner,
+          )
+        ) {
           setPixel(x, y, 99, 102, 241);
         }
       }
@@ -253,7 +281,9 @@ export class TicketPdfService {
 
     for (let i = 0; i < input.tickets.length; i++) {
       if (!qrBuffers.has(i)) {
-        const buffer = await this.generateQrPngBuffer(input.tickets[i].qrPayload);
+        const buffer = await this.generateQrPngBuffer(
+          input.tickets[i].qrPayload,
+        );
         qrBuffers.set(i, buffer);
       }
     }
@@ -296,9 +326,28 @@ export class TicketPdfService {
             doc.addPage();
           }
 
-          this.drawSheetMetaBar(doc, margin, contentWidth, index + 1, totalSheets, ticket.ticketCode);
-          this.drawInstitutionalHeader(doc, margin, contentWidth, input, emissionDate);
-          this.drawSecurityBanner(doc, margin, contentWidth, index + 1, totalSheets);
+          this.drawSheetMetaBar(
+            doc,
+            margin,
+            contentWidth,
+            index + 1,
+            totalSheets,
+            ticket.ticketCode,
+          );
+          this.drawInstitutionalHeader(
+            doc,
+            margin,
+            contentWidth,
+            input,
+            emissionDate,
+          );
+          this.drawSecurityBanner(
+            doc,
+            margin,
+            contentWidth,
+            index + 1,
+            totalSheets,
+          );
 
           const cardTop = 158;
           const cardHeight = this.drawTicketCouponCard(
@@ -314,7 +363,13 @@ export class TicketPdfService {
           );
 
           const quickRowTop = cardTop + cardHeight + 12;
-          const quickRowHeight = this.drawQuickAccessRow(doc, margin, quickRowTop, contentWidth, input);
+          const quickRowHeight = this.drawQuickAccessRow(
+            doc,
+            margin,
+            quickRowTop,
+            contentWidth,
+            input,
+          );
 
           const footerTop = quickRowTop + quickRowHeight + 12;
           this.drawLegalConditionsFooter(doc, margin, footerTop, contentWidth);
@@ -322,8 +377,10 @@ export class TicketPdfService {
 
         doc.end();
       } catch (err) {
-        this.logger.error(`Error generando PDF de entradas: ${(err as Error).message}`);
-        reject(err);
+        this.logger.error(
+          `Error generando PDF de entradas: ${(err as Error).message}`,
+        );
+        reject(err instanceof Error ? err : new Error(String(err)));
       }
     });
   }
@@ -346,7 +403,11 @@ export class TicketPdfService {
       .fillColor(PDF_COLORS.deepSlate)
       .font('Helvetica-Bold')
       .fontSize(8)
-      .text(`Hoja ${ticketNum} de ${totalSheets} · Entrada Oficial`, x + 10, y + 2);
+      .text(
+        `Hoja ${ticketNum} de ${totalSheets} · Entrada Oficial`,
+        x + 10,
+        y + 2,
+      );
 
     doc.font('Courier').fontSize(7.5);
     const codeTextWidth = Math.max(doc.widthOfString(ticketCode) + 14, 92);
@@ -356,9 +417,10 @@ export class TicketPdfService {
       .roundedRect(pillX, y, codeTextWidth, 15, 4)
       .lineWidth(0.7)
       .fillAndStroke(PDF_COLORS.surfaceGray, PDF_COLORS.surfaceVariant);
-    doc
-      .fillColor(PDF_COLORS.onSurfaceVariant)
-      .text(ticketCode, pillX, y + 4, { width: codeTextWidth, align: 'center' });
+    doc.fillColor(PDF_COLORS.onSurfaceVariant).text(ticketCode, pillX, y + 4, {
+      width: codeTextWidth,
+      align: 'center',
+    });
 
     doc
       .moveTo(x, y + 21)
@@ -415,12 +477,21 @@ export class TicketPdfService {
       .roundedRect(badgeX, y, badgeW, badgeH, 8)
       .lineWidth(0.75)
       .fillAndStroke(PDF_COLORS.surfaceGray, PDF_COLORS.surfaceVariant);
-    this.drawMiniIcon(doc, 'shield', badgeX + 10, y + 3.5, 9, PDF_COLORS.electricIndigo);
+    this.drawMiniIcon(
+      doc,
+      'shield',
+      badgeX + 10,
+      y + 3.5,
+      9,
+      PDF_COLORS.electricIndigo,
+    );
     doc
       .fillColor(PDF_COLORS.deepSlate)
       .font('Helvetica-Bold')
       .fontSize(6.8)
-      .text('VERIFICADO · QPH PASS OFICIAL', badgeX + 21, y + 5, { width: badgeW - 25 });
+      .text('VERIFICADO · QPH PASS OFICIAL', badgeX + 21, y + 5, {
+        width: badgeW - 25,
+      });
 
     const metaW = 260;
     const metaX = x + width - metaW;
@@ -473,7 +544,14 @@ export class TicketPdfService {
       .lineWidth(0.8)
       .fillAndStroke(PDF_COLORS.surfaceGray, PDF_COLORS.surfaceVariant);
 
-    this.drawMiniIcon(doc, 'qrScanner', x + 12, y + 10, 14, PDF_COLORS.electricIndigo);
+    this.drawMiniIcon(
+      doc,
+      'qrScanner',
+      x + 12,
+      y + 10,
+      14,
+      PDF_COLORS.electricIndigo,
+    );
 
     const badgeW = 72;
     const textW = width - 40 - badgeW - 14;
@@ -538,11 +616,15 @@ export class TicketPdfService {
       .replace('DIVERCION', 'DIVERSIÓN');
     const eventSubtitle =
       input.eventSubtitle || 'Entrada Oficial Garantizada · Qué Planes Hoy';
-    const addressLine = [input.venueAddress, input.city].filter(Boolean).join(', ') || input.city;
+    const addressLine =
+      [input.venueAddress, input.city].filter(Boolean).join(', ') || input.city;
 
     // Medición previa del contenido izquierdo para dimensionar dinámicamente la tarjeta
     doc.font('Helvetica-Bold').fontSize(15);
-    const titleH = Math.max(doc.heightOfString(input.eventTitle, { width: leftW, lineGap: 1.5 }), 18);
+    const titleH = Math.max(
+      doc.heightOfString(input.eventTitle, { width: leftW, lineGap: 1.5 }),
+      18,
+    );
 
     const bentoPadX = 12;
     const bentoPadY = 10;
@@ -557,7 +639,9 @@ export class TicketPdfService {
     const row1H = Math.max(11 + holderValH + 2 + holderSubH, 36);
 
     doc.font('Helvetica-Bold').fontSize(8.5);
-    const dateH = doc.heightOfString(input.eventDateFormatted, { width: col1W - 14 });
+    const dateH = doc.heightOfString(input.eventDateFormatted, {
+      width: col1W - 14,
+    });
     const venueH = doc.heightOfString(input.venueName, { width: col2W - 14 });
     doc.font('Helvetica').fontSize(7.5);
     const addrH = doc.heightOfString(addressLine, { width: col2W });
@@ -568,7 +652,17 @@ export class TicketPdfService {
     const topMetaH = 22;
     const subtitleH = 14;
     const bottomBarH = 28;
-    const leftTotalH = 16 + topMetaH + titleH + 3 + subtitleH + 10 + bentoH + 10 + bottomBarH + 14;
+    const leftTotalH =
+      16 +
+      topMetaH +
+      titleH +
+      3 +
+      subtitleH +
+      10 +
+      bentoH +
+      10 +
+      bottomBarH +
+      14;
     const cardHeight = Math.max(leftTotalH, 266);
 
     // Fondo blanco y borde principal de la tarjeta
@@ -580,13 +674,17 @@ export class TicketPdfService {
     // Franja lateral izquierda índigo recortada al borde redondeado
     doc.save();
     doc.roundedRect(x, cardTop, width, cardHeight, 12).clip();
-    doc.rect(x, cardTop, stripeWidth, cardHeight).fill(PDF_COLORS.electricIndigo);
+    doc
+      .rect(x, cardTop, stripeWidth, cardHeight)
+      .fill(PDF_COLORS.electricIndigo);
     doc.restore();
 
     // Fondo sutil del talón derecho recortado
     doc.save();
     doc.roundedRect(x, cardTop, width, cardHeight, 12).clip();
-    doc.rect(dividerX, cardTop, stubWidth, cardHeight).fill(PDF_COLORS.surfaceSoft);
+    doc
+      .rect(dividerX, cardTop, stubWidth, cardHeight)
+      .fill(PDF_COLORS.surfaceSoft);
     doc.restore();
 
     // Borde exterior final limpio y línea punteada vertical del talón
@@ -611,16 +709,19 @@ export class TicketPdfService {
     // Fila superior de badges dentro del cuerpo izquierdo
     const badgesY = cardTop + 16;
     doc.font('Helvetica-Bold').fontSize(7.2);
-    const zoneBadgeW = Math.min(Math.max(doc.widthOfString(rawZone) + 18, 56), 130);
-    doc.roundedRect(leftX, badgesY, zoneBadgeW, 15, 7.5).fill(PDF_COLORS.electricIndigo);
+    const zoneBadgeW = Math.min(
+      Math.max(doc.widthOfString(rawZone) + 18, 56),
+      130,
+    );
     doc
-      .fillColor(PDF_COLORS.white)
-      .text(rawZone, leftX + 4, badgesY + 4.5, {
-        width: zoneBadgeW - 8,
-        align: 'center',
-        ellipsis: true,
-        lineBreak: false,
-      });
+      .roundedRect(leftX, badgesY, zoneBadgeW, 15, 7.5)
+      .fill(PDF_COLORS.electricIndigo);
+    doc.fillColor(PDF_COLORS.white).text(rawZone, leftX + 4, badgesY + 4.5, {
+      width: zoneBadgeW - 8,
+      align: 'center',
+      ellipsis: true,
+      lineBreak: false,
+    });
 
     const countBadgeX = leftX + zoneBadgeW + 6;
     const countLabel = `ENTRADA ${index + 1} DE ${totalSheets}`;
@@ -631,7 +732,10 @@ export class TicketPdfService {
       .fillAndStroke(PDF_COLORS.surfaceGray, PDF_COLORS.surfaceVariant);
     doc
       .fillColor(PDF_COLORS.deepSlate)
-      .text(countLabel, countBadgeX, badgesY + 4.5, { width: countBadgeW, align: 'center' });
+      .text(countLabel, countBadgeX, badgesY + 4.5, {
+        width: countBadgeW,
+        align: 'center',
+      });
 
     doc
       .fillColor(PDF_COLORS.onSurfaceVariant)
@@ -708,7 +812,9 @@ export class TicketPdfService {
       .fillColor(PDF_COLORS.onSurfaceVariant)
       .font('Helvetica')
       .fontSize(7.5)
-      .text('Acceso garantizado · Control digital', col2X, r1Y + 23, { width: col2W });
+      .text('Acceso garantizado · Control digital', col2X, r1Y + 23, {
+        width: col2W,
+      });
 
     // Celda (2,1): Fecha y Horario
     const r2Y = r1Y + row1H + 10;
@@ -717,19 +823,33 @@ export class TicketPdfService {
       .font('Helvetica-Bold')
       .fontSize(6.5)
       .text('FECHA Y HORARIO', col1X, r2Y);
-    this.drawMiniIcon(doc, 'calendar', col1X, r2Y + 10, 9.5, PDF_COLORS.electricIndigo);
+    this.drawMiniIcon(
+      doc,
+      'calendar',
+      col1X,
+      r2Y + 10,
+      9.5,
+      PDF_COLORS.electricIndigo,
+    );
     doc
       .fillColor(PDF_COLORS.deepSlate)
       .font('Helvetica-Bold')
       .fontSize(8.5)
-      .text(input.eventDateFormatted, col1X + 13, r2Y + 10.5, { width: col1W - 14 });
+      .text(input.eventDateFormatted, col1X + 13, r2Y + 10.5, {
+        width: col1W - 14,
+      });
     doc
       .fillColor(PDF_COLORS.onSurfaceVariant)
       .font('Helvetica')
       .fontSize(7.5)
-      .text(`Función programada: ${input.eventTimeFormatted}`, col1X, r2Y + 10.5 + dateH + 2, {
-        width: col1W,
-      });
+      .text(
+        `Función programada: ${input.eventTimeFormatted}`,
+        col1X,
+        r2Y + 10.5 + dateH + 2,
+        {
+          width: col1W,
+        },
+      );
 
     // Celda (2,2): Recinto & Dirección
     doc
@@ -737,7 +857,14 @@ export class TicketPdfService {
       .font('Helvetica-Bold')
       .fontSize(6.5)
       .text('RECINTO & DIRECCIÓN', col2X, r2Y);
-    this.drawMiniIcon(doc, 'pin', col2X, r2Y + 10, 9.5, PDF_COLORS.electricIndigo);
+    this.drawMiniIcon(
+      doc,
+      'pin',
+      col2X,
+      r2Y + 10,
+      9.5,
+      PDF_COLORS.electricIndigo,
+    );
     doc
       .fillColor(PDF_COLORS.deepSlate)
       .font('Helvetica-Bold')
@@ -790,7 +917,16 @@ export class TicketPdfService {
       .text(input.totalAmountFormatted);
 
     // Talón derecho: E-TICKET SEGURO + QR con logo QPH central + código + barcode decorativo
-    this.drawTicketStub(doc, dividerX, cardTop, stubWidth, cardHeight, input.orderCode, ticket.ticketCode, qrBuffer);
+    this.drawTicketStub(
+      doc,
+      dividerX,
+      cardTop,
+      stubWidth,
+      cardHeight,
+      input.orderCode,
+      ticket.ticketCode,
+      qrBuffer,
+    );
 
     return cardHeight;
   }
@@ -818,7 +954,9 @@ export class TicketPdfService {
 
     // Limpiar el trazo horizontal exacto sobre la abertura del borde
     const eraseY = position === 'top' ? edgeY - 1.2 : edgeY - 0.6;
-    doc.rect(centerX - radius + 0.8, eraseY, (radius - 0.8) * 2, 1.8).fill(PDF_COLORS.white);
+    doc
+      .rect(centerX - radius + 0.8, eraseY, (radius - 0.8) * 2, 1.8)
+      .fill(PDF_COLORS.white);
   }
 
   /**
@@ -867,15 +1005,32 @@ export class TicketPdfService {
       const cx = qrX + qrSize / 2;
       const cy = qrY + qrSize / 2;
 
-      doc.roundedRect(cx - logoOuter / 2, cy - logoOuter / 2, logoOuter, logoOuter, 5).fill(PDF_COLORS.white);
       doc
-        .roundedRect(cx - logoInner / 2, cy - logoInner / 2, logoInner, logoInner, 4)
+        .roundedRect(
+          cx - logoOuter / 2,
+          cy - logoOuter / 2,
+          logoOuter,
+          logoOuter,
+          5,
+        )
+        .fill(PDF_COLORS.white);
+      doc
+        .roundedRect(
+          cx - logoInner / 2,
+          cy - logoInner / 2,
+          logoInner,
+          logoInner,
+          4,
+        )
         .fill(PDF_COLORS.electricIndigo);
       doc
         .fillColor(PDF_COLORS.white)
         .font('Helvetica-Bold')
         .fontSize(6.5)
-        .text('QPH', cx - logoInner / 2, cy - 2.6, { width: logoInner, align: 'center' });
+        .text('QPH', cx - logoInner / 2, cy - 2.6, {
+          width: logoInner,
+          align: 'center',
+        });
     }
 
     const codeY = qrBoxY + qrBoxSize + 10;
@@ -883,7 +1038,10 @@ export class TicketPdfService {
       .fillColor(PDF_COLORS.deepSlate)
       .font('Courier-Bold')
       .fontSize(8.5)
-      .text(ticketCode, stubX + 8, codeY, { width: stubWidth - 16, align: 'center' });
+      .text(ticketCode, stubX + 8, codeY, {
+        width: stubWidth - 16,
+        align: 'center',
+      });
 
     doc
       .fillColor(PDF_COLORS.onSurfaceVariant)
@@ -932,12 +1090,13 @@ export class TicketPdfService {
     const cardW = (width - gap * 3) / 4;
     const cardH = 38;
 
-    const cards: Array<{ icon: VectorIconType; label: string; value: string }> = [
-      { icon: 'clock', label: 'HORARIO', value: input.eventTimeFormatted },
-      { icon: 'badge', label: 'IDENTIDAD', value: 'DNI requerido' },
-      { icon: 'pin', label: 'RECINTO', value: input.venueName },
-      { icon: 'verified', label: 'TORNOS QR', value: 'Pase directo' },
-    ];
+    const cards: Array<{ icon: VectorIconType; label: string; value: string }> =
+      [
+        { icon: 'clock', label: 'HORARIO', value: input.eventTimeFormatted },
+        { icon: 'badge', label: 'IDENTIDAD', value: 'DNI requerido' },
+        { icon: 'pin', label: 'RECINTO', value: input.venueName },
+        { icon: 'verified', label: 'TORNOS QR', value: 'Pase directo' },
+      ];
 
     cards.forEach((card, idx) => {
       const cardX = x + idx * (cardW + gap);
@@ -946,7 +1105,14 @@ export class TicketPdfService {
         .lineWidth(0.8)
         .fillAndStroke(PDF_COLORS.surfaceSoft, PDF_COLORS.surfaceVariant);
 
-      this.drawMiniIcon(doc, card.icon, cardX + 9, y + 12, 13, PDF_COLORS.electricIndigo);
+      this.drawMiniIcon(
+        doc,
+        card.icon,
+        cardX + 9,
+        y + 12,
+        13,
+        PDF_COLORS.electricIndigo,
+      );
 
       const textX = cardX + 27;
       const textW = cardW - 33;
@@ -959,7 +1125,11 @@ export class TicketPdfService {
         .fillColor(PDF_COLORS.deepSlate)
         .font('Helvetica-Bold')
         .fontSize(7.8)
-        .text(card.value, textX, y + 20, { width: textW, lineBreak: false, ellipsis: true });
+        .text(card.value, textX, y + 20, {
+          width: textW,
+          lineBreak: false,
+          ellipsis: true,
+        });
     });
 
     return cardH;
@@ -1006,12 +1176,23 @@ export class TicketPdfService {
       .lineWidth(0.8)
       .fillAndStroke(PDF_COLORS.surfaceSoft, PDF_COLORS.surfaceVariant);
 
-    this.drawMiniIcon(doc, 'gavel', x + padX, y + padY, 11, PDF_COLORS.electricIndigo);
+    this.drawMiniIcon(
+      doc,
+      'gavel',
+      x + padX,
+      y + padY,
+      11,
+      PDF_COLORS.electricIndigo,
+    );
     doc
       .fillColor(PDF_COLORS.deepSlate)
       .font('Helvetica-Bold')
       .fontSize(8)
-      .text('CONDICIONES DE USO Y NORMATIVA OFICIAL DE ACCESO', x + padX + 16, y + padY + 2);
+      .text(
+        'CONDICIONES DE USO Y NORMATIVA OFICIAL DE ACCESO',
+        x + padX + 16,
+        y + padY + 2,
+      );
 
     const gridTop = y + padY + 20;
 
@@ -1081,23 +1262,42 @@ export class TicketPdfService {
         const c = size * 0.28;
         // Cuatro esquinas del visor
         doc
-          .moveTo(x, y + c).lineTo(x, y).lineTo(x + c, y)
-          .moveTo(x + size - c, y).lineTo(x + size, y).lineTo(x + size, y + c)
-          .moveTo(x, y + size - c).lineTo(x, y + size).lineTo(x + c, y + size)
-          .moveTo(x + size - c, y + size).lineTo(x + size, y + size).lineTo(x + size, y + size - c)
+          .moveTo(x, y + c)
+          .lineTo(x, y)
+          .lineTo(x + c, y)
+          .moveTo(x + size - c, y)
+          .lineTo(x + size, y)
+          .lineTo(x + size, y + c)
+          .moveTo(x, y + size - c)
+          .lineTo(x, y + size)
+          .lineTo(x + c, y + size)
+          .moveTo(x + size - c, y + size)
+          .lineTo(x + size, y + size)
+          .lineTo(x + size, y + size - c)
           .stroke();
-        doc.rect(x + size * 0.26, y + size * 0.26, size * 0.18, size * 0.18).fill(color);
-        doc.rect(x + size * 0.56, y + size * 0.26, size * 0.18, size * 0.18).fill(color);
-        doc.rect(x + size * 0.26, y + size * 0.56, size * 0.18, size * 0.18).fill(color);
-        doc.rect(x + size * 0.56, y + size * 0.56, size * 0.18, size * 0.18).fill(color);
+        doc
+          .rect(x + size * 0.26, y + size * 0.26, size * 0.18, size * 0.18)
+          .fill(color);
+        doc
+          .rect(x + size * 0.56, y + size * 0.26, size * 0.18, size * 0.18)
+          .fill(color);
+        doc
+          .rect(x + size * 0.26, y + size * 0.56, size * 0.18, size * 0.18)
+          .fill(color);
+        doc
+          .rect(x + size * 0.56, y + size * 0.56, size * 0.18, size * 0.18)
+          .fill(color);
         break;
       }
       case 'calendar': {
         doc.roundedRect(x, y + size * 0.15, size, size * 0.85, 1.5).stroke();
         doc
-          .moveTo(x + size * 0.28, y).lineTo(x + size * 0.28, y + size * 0.24)
-          .moveTo(x + size * 0.72, y).lineTo(x + size * 0.72, y + size * 0.24)
-          .moveTo(x, y + size * 0.42).lineTo(x + size, y + size * 0.42)
+          .moveTo(x + size * 0.28, y)
+          .lineTo(x + size * 0.28, y + size * 0.24)
+          .moveTo(x + size * 0.72, y)
+          .lineTo(x + size * 0.72, y + size * 0.24)
+          .moveTo(x, y + size * 0.42)
+          .lineTo(x + size, y + size * 0.42)
           .stroke();
         break;
       }
@@ -1116,15 +1316,21 @@ export class TicketPdfService {
         const cx = x + size / 2;
         const cy = y + size / 2;
         doc.circle(cx, cy, size * 0.45).stroke();
-        doc.moveTo(cx, cy - size * 0.24).lineTo(cx, cy).lineTo(cx + size * 0.2, cy + size * 0.1).stroke();
+        doc
+          .moveTo(cx, cy - size * 0.24)
+          .lineTo(cx, cy)
+          .lineTo(cx + size * 0.2, cy + size * 0.1)
+          .stroke();
         break;
       }
       case 'badge': {
         doc.roundedRect(x, y + size * 0.15, size, size * 0.7, 1.8).stroke();
         doc.circle(x + size * 0.32, y + size * 0.46, size * 0.13).fill(color);
         doc
-          .moveTo(x + size * 0.56, y + size * 0.38).lineTo(x + size * 0.84, y + size * 0.38)
-          .moveTo(x + size * 0.56, y + size * 0.58).lineTo(x + size * 0.78, y + size * 0.58)
+          .moveTo(x + size * 0.56, y + size * 0.38)
+          .lineTo(x + size * 0.84, y + size * 0.38)
+          .moveTo(x + size * 0.56, y + size * 0.58)
+          .lineTo(x + size * 0.78, y + size * 0.58)
           .stroke();
         break;
       }

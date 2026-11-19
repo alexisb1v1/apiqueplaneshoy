@@ -542,17 +542,19 @@ sequenceDiagram
     Web->>API: POST /api/advances/:id/pay { transfer_reference: '849201', transfer_voucher_url }
     API->>DB: UPDATE event_advances SET status='paid', paid_at=NOW()
 
-    Note over Org,Banco: FASE B: LIQUIDACIÓN FINAL (Relación 1 a 1 Estricta al concluir el Show)
-    Org->>Web: Solicita Liquidación Final del Evento
-    Web->>API: POST /api/events/:id/settlements/request
+    Note over Org,Banco: FASE B: LIQUIDACIÓN MANUAL DE FONDOS (Modal / Drawer Lateral 1 a 1)
+    Org->>Web: Abre modal/drawer de liquidación (desde /organizer/events/[id] o /organizer/events)
+    Web->>API: GET /api/events/organizer/:id/settlement
+    API->>DB: Calcula en tiempo real o recupera corte congelado de event_settlements
+    API-->>Web: Retorna { totalTicketsSold, grossAmount, totalCouponsDiscountAmount, platformFeeAmount, netPayoutAmount, isSettlementRequested, settlement }
+    Web-->>Org: Muestra desglose contable, aviso de 24h a 72h hábiles y formulario bancario
+    Org->>Web: Completa Banco, Tipo de cuenta, Titular, Documento, N° Cuenta, CCI (20 dígitos)
+    Web->>API: POST /api/events/organizer/:id/settlement (RequestEventSettlementRequestDto)
     activate API
-    API->>DB: Calcula ventas brutas de tickets vendidos (status IN ('sold', 'used'))
-    API->>DB: SELECT COALESCE(SUM(discount_amount), 0) FROM orders WHERE event_id=:id AND status='paid' (total_coupons_discount_amount)
-    API->>DB: Suma comisiones de ticketera QPH (platform_fee)
-    API->>DB: Suma comisiones de pasarela de pago (gateway_fee)
-    API->>DB: SELECT SUM(amount) FROM event_advances WHERE status='paid' (total_advances_amount)
-    API->>DB: Genera Subreporte JSONB (breakdown_by_zone con zonas, tiers, cupones canjeados y anticipos)
-    API->>DB: INSERT INTO event_settlements (event_id UNIQUE, status='in_review', gross_amount, total_coupons_discount_amount, net_payout_amount)
+    API->>DB: Valida BOLA (Ownership) y que no exista corte previo activo
+    API->>DB: Congela montos de venta, fees de servicio, descuentos por cupones
+    API->>DB: INSERT INTO event_settlements (event_id UNIQUE, status='requested', bank_name, bank_account_number, bank_account_cci, net_payout_amount)
+    API-->>Web: Retorna estado 201 Created (EventSettlementResponseDto con status='requested')
     deactivate API
 
     Admin->>Web: Audita corte congelado y aprueba desembolso
@@ -990,9 +992,90 @@ Endpoint protegido con `JwtAuthGuard` en `EventsController` (ubicado antes de `G
    * Calcula los descuentos de cupones aplicados (`orders.discount_amount` de órdenes `paid`, deduplicando por `order.id`) usando `COALESCE(orders.event_id, shows.event_id)`.
    * Expone `netSalesRevenue` (`grossRevenue - couponsDiscountAmount`), `targetRevenue` (`SUM(zone.capacity * zone.regularPrice)`), `settlementStatus`, y `draftChecklist` dinámico para borradores.
 
+---
+
+## 17. Reporte Detallado de Ventas y Taquilla del Evento (`GET /api/events/organizer/:identifier/report`)
+
+Endpoint protegido con `JwtAuthGuard` en `EventsController` atendido por `GetOrganizerEventReportHandler` (`GetOrganizerEventReportQuery`):
+
+1. **Aislamiento BOLA (OWASP API1):** Valida que `event.organizerId === user.id`. Si no pertenece al organizador autenticado, retorna `FORBIDDEN` (HTTP 403).
+2. **Identificador Flexible:** Admite búsqueda por `publicUuid` (UUIDv4), `id` (numérico) o `slug`.
+3. **Métricas Financieras y Operativas (KPIs en Vivo):**
+   * **Recaudación Neta (`netSalesRevenue`):** `grossRevenue` menos `couponsDiscountAmount` de órdenes `paid`.
+   * **Ocupación y Aforo:** Total capacidad vs. tickets confirmados (`ticketsSold`) y tasa de ocupación (`occupancyPercentage`).
+   * **Control de Asistencia (Puerta):** Tickets escaneados (`ticketsUsed` con `status = 'used'`) vs. no escaneados (`checkInPercentage`).
+   * **Ticket Promedio:** Recaudación neta entre tickets vendidos.
+4. **Desglose Multidimensional:**
+   * **Por Zonas:** Capacidad, vendidos, escaneados, remanentes, porcentaje, precios vigentes (preventa activa o regular), flag de comisión (`feeIncluded`), y lista completa de fases de preventa (`tiers`) con estado ('Activo', 'Agotado', 'Caducado').
+   * **Por Funciones (Shows):** Fecha formateada en español, horario, aforo, vendidos y validados en puerta.
+   * **Últimas 25 Órdenes Pagadas:** Código determinístico `#ORD-XXXXXX`, fecha/hora ISO, nombre y correo del comprador, detalle de zonas compradas, subtotal, cupón canjeado, total pagado y pasarela de pago.
+   * **Cronología de Ventas Multi-Zona (Daily Sales Timeline):** Boletos e ingresos agrupados por fecha y por cada zona (`zoneId`, `zoneName`, `color`) para todo el histórico desde la primera venta, permitiendo graficar curvas comparativas entre zonas y el total global.
+5. **Embudo de Conversión y Redes Sociales (Umami Analytics API):**
+   * **Integración API REST con Umami VPS (`https://analitica.centralafbv.com/api`):** Métricas de tráfico en vivo filtradas por URL del evento (`/e/:slug`).
+   * **Caché en Redis:** Clave `qph:analytics:funnel:{eventId}` con TTL de 300s (5 min) para evitar saturación y ofrecer respuestas instantáneas.
+   * **Fases del Embudo (Funnel):**
+     - Paso 1: *Visitas a la Página del Evento* (tráfico único en Umami).
+     - Paso 2: *Inicio de Checkout* (avance a selección de tickets).
+     - Paso 3: *Órdenes Pagadas* (órdenes aprobadas `status = 'paid'` en PostgreSQL).
+     - Métrica de retención y porcentaje de abandono (*drop-off*) entre fases.
+   * **Desglose de Redes Sociales y Fuentes (UTMs & Referrers):** Identifica y clasifica tráfico en Instagram, Facebook, TikTok, WhatsApp, Google y Directo.
+   * **Generador de Enlaces UTM para Organizadores:** Permite crear enlaces de campaña listos para historias y biografía (`?utm_source=instagram&utm_medium=social&utm_campaign=taquilla`).
+   * **Degradación Elegante:** Si Umami no responde o hay latencia, el endpoint no se interrumpe y estima métricas coherentes con las órdenes registradas en base de datos.
 
 
 
 
 
 
+
+
+
+
+---
+
+## 18. Módulo de Liquidaciones y Despacho en Backoffice (`event_settlements`)
+
+Gestiona el ciclo de vida financiero post-evento, permitiendo al promotor solicitar su liquidación y a la tesorería de Qué Planes Hoy auditar y transferir los fondos netos mediante el Backoffice.
+
+### 18.1 Flujo Operativo Completo
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Promotor as Promotor (Web)
+    actor Admin as Tesorería (Backoffice)
+    participant API as Backend NestJS
+    participant DB as PostgreSQL (event_settlements)
+    participant Mail as MailService
+
+    Promotor->>API: GET /events/settlement/:identifier
+    API->>DB: Consulta métricas de ventas y settlement existente
+    API-->>Promotor: 200 OK (Ventas netas, comisiones, RUC y nombre precargados)
+
+    Promotor->>API: POST /events/settlement/:identifier { bankName, bankAccountNumber, bankAccountCci, bankAccountHolder, ruc }
+    Note over API: Valida RUC con Algoritmo SUNAT Módulo 11.<br/>Si es BCP, el CCI es opcional; otros bancos requieren CCI 20 dígitos.
+    API->>DB: INSERT/UPDATE event_settlements (status = 'requested')
+    API-->>Promotor: 201 Created
+
+    Admin->>API: GET /events/admin/settlements?status=pending
+    API->>DB: SELECT settlements JOIN events JOIN users
+    API-->>Admin: 200 OK [AdminSettlementListResponseDto]
+
+    alt Despacho de Transferencia Bancaria
+        Admin->>API: POST /events/admin/settlements/:id/pay { transferReference, transferVoucherUrl, notes }
+        API->>DB: UPDATE event_settlements SET status='paid', paid_at=NOW(), transfer_reference=:ref, processed_by_user_id=:adminId
+        API->>Mail: sendSettlementPaidEmail(promotor)
+        API-->>Admin: 200 OK { message: "Liquidación despachada y pagada con éxito" }
+    else Rechazo por Inconsistencias en Cuenta/RUC
+        Admin->>API: POST /events/admin/settlements/:id/reject { reason }
+        API->>DB: UPDATE event_settlements SET status='rejected', notes=:reason, processed_by_user_id=:adminId
+        API-->>Admin: 200 OK { message: "Liquidación rechazada" }
+    end
+```
+
+### 18.2 Endpoints Involucrados
+1. `GET /events/settlement/:identifier`: Obtiene preliquidación y precarga del RUC del promotor.
+2. `POST /events/settlement/:identifier`: Registra o actualiza la solicitud de liquidación (`status='requested'`).
+3. `GET /events/admin/settlements`: Listado administrativo para Tesorería con filtros de estado y búsqueda.
+4. `POST /events/admin/settlements/:id/pay`: Aprobación y registro de transferencia bancaria (`status='paid'`).
+5. `POST /events/admin/settlements/:id/reject`: Rechazo de liquidación con motivo de corrección (`status='rejected'`).

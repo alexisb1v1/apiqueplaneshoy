@@ -53,7 +53,9 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
       // 1. Obtener y validar el token almacenado en Redis
       const payload = await this.redisService.get<StoredTokenPayload>(redisKey);
       if (!payload || !payload.userId) {
-        this.logger.warn(`Intento de restablecimiento con token inexistente o expirado: ${rawToken}`);
+        this.logger.warn(
+          `Intento de restablecimiento con token inexistente o expirado: ${rawToken}`,
+        );
         return err('TOKEN_EXPIRED_OR_INVALID');
       }
 
@@ -77,9 +79,14 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
       await this.redisService.del(redisKey);
 
       // 6. Enviar correo de confirmación de cambio de contraseña
-      await this.emailService.sendPasswordChangedNotificationEmail(user.email, user.name);
+      await this.emailService.sendPasswordChangedNotificationEmail(
+        user.email,
+        user.name,
+      );
 
-      this.logger.log(`Contraseña restablecida exitosamente para el usuario: ${user.email}`);
+      this.logger.log(
+        `Contraseña restablecida exitosamente para el usuario: ${user.email}`,
+      );
 
       return ok(
         new ResetPasswordResponseDto(
@@ -87,9 +94,11 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
         ),
       );
     } catch (error) {
-      this.logger.error(`Error en ResetPasswordHandler: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `Error en ResetPasswordHandler: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       return err('INTERNAL_ERROR');
     }
   }
 }
-

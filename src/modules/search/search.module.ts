@@ -6,13 +6,9 @@ import { SearchService } from './services/search.service';
 import { SearchController } from './controllers/search.controller';
 
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([EventEntity]),
-  ],
+  imports: [ConfigModule, TypeOrmModule.forFeature([EventEntity])],
   controllers: [SearchController],
   providers: [SearchService],
   exports: [SearchService],
 })
 export class SearchModule {}
-

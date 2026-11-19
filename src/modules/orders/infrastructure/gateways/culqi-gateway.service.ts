@@ -147,28 +147,47 @@ export class CulqiGatewayService {
 
   constructor(private readonly configService: ConfigService) {
     const rawBaseUrl =
-      this.configService.get<string>('CULQI_API_BASE_URL') || 'https://api.culqi.com/v2';
+      this.configService.get<string>('CULQI_API_BASE_URL') ||
+      'https://api.culqi.com/v2';
     this.apiBaseUrl = rawBaseUrl.replace(/\/+$/, '');
     this.checkoutScriptUrl = (
-      this.configService.get<string>('CULQI_CHECKOUT_JS_URL') || 'https://js.culqi.com/checkout-js'
+      this.configService.get<string>('CULQI_CHECKOUT_JS_URL') ||
+      'https://js.culqi.com/checkout-js'
     ).trim();
     this.threeDsScriptUrl = (
-      this.configService.get<string>('CULQI_3DS_JS_URL') || 'https://3ds.culqi.com'
+      this.configService.get<string>('CULQI_3DS_JS_URL') ||
+      'https://3ds.culqi.com'
     ).trim();
-    this.publicKey = (this.configService.get<string>('CULQI_PUBLIC_KEY') || '').trim();
-    this.secretKey = (this.configService.get<string>('CULQI_SECRET_KEY') || '').trim();
+    this.publicKey = (
+      this.configService.get<string>('CULQI_PUBLIC_KEY') || ''
+    ).trim();
+    this.secretKey = (
+      this.configService.get<string>('CULQI_SECRET_KEY') || ''
+    ).trim();
 
-    const rawRsaId = (this.configService.get<string>('CULQI_RSA_ID') || '').trim();
-    const rawRsaPub = (this.configService.get<string>('CULQI_RSA_PUBLIC_KEY') || '').trim();
+    const rawRsaId = (
+      this.configService.get<string>('CULQI_RSA_ID') || ''
+    ).trim();
+    const rawRsaPub = (
+      this.configService.get<string>('CULQI_RSA_PUBLIC_KEY') || ''
+    ).trim();
     this.rsaId = rawRsaId || null;
     this.rsaPublicKey = rawRsaPub ? rawRsaPub.replace(/\\n/g, '\n') : null;
 
-    this.webhookUsername = (this.configService.get<string>('CULQI_WEBHOOK_USERNAME') || '').trim();
-    this.webhookPassword = (this.configService.get<string>('CULQI_WEBHOOK_PASSWORD') || '').trim();
+    this.webhookUsername = (
+      this.configService.get<string>('CULQI_WEBHOOK_USERNAME') || ''
+    ).trim();
+    this.webhookPassword = (
+      this.configService.get<string>('CULQI_WEBHOOK_PASSWORD') || ''
+    ).trim();
 
-    const parsedTimeout = Number(this.configService.get<string>('CULQI_TIMEOUT_MS'));
+    const parsedTimeout = Number(
+      this.configService.get<string>('CULQI_TIMEOUT_MS'),
+    );
     this.timeoutMs =
-      Number.isFinite(parsedTimeout) && parsedTimeout >= 3000 && parsedTimeout <= 30000
+      Number.isFinite(parsedTimeout) &&
+      parsedTimeout >= 3000 &&
+      parsedTimeout <= 30000
         ? parsedTimeout
         : 15000;
 
@@ -220,9 +239,14 @@ export class CulqiGatewayService {
    * @param payload - Parámetros de orden validados y calculados en el servidor
    * @returns Resultado tipado con la orden Culqi creada o detalle de error
    */
-  async createOrder(payload: CulqiCreateOrderPayload): Promise<CulqiOrderCallResult> {
+  async createOrder(
+    payload: CulqiCreateOrderPayload,
+  ): Promise<CulqiOrderCallResult> {
     if (!this.isConfigured()) {
-      return { ok: false, message: 'Credenciales de Culqi no configuradas en el entorno.' };
+      return {
+        ok: false,
+        message: 'Credenciales de Culqi no configuradas en el entorno.',
+      };
     }
 
     const requestBody = {
@@ -285,7 +309,10 @@ export class CulqiGatewayService {
    */
   async getOrder(culqiOrderId: string): Promise<CulqiOrderCallResult> {
     if (!this.isConfigured()) {
-      return { ok: false, message: 'Credenciales de Culqi no configuradas en el entorno.' };
+      return {
+        ok: false,
+        message: 'Credenciales de Culqi no configuradas en el entorno.',
+      };
     }
 
     try {
@@ -314,7 +341,10 @@ export class CulqiGatewayService {
       this.logger.error(
         `[Culqi getOrder] Error consultando orden ${culqiOrderId}: ${error?.message || error}`,
       );
-      return { ok: false, message: 'No se pudo consultar el estado actual en Culqi.' };
+      return {
+        ok: false,
+        message: 'No se pudo consultar el estado actual en Culqi.',
+      };
     }
   }
 
@@ -325,7 +355,9 @@ export class CulqiGatewayService {
    * @param payload - Datos del cargo y antifraude validados por el backend
    * @returns Resultado discriminado (`PAID`, `REQUIRES_3DS`, `REJECTED`, `GATEWAY_ERROR`)
    */
-  async createCharge(payload: CulqiCreateChargePayload): Promise<CulqiChargeCallResult> {
+  async createCharge(
+    payload: CulqiCreateChargePayload,
+  ): Promise<CulqiChargeCallResult> {
     if (!this.isConfigured()) {
       return {
         status: 'GATEWAY_ERROR',
@@ -340,7 +372,9 @@ export class CulqiGatewayService {
       source_id: payload.sourceId,
       capture: true,
       description: payload.description.slice(0, 80),
-      ...(payload.installments !== undefined ? { installments: payload.installments } : {}),
+      ...(payload.installments !== undefined
+        ? { installments: payload.installments }
+        : {}),
       antifraud_details: {
         first_name: payload.antifraudDetails.firstName.slice(0, 50),
         last_name: payload.antifraudDetails.lastName.slice(0, 50),
@@ -349,10 +383,15 @@ export class CulqiGatewayService {
         country_code: payload.antifraudDetails.countryCode,
         phone_number: payload.antifraudDetails.phoneNumber,
         ...(payload.antifraudDetails.deviceFingerPrintId
-          ? { device_finger_print_id: payload.antifraudDetails.deviceFingerPrintId }
+          ? {
+              device_finger_print_id:
+                payload.antifraudDetails.deviceFingerPrintId,
+            }
           : {}),
       },
-      ...(payload.authentication3DS ? { authentication_3DS: payload.authentication3DS } : {}),
+      ...(payload.authentication3DS
+        ? { authentication_3DS: payload.authentication3DS }
+        : {}),
       ...(payload.metadata ? { metadata: payload.metadata } : {}),
     };
 
@@ -387,7 +426,9 @@ export class CulqiGatewayService {
           data,
           'El servicio de Culqi presentó una incidencia temporal. Inténtalo en unos segundos.',
         );
-        this.logger.error(`[Culqi createCharge] Error servidor Culqi HTTP ${response.status}: ${message}`);
+        this.logger.error(
+          `[Culqi createCharge] Error servidor Culqi HTTP ${response.status}: ${message}`,
+        );
         return { status: 'GATEWAY_ERROR', message, raw: data || undefined };
       }
 
@@ -423,7 +464,8 @@ export class CulqiGatewayService {
       );
       return {
         status: 'GATEWAY_ERROR',
-        message: 'No se pudo confirmar la respuesta de Culqi por tiempo de espera.',
+        message:
+          'No se pudo confirmar la respuesta de Culqi por tiempo de espera.',
       };
     }
   }
@@ -436,7 +478,10 @@ export class CulqiGatewayService {
    */
   async getCharge(culqiChargeId: string): Promise<CulqiGetChargeCallResult> {
     if (!this.isConfigured()) {
-      return { ok: false, message: 'Credenciales de Culqi no configuradas en el entorno.' };
+      return {
+        ok: false,
+        message: 'Credenciales de Culqi no configuradas en el entorno.',
+      };
     }
 
     try {
@@ -477,7 +522,8 @@ export class CulqiGatewayService {
    * @returns `true` si la autenticación es válida
    */
   verifyWebhookBasicAuth(authorizationHeader?: string): boolean {
-    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
     const hasConfiguredCredentials =
       Boolean(this.webhookUsername) && Boolean(this.webhookPassword);
 
@@ -507,8 +553,10 @@ export class CulqiGatewayService {
       const user = decoded.slice(0, separatorIndex);
       const pass = decoded.slice(separatorIndex + 1);
 
-      return this.safeCompareStrings(user, this.webhookUsername) &&
-        this.safeCompareStrings(pass, this.webhookPassword);
+      return (
+        this.safeCompareStrings(user, this.webhookUsername) &&
+        this.safeCompareStrings(pass, this.webhookPassword)
+      );
     } catch {
       return false;
     }
@@ -521,7 +569,9 @@ export class CulqiGatewayService {
     return timingSafeEqual(bufA, bufB);
   }
 
-  private async safeParseJson(response: Response): Promise<Record<string, any> | null> {
+  private async safeParseJson(
+    response: Response,
+  ): Promise<Record<string, any> | null> {
     try {
       const text = await response.text();
       if (!text) return null;
@@ -539,10 +589,16 @@ export class CulqiGatewayService {
     if (typeof data.user_message === 'string' && data.user_message.trim()) {
       return data.user_message.trim();
     }
-    if (typeof data.merchant_message === 'string' && data.merchant_message.trim()) {
+    if (
+      typeof data.merchant_message === 'string' &&
+      data.merchant_message.trim()
+    ) {
       return data.merchant_message.trim();
     }
-    if (typeof data.outcome?.user_message === 'string' && data.outcome.user_message.trim()) {
+    if (
+      typeof data.outcome?.user_message === 'string' &&
+      data.outcome.user_message.trim()
+    ) {
       return data.outcome.user_message.trim();
     }
     if (typeof data.message === 'string' && data.message.trim()) {
@@ -551,4 +607,3 @@ export class CulqiGatewayService {
     return fallback;
   }
 }
-

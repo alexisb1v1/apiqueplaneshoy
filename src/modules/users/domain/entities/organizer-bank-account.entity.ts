@@ -14,7 +14,8 @@ import { UserEntity } from './user.entity';
 export class OrganizerBankAccountEntity {
   @PrimaryGeneratedColumn({
     type: 'bigint',
-    comment: 'Identificador único interno autoincremental de la cuenta bancaria del promotor',
+    comment:
+      'Identificador único interno autoincremental de la cuenta bancaria del promotor',
   })
   id: string;
 
@@ -39,7 +40,8 @@ export class OrganizerBankAccountEntity {
     name: 'bank_name',
     type: 'varchar',
     length: 100,
-    comment: 'Nombre del banco en Perú (ej: BCP, BBVA, Interbank, Scotiabank, BanBif)',
+    comment:
+      'Nombre del banco en Perú (ej: BCP, BBVA, Interbank, Scotiabank, BanBif)',
   })
   bankName: string;
 
@@ -48,7 +50,8 @@ export class OrganizerBankAccountEntity {
     type: 'varchar',
     length: 30,
     default: 'checking',
-    comment: 'Tipo de cuenta bancaria: savings (ahorros) o checking (corriente)',
+    comment:
+      'Tipo de cuenta bancaria: savings (ahorros) o checking (corriente)',
   })
   accountType: string;
 
@@ -107,7 +110,8 @@ export class OrganizerBankAccountEntity {
     name: 'is_default',
     type: 'boolean',
     default: false,
-    comment: 'Indica si es la cuenta principal predeterminada para adelantos y liquidaciones',
+    comment:
+      'Indica si es la cuenta principal predeterminada para adelantos y liquidaciones',
   })
   isDefault: boolean;
 
@@ -123,7 +127,8 @@ export class OrganizerBankAccountEntity {
     name: 'verified_at',
     type: 'timestamptz',
     nullable: true,
-    comment: 'Fecha y hora en que administración/finanzas verificó la titularidad de la cuenta',
+    comment:
+      'Fecha y hora en que administración/finanzas verificó la titularidad de la cuenta',
   })
   verifiedAt: Date | null;
 
@@ -141,8 +146,9 @@ export class OrganizerBankAccountEntity {
   })
   updatedAt: Date;
 
-  @ManyToOne(() => UserEntity, (user) => user.bankAccounts, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserEntity, (user) => user.bankAccounts, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 }
-

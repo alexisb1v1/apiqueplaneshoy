@@ -42,7 +42,8 @@ export class UpdateProfileRequestDto {
   phone?: string;
 
   @ApiPropertyOptional({
-    description: 'Nombre comercial de la productora o razón social del organizador',
+    description:
+      'Nombre comercial de la productora o razón social del organizador',
     example: 'Selva Central Producciones SAC',
   })
   @IsOptional()
@@ -78,4 +79,3 @@ export class UpdateProfileRequestDto {
   @IsString()
   organizerLogoUrl?: string;
 }
-

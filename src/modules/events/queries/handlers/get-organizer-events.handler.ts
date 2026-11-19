@@ -32,9 +32,10 @@ interface OrderDiscountAggRow {
 }
 
 @QueryHandler(GetOrganizerEventsQuery)
-export class GetOrganizerEventsHandler
-  implements IQueryHandler<GetOrganizerEventsQuery, Result<OrganizerEventResponseDto[], AppError>>
-{
+export class GetOrganizerEventsHandler implements IQueryHandler<
+  GetOrganizerEventsQuery,
+  Result<OrganizerEventResponseDto[], AppError>
+> {
   private readonly logger = new Logger(GetOrganizerEventsHandler.name);
 
   constructor(
@@ -69,7 +70,8 @@ export class GetOrganizerEventsHandler
       const periodParam = query.period || '3m';
       let minCreatedAt: Date | null = null;
       if (periodParam !== 'all') {
-        const months = periodParam === '12m' ? 12 : periodParam === '6m' ? 6 : 3;
+        const months =
+          periodParam === '12m' ? 12 : periodParam === '6m' ? 6 : 3;
         minCreatedAt = new Date();
         minCreatedAt.setMonth(minCreatedAt.getMonth() - months);
       }
@@ -109,7 +111,9 @@ export class GetOrganizerEventsHandler
           .addSelect('COUNT(t.id)', 'soldCount')
           .addSelect('COALESCE(SUM(t.paid_base_price), 0)', 'grossRevenue')
           .where('s.event_id IN (:...eventIds)', { eventIds })
-          .andWhere('t.status IN (:...soldStatuses)', { soldStatuses: ['sold', 'used'] })
+          .andWhere('t.status IN (:...soldStatuses)', {
+            soldStatuses: ['sold', 'used'],
+          })
           .groupBy('s.event_id')
           .addGroupBy('t.zone_id')
           .getRawMany<ZoneAggRow>(),
@@ -121,11 +125,17 @@ export class GetOrganizerEventsHandler
           .addSelect('COALESCE(o.event_id, s.event_id)', 'eventId')
           .addSelect('COALESCE(o.discount_amount, 0)', 'discountAmount')
           .where('o.status = :paidStatus', { paidStatus: 'paid' })
-          .andWhere('(o.event_id IN (:...eventIds) OR s.event_id IN (:...eventIds))', { eventIds })
+          .andWhere(
+            '(o.event_id IN (:...eventIds) OR s.event_id IN (:...eventIds))',
+            { eventIds },
+          )
           .getRawMany<OrderDiscountAggRow>(),
       ]);
 
-      const zoneMetricsMap = new Map<string, { soldCount: number; grossRevenue: number }>();
+      const zoneMetricsMap = new Map<
+        string,
+        { soldCount: number; grossRevenue: number }
+      >();
       for (const row of zoneSalesRows) {
         zoneMetricsMap.set(`${row.eventId}:${row.zoneId}`, {
           soldCount: Number(row.soldCount) || 0,
@@ -150,7 +160,12 @@ export class GetOrganizerEventsHandler
 
       const now = new Date();
       let mappedEvents = events.map((event) =>
-        this.mapEventToOrganizerDto(event, zoneMetricsMap, couponDiscountByEvent, now),
+        this.mapEventToOrganizerDto(
+          event,
+          zoneMetricsMap,
+          couponDiscountByEvent,
+          now,
+        ),
       );
 
       // Filtros opcionales de consulta
@@ -194,7 +209,8 @@ export class GetOrganizerEventsHandler
     now: Date,
   ): OrganizerEventResponseDto {
     const sortedShows = [...(event.shows || [])].sort(
-      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      (a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
     );
     const firstShow = sortedShows[0] || null;
     const lastShow = sortedShows[sortedShows.length - 1] || null;
@@ -218,7 +234,9 @@ export class GetOrganizerEventsHandler
     let totalGrossRevenue = 0;
     let totalTargetRevenue = 0;
 
-    const mappedZones: OrganizerEventZoneResponseDto[] = [...(event.zones || [])]
+    const mappedZones: OrganizerEventZoneResponseDto[] = [
+      ...(event.zones || []),
+    ]
       .sort((a, b) => Number(a.id) - Number(b.id))
       .map((zone) => {
         const cap = Number(zone.capacity) || 0;
@@ -226,7 +244,8 @@ export class GetOrganizerEventsHandler
         const sold = agg ? agg.soldCount : Number(zone.soldCount) || 0;
         const locked = Number(zone.lockedCount) || 0;
         const remaining = Math.max(0, cap - sold - locked);
-        const occupancy = cap > 0 ? Math.min(100, Math.round((sold / cap) * 1000) / 10) : 0;
+        const occupancy =
+          cap > 0 ? Math.min(100, Math.round((sold / cap) * 1000) / 10) : 0;
         const regularPrice = Number(zone.regularPrice) || 0;
 
         const activeTiers = (zone.pricingTiers || [])
@@ -240,7 +259,9 @@ export class GetOrganizerEventsHandler
 
         const currentTier = activeTiers[0];
         const isPresaleActive = Boolean(currentTier);
-        const activePrice = currentTier ? Number(currentTier.price) : regularPrice;
+        const activePrice = currentTier
+          ? Number(currentTier.price)
+          : regularPrice;
         const activeTierName = currentTier ? currentTier.name : 'Venta Regular';
 
         if (isPresaleActive && !hasAnyActivePresale) {
@@ -289,15 +310,34 @@ export class GetOrganizerEventsHandler
             isPresaleActive,
             statusBadge,
             revenue: Math.round(zoneRevenue * 100) / 100,
+            feeIncluded: Boolean(zone.feeIncluded),
+            serviceFee: Number(zone.serviceFee) || 0,
           },
           { excludeExtraneousValues: true },
         );
       });
 
+    // Determinar a nivel de evento a quién se le cobra la comisión
+    const zonesList = event.zones || [];
+    const totalZones = zonesList.length;
+    const includedZonesCount = zonesList.filter((z) => z.feeIncluded).length;
+    let feeChargedTo: 'buyer' | 'promoter' | 'mixed' = 'buyer';
+    if (totalZones > 0) {
+      if (includedZonesCount === totalZones) {
+        feeChargedTo = 'promoter';
+      } else if (includedZonesCount > 0) {
+        feeChargedTo = 'mixed';
+      }
+    }
+    const isEventFeeIncluded = feeChargedTo === 'promoter';
+
     const totalRemaining = Math.max(0, totalCapacity - totalTicketsSold);
     const totalOccupancy =
       totalCapacity > 0
-        ? Math.min(100, Math.round((totalTicketsSold / totalCapacity) * 1000) / 10)
+        ? Math.min(
+            100,
+            Math.round((totalTicketsSold / totalCapacity) * 1000) / 10,
+          )
         : 0;
 
     const couponsDiscount = couponDiscountByEvent.get(String(event.id)) || 0;
@@ -307,7 +347,9 @@ export class GetOrganizerEventsHandler
     );
 
     const isSoldOut =
-      event.status === 'published' && totalCapacity > 0 && totalTicketsSold >= totalCapacity;
+      event.status === 'published' &&
+      totalCapacity > 0 &&
+      totalTicketsSold >= totalCapacity;
 
     let statusLabel = 'Borrador';
     if (event.status === 'published') {
@@ -342,7 +384,10 @@ export class GetOrganizerEventsHandler
     const baseReady = event.name && event.venue ? 40 : 20;
     const completionPercent = Math.min(
       100,
-      baseReady + (hasShows ? 20 : 0) + (hasZones ? 20 : 0) + (hasBanner ? 20 : 0),
+      baseReady +
+        (hasShows ? 20 : 0) +
+        (hasZones ? 20 : 0) +
+        (hasBanner ? 20 : 0),
     );
 
     const draftChecklist = plainToInstance(
@@ -371,10 +416,14 @@ export class GetOrganizerEventsHandler
         isSoldOut,
         statusLabel,
         hasLandingPage: Boolean(event.hasLandingPage),
+        feeIncluded: isEventFeeIncluded,
+        feeChargedTo,
         imageUrl: bannerImage,
         venue: event.venue,
         city: cityName,
-        firstShowStartTime: firstShow ? new Date(firstShow.startTime).toISOString() : null,
+        firstShowStartTime: firstShow
+          ? new Date(firstShow.startTime).toISOString()
+          : null,
         dateFormatted: this.formatShowRange(firstShow, lastShow),
         showsCount: sortedShows.length,
         capacity: totalCapacity,
@@ -387,7 +436,9 @@ export class GetOrganizerEventsHandler
         targetRevenue: Math.round(totalTargetRevenue * 100) / 100,
         settlementStatus: event.settlement?.status || null,
         advancesCount: (event.advances || []).length,
-        createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : now.toISOString(),
+        createdAt: event.createdAt
+          ? new Date(event.createdAt).toISOString()
+          : now.toISOString(),
         draftChecklist,
         zones: mappedZones,
       },
@@ -395,7 +446,10 @@ export class GetOrganizerEventsHandler
     );
   }
 
-  private formatShowRange(firstShow: ShowEntity | null, lastShow: ShowEntity | null): string {
+  private formatShowRange(
+    firstShow: ShowEntity | null,
+    lastShow: ShowEntity | null,
+  ): string {
     if (!firstShow?.startTime) {
       return 'Fecha por definir';
     }

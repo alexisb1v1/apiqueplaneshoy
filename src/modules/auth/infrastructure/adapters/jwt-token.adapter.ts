@@ -15,7 +15,7 @@ export class JwtTokenAdapter implements TokenService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   generateToken(payload: AuthTokenPayload): string {
     return this.jwtService.sign(payload);
@@ -29,7 +29,10 @@ export class JwtTokenAdapter implements TokenService {
     }
   }
 
-  generateEmailVerificationToken(payload: { sub: string; email: string }): string {
+  generateEmailVerificationToken(payload: {
+    sub: string;
+    email: string;
+  }): string {
     return this.jwtService.sign(
       {
         sub: payload.sub,
@@ -42,9 +45,12 @@ export class JwtTokenAdapter implements TokenService {
     );
   }
 
-  verifyEmailVerificationToken(token: string): EmailVerificationTokenPayload | null {
+  verifyEmailVerificationToken(
+    token: string,
+  ): EmailVerificationTokenPayload | null {
     try {
-      const decoded = this.jwtService.verify<EmailVerificationTokenPayload>(token);
+      const decoded =
+        this.jwtService.verify<EmailVerificationTokenPayload>(token);
       if (decoded.type !== 'email_verification') {
         return null;
       }
@@ -58,7 +64,10 @@ export class JwtTokenAdapter implements TokenService {
    * Genera un Refresh Token criptográfico de larga duración (30 días)
    * respaldado en Redis con rotación de seguridad (Token Rotation).
    */
-  async generateRefreshToken(payload: { userId: number; publicUuid: string }): Promise<string> {
+  async generateRefreshToken(payload: {
+    userId: number;
+    publicUuid: string;
+  }): Promise<string> {
     const tokenUuid = randomUUID();
     const tokenSecret = randomBytes(24).toString('hex');
     const refreshToken = `${payload.userId}.${tokenUuid}.${tokenSecret}`;
@@ -71,7 +80,11 @@ export class JwtTokenAdapter implements TokenService {
       createdAt: new Date().toISOString(),
     };
 
-    await this.redisService.set(redisKey, redisValue, REFRESH_TOKEN_TTL_SECONDS);
+    await this.redisService.set(
+      redisKey,
+      redisValue,
+      REFRESH_TOKEN_TTL_SECONDS,
+    );
     return refreshToken;
   }
 
