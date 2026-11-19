@@ -15,12 +15,16 @@ import { RefreshTokenRequestDto } from './dto/refresh-token.request.dto';
 import { RefreshTokenResponseDto } from './dto/refresh-token.response.dto';
 import { RefreshTokenCommand } from '@auth/application/commands/v1/refresh-token/refresh-token.command';
 import { matchResult } from '@common/http/match-result';
-import { REFRESH_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_OPTIONS } from '@auth/constants/cookie.constants';
+import {
+  REFRESH_TOKEN_COOKIE_NAME,
+  ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_OPTIONS,
+} from '@auth/constants/cookie.constants';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class RefreshTokenController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(private readonly commandBus: CommandBus) { }
 
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
@@ -42,23 +46,30 @@ export class RefreshTokenController {
     @Res({ passthrough: true }) res: Response,
     @Body() dto?: RefreshTokenRequestDto,
   ): Promise<RefreshTokenResponseDto> {
-    const rawToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] || dto?.refreshToken;
+    const origin = dto?.origin || (req.headers['x-origin'] === 'backoffice' ? 'backoffice' : 'web');
+    const targetCookieName =
+      origin === 'backoffice'
+        ? ADMIN_REFRESH_TOKEN_COOKIE_NAME
+        : REFRESH_TOKEN_COOKIE_NAME;
+
+    const rawToken = req.cookies?.[targetCookieName] || dto?.refreshToken;
 
     if (!rawToken || typeof rawToken !== 'string') {
       throw new UnauthorizedException('No se proporcionó token de actualización (Refresh Token).');
     }
 
-    const result = await this.commandBus.execute(new RefreshTokenCommand({ refreshToken: rawToken }));
+    const result = await this.commandBus.execute(new RefreshTokenCommand({ refreshToken: rawToken, origin }));
     return matchResult(
       result,
       (data: RefreshTokenResponseDto) => {
         if (data.refreshToken) {
-          res.cookie(REFRESH_TOKEN_COOKIE_NAME, data.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+          res.cookie(targetCookieName, data.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
         }
         return data;
       },
       {
         UNAUTHORIZED: 'El token de actualización es inválido, ha expirado o ya fue consumido.',
+        FORBIDDEN: 'Acceso no permitido para este tipo de cuenta en esta plataforma.',
       },
     );
   }
@@ -70,8 +81,11 @@ export class RefreshTokenController {
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @Body() body?: { origin?: string },
   ): Promise<{ success: boolean; message: string }> {
-    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: '/' });
+    const origin = body?.origin || (req.headers['x-origin'] === 'backoffice' ? 'backoffice' : 'web');
+    const cookieToClear = origin === 'backoffice' ? ADMIN_REFRESH_TOKEN_COOKIE_NAME : REFRESH_TOKEN_COOKIE_NAME;
+    res.clearCookie(cookieToClear, { path: '/' });
     return { success: true, message: 'Sesión cerrada exitosamente' };
   }
 }

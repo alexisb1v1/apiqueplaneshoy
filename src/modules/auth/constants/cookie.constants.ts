@@ -1,6 +1,7 @@
 import { CookieOptions } from 'express';
 
 export const REFRESH_TOKEN_COOKIE_NAME = 'qph_refresh_token';
+export const ADMIN_REFRESH_TOKEN_COOKIE_NAME = 'qph_admin_refresh_token';
 
 export const REFRESH_TOKEN_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,

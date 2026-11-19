@@ -42,6 +42,15 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
       return err('UNAUTHORIZED');
     }
 
+    // Segregación de accesos por rol y origen:
+    const origin = command.dto.origin || 'web';
+    if (origin === 'backoffice' && user.role !== 'admin') {
+      return err('FORBIDDEN');
+    }
+    if (origin === 'web' && user.role === 'admin') {
+      return err('FORBIDDEN');
+    }
+
     // 3. Emitir nuevo Access Token de 15 minutos
     const newAccessToken = this.tokenService.generateToken({
       sub: user.publicUuid,

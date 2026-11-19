@@ -6,12 +6,16 @@ import { LoginUserRequestDto } from './dto/login-user.request.dto';
 import { LoginUserResponseDto } from './dto/login-user.response.dto';
 import { LoginUserCommand } from '@auth/application/commands/v1/login-user/login-user.command';
 import { matchResult } from '@common/http/match-result';
-import { REFRESH_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_OPTIONS } from '@auth/constants/cookie.constants';
+import {
+  REFRESH_TOKEN_COOKIE_NAME,
+  ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_OPTIONS,
+} from '@auth/constants/cookie.constants';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class LoginUserController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(private readonly commandBus: CommandBus) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -34,7 +38,11 @@ export class LoginUserController {
       result,
       (response: LoginUserResponseDto) => {
         if (response.refreshToken) {
-          res.cookie(REFRESH_TOKEN_COOKIE_NAME, response.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+          const cookieName =
+            dto.origin === 'backoffice'
+              ? ADMIN_REFRESH_TOKEN_COOKIE_NAME
+              : REFRESH_TOKEN_COOKIE_NAME;
+          res.cookie(cookieName, response.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
         }
         return response;
       },

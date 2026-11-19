@@ -9,5 +9,15 @@ export class RefreshTokenRequestDto {
   @IsString({ message: 'El refreshToken debe ser una cadena de texto' })
   @IsOptional()
   readonly refreshToken?: string;
+
+  @ApiPropertyOptional({
+    example: 'web',
+    description: 'Origen de la solicitud: web (portal clientes) o backoffice (consola administrativa)',
+    enum: ['web', 'backoffice'],
+    default: 'web',
+  })
+  @IsString()
+  @IsOptional()
+  readonly origin?: 'web' | 'backoffice' = 'web';
 }
 

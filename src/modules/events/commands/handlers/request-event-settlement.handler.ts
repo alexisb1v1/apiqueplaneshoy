@@ -238,27 +238,26 @@ export class RequestEventSettlementHandler
 
       const saved = await this.settlementRepository.save(settlement);
 
-      // Notificar al organizador por correo electrónico que su solicitud fue recibida
-      if (user.email) {
-        this.mailService
-          .sendSettlementRequestedEmail({
-            to: user.email,
-            name: user.name || user.organizerName || 'Organizador',
-            eventTitle: event.name,
-            totalTicketsSold: Number(saved.totalTicketsSold) || 0,
-            grossAmountFormatted: `S/ ${Number(saved.grossAmount || 0).toFixed(2)}`,
-            couponsDiscountFormatted: `S/ ${Number(saved.totalCouponsDiscountAmount || 0).toFixed(2)}`,
-            platformFeeFormatted: `S/ ${Number(saved.platformFeeAmount || 0).toFixed(2)}`,
-            netPayoutFormatted: `S/ ${Number(saved.netPayoutAmount || 0).toFixed(2)}`,
-            bankName: saved.bankName || 'No especificado',
-            bankAccountNumber: saved.bankAccountNumber || '-',
-            bankAccountCci: saved.bankAccountCci,
-            requestedAtIso: saved.requestedAt ? new Date(saved.requestedAt).toISOString() : new Date().toISOString(),
-          })
-          .catch((mailErr) => {
-            this.logger.warn(`No se pudo enviar el correo de solicitud de liquidación a ${user.email}: ${(mailErr as Error).message}`);
-          });
-      }
+      // Notificar a promotores@queplanhoy.com que se ingresó una solicitud de liquidación
+      const settlementNotificationEmail = process.env.SETTLEMENT_NOTIFICATION_EMAIL || 'promotores@queplanhoy.com';
+      this.mailService
+        .sendSettlementRequestedEmail({
+          to: settlementNotificationEmail,
+          name: user.name || user.organizerName || 'Organizador',
+          eventTitle: event.name,
+          totalTicketsSold: Number(saved.totalTicketsSold) || 0,
+          grossAmountFormatted: `S/ ${Number(saved.grossAmount || 0).toFixed(2)}`,
+          couponsDiscountFormatted: `S/ ${Number(saved.totalCouponsDiscountAmount || 0).toFixed(2)}`,
+          platformFeeFormatted: `S/ ${Number(saved.platformFeeAmount || 0).toFixed(2)}`,
+          netPayoutFormatted: `S/ ${Number(saved.netPayoutAmount || 0).toFixed(2)}`,
+          bankName: saved.bankName || 'No especificado',
+          bankAccountNumber: saved.bankAccountNumber || '-',
+          bankAccountCci: saved.bankAccountCci,
+          requestedAtIso: saved.requestedAt ? new Date(saved.requestedAt).toISOString() : new Date().toISOString(),
+        })
+        .catch((mailErr) => {
+          this.logger.warn(`No se pudo enviar el correo de solicitud de liquidación a ${settlementNotificationEmail}: ${(mailErr as Error).message}`);
+        });
 
       const eventCode = `#EV-${event.publicUuid.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
 
