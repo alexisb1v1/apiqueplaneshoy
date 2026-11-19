@@ -14,6 +14,7 @@ import { OrderEntity } from '@orders/domain/entities/order.entity';
 import { EventSettlementEntity } from '../../domain/entities/event-settlement.entity';
 import { isValidRuc, isValidDni } from '@common/validators/sunat-validators';
 import { RequestEventSettlementCommand } from '../impl/request-event-settlement.command';
+import { MailService } from '@modules/mail/mail.service';
 import {
   EventSettlementResponseDto,
   SettlementBreakdownZoneDto,
@@ -45,6 +46,7 @@ export class RequestEventSettlementHandler
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
   ) {}
 
   async execute(
@@ -235,6 +237,28 @@ export class RequestEventSettlementHandler
       settlement.requestedAt = new Date();
 
       const saved = await this.settlementRepository.save(settlement);
+
+      // Notificar al organizador por correo electrónico que su solicitud fue recibida
+      if (user.email) {
+        this.mailService
+          .sendSettlementRequestedEmail({
+            to: user.email,
+            name: user.name || user.organizerName || 'Organizador',
+            eventTitle: event.name,
+            totalTicketsSold: Number(saved.totalTicketsSold) || 0,
+            grossAmountFormatted: `S/ ${Number(saved.grossAmount || 0).toFixed(2)}`,
+            couponsDiscountFormatted: `S/ ${Number(saved.totalCouponsDiscountAmount || 0).toFixed(2)}`,
+            platformFeeFormatted: `S/ ${Number(saved.platformFeeAmount || 0).toFixed(2)}`,
+            netPayoutFormatted: `S/ ${Number(saved.netPayoutAmount || 0).toFixed(2)}`,
+            bankName: saved.bankName || 'No especificado',
+            bankAccountNumber: saved.bankAccountNumber || '-',
+            bankAccountCci: saved.bankAccountCci,
+            requestedAtIso: saved.requestedAt ? new Date(saved.requestedAt).toISOString() : new Date().toISOString(),
+          })
+          .catch((mailErr) => {
+            this.logger.warn(`No se pudo enviar el correo de solicitud de liquidación a ${user.email}: ${(mailErr as Error).message}`);
+          });
+      }
 
       const eventCode = `#EV-${event.publicUuid.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
 

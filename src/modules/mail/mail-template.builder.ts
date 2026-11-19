@@ -653,11 +653,18 @@ export function buildSettlementPaidEmailContent(params: {
           <td align="right" style="padding: 10px 12px; font-size: 15px; font-weight: 900; color: #059669;">${escapeHtml(params.netPayoutFormatted)}</td>
         </tr>
       </table>
-      <p style="margin: 0; font-size: 12px; color: #475569;">
+      <p style="margin: 0 0 12px 0; font-size: 12px; color: #475569;">
         <strong>Banco:</strong> ${escapeHtml(params.bankName)} · <strong>Operación:</strong> <span style="font-family: monospace;">${escapeHtml(params.transferReference)}</span> · ${escapeHtml(formattedDate)}
       </p>
+      ${
+        params.voucherUrl
+          ? `<p style="margin: 0; font-size: 12px; color: #059669;">
+               ✔ <strong>Comprobante bancario:</strong> Puedes visualizarlo haciendo clic en el botón inferior o descargarlo del archivo adjunto a este correo.
+             </p>`
+          : ''
+      }
     `,
-    ctaLabel: params.voucherUrl ? 'Descargar voucher de liquidación' : undefined,
+    ctaLabel: params.voucherUrl ? 'Ver voucher de liquidación' : undefined,
     ctaUrl: params.voucherUrl || undefined,
     supportEmail: params.supportEmail,
   });
@@ -666,6 +673,88 @@ export function buildSettlementPaidEmailContent(params: {
 
   return {
     subject: `Liquidación final pagada (${params.netPayoutFormatted}) - ${params.eventTitle}`,
+    html,
+    text,
+  };
+}
+
+/**
+ * Construye el correo de notificación cuando el organizador solicita la liquidación final de su evento.
+ */
+export function buildSettlementRequestedEmailContent(params: {
+  name: string;
+  eventTitle: string;
+  totalTicketsSold: number;
+  grossAmountFormatted: string;
+  couponsDiscountFormatted: string;
+  platformFeeFormatted: string;
+  netPayoutFormatted: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountCci?: string | null;
+  requestedAtIso: string;
+  supportEmail?: string;
+}): RenderedEmailContent {
+  const formattedDate = new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'America/Lima',
+  }).format(new Date(params.requestedAtIso));
+
+  const html = renderBrandedEmailLayout({
+    preheader: `Solicitud de liquidación recibida para ${params.eventTitle}.`,
+    badge: 'Liquidación en Revisión',
+    title: 'Solicitud de liquidación en proceso',
+    greeting: `Hola, ${escapeHtml(params.name || 'Organizador')}:`,
+    bodyHtml: `
+      <p style="margin: 0 0 14px 0;">
+        Hemos recibido tu solicitud de liquidación final para el evento <strong>${escapeHtml(params.eventTitle)}</strong> (${params.totalTicketsSold} entradas vendidas). Nuestro equipo de tesorería está auditando las cifras para procesar la transferencia bancaria.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; margin-bottom: 14px;">
+        <tr style="background-color: #F1F5F9;">
+          <th align="left" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Concepto</th>
+          <th align="right" style="padding: 9px 12px; font-size: 11px; text-transform: uppercase; color: #475569;">Importe Estimado</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">Ventas brutas</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; font-weight: 700; color: #0F172A;">${escapeHtml(params.grossAmountFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Descuento por cupones</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.couponsDiscountFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #334155;">(-) Comisión plataforma QPH</td>
+          <td align="right" style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #64748B;">-${escapeHtml(params.platformFeeFormatted)}</td>
+        </tr>
+        <tr style="background-color: #F8FAFC;">
+          <td style="padding: 10px 12px; font-size: 14px; font-weight: 800; color: #0F172A;">Neto estimado a transferir</td>
+          <td align="right" style="padding: 10px 12px; font-size: 15px; font-weight: 900; color: #7C3AED;">${escapeHtml(params.netPayoutFormatted)}</td>
+        </tr>
+      </table>
+      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+        <p style="margin: 0 0 4px 0; font-size: 12px; color: #334155;">
+          <strong>Destino bancario:</strong> ${escapeHtml(params.bankName)} · Cta: <span style="font-family: monospace;">${escapeHtml(params.bankAccountNumber)}</span>
+        </p>
+        ${
+          params.bankAccountCci
+            ? `<p style="margin: 0; font-size: 12px; color: #475569;">
+                 <strong>CCI:</strong> <span style="font-family: monospace;">${escapeHtml(params.bankAccountCci)}</span>
+               </p>`
+            : ''
+        }
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #64748B;">
+        ⏱ <strong>Plazo estimado:</strong> La auditoría y desembolso toma habitualmente entre <strong>24 a 72 horas hábiles</strong>. Te notificaremos a este mismo correo apenas se emita la transferencia.
+      </p>
+    `,
+    supportEmail: params.supportEmail,
+  });
+
+  const text = `Solicitud de liquidación recibida para "${params.eventTitle}". Monto estimado: ${params.netPayoutFormatted}. Cuenta: ${params.bankName} - ${params.bankAccountNumber}. Fecha: ${formattedDate}.`;
+
+  return {
+    subject: `Solicitud de liquidación recibida (${params.netPayoutFormatted}) - ${params.eventTitle}`,
     html,
     text,
   };

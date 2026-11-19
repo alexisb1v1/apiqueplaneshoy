@@ -25,7 +25,7 @@ export class GetPresignedUrlDto {
     description: 'Carpeta o sección donde se almacenará el recurso',
     example: 'banners',
     required: false,
-    enum: ['banners', 'croquis', 'gallery', 'landings', 'organizers'],
+    enum: ['banners', 'croquis', 'gallery', 'landings', 'organizers', 'vouchers'],
   })
   @IsString()
   @IsOptional()

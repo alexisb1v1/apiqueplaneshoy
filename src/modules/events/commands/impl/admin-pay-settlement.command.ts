@@ -4,6 +4,6 @@ export class AdminPaySettlementCommand {
   constructor(
     public readonly settlementIdentifier: string,
     public readonly dto: AdminPaySettlementRequestDto,
-    public readonly adminUserId: number,
+    public readonly adminUserId: number | null,
   ) {}
 }

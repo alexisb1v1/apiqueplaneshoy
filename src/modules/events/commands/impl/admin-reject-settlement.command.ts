@@ -4,6 +4,6 @@ export class AdminRejectSettlementCommand {
   constructor(
     public readonly settlementIdentifier: string,
     public readonly dto: AdminRejectSettlementRequestDto,
-    public readonly adminUserId: number,
+    public readonly adminUserId: number | null,
   ) {}
 }

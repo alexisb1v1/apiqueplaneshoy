@@ -127,6 +127,21 @@ export interface SendAdvancePaidEmailPayload {
   voucherUrl?: string | null;
 }
 
+export interface SendSettlementRequestedEmailPayload {
+  to: string;
+  name: string;
+  eventTitle: string;
+  totalTicketsSold: number;
+  grossAmountFormatted: string;
+  couponsDiscountFormatted: string;
+  platformFeeFormatted: string;
+  netPayoutFormatted: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountCci?: string | null;
+  requestedAtIso: string;
+}
+
 export interface SendSettlementPaidEmailPayload {
   to: string;
   name: string;
@@ -143,5 +158,6 @@ export interface SendSettlementPaidEmailPayload {
   transferReference: string;
   paidAtIso: string;
   voucherUrl?: string | null;
+  attachments?: EmailAttachment[];
 }
 

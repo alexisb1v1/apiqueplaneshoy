@@ -1030,3 +1030,52 @@ Endpoint protegido con `JwtAuthGuard` en `EventsController` atendido por `GetOrg
 
 
 
+
+---
+
+## 18. Módulo de Liquidaciones y Despacho en Backoffice (`event_settlements`)
+
+Gestiona el ciclo de vida financiero post-evento, permitiendo al promotor solicitar su liquidación y a la tesorería de Qué Planes Hoy auditar y transferir los fondos netos mediante el Backoffice.
+
+### 18.1 Flujo Operativo Completo
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Promotor as Promotor (Web)
+    actor Admin as Tesorería (Backoffice)
+    participant API as Backend NestJS
+    participant DB as PostgreSQL (event_settlements)
+    participant Mail as MailService
+
+    Promotor->>API: GET /events/settlement/:identifier
+    API->>DB: Consulta métricas de ventas y settlement existente
+    API-->>Promotor: 200 OK (Ventas netas, comisiones, RUC y nombre precargados)
+
+    Promotor->>API: POST /events/settlement/:identifier { bankName, bankAccountNumber, bankAccountCci, bankAccountHolder, ruc }
+    Note over API: Valida RUC con Algoritmo SUNAT Módulo 11.<br/>Si es BCP, el CCI es opcional; otros bancos requieren CCI 20 dígitos.
+    API->>DB: INSERT/UPDATE event_settlements (status = 'requested')
+    API-->>Promotor: 201 Created
+
+    Admin->>API: GET /events/admin/settlements?status=pending
+    API->>DB: SELECT settlements JOIN events JOIN users
+    API-->>Admin: 200 OK [AdminSettlementListResponseDto]
+
+    alt Despacho de Transferencia Bancaria
+        Admin->>API: POST /events/admin/settlements/:id/pay { transferReference, transferVoucherUrl, notes }
+        API->>DB: UPDATE event_settlements SET status='paid', paid_at=NOW(), transfer_reference=:ref, processed_by_user_id=:adminId
+        API->>Mail: sendSettlementPaidEmail(promotor)
+        API-->>Admin: 200 OK { message: "Liquidación despachada y pagada con éxito" }
+    else Rechazo por Inconsistencias en Cuenta/RUC
+        Admin->>API: POST /events/admin/settlements/:id/reject { reason }
+        API->>DB: UPDATE event_settlements SET status='rejected', notes=:reason, processed_by_user_id=:adminId
+        API-->>Admin: 200 OK { message: "Liquidación rechazada" }
+    end
+```
+
+### 18.2 Endpoints Involucrados
+1. `GET /events/settlement/:identifier`: Obtiene preliquidación y precarga del RUC del promotor.
+2. `POST /events/settlement/:identifier`: Registra o actualiza la solicitud de liquidación (`status='requested'`).
+3. `GET /events/admin/settlements`: Listado administrativo para Tesorería con filtros de estado y búsqueda.
+4. `POST /events/admin/settlements/:id/pay`: Aprobación y registro de transferencia bancaria (`status='paid'`).
+5. `POST /events/admin/settlements/:id/reject`: Rechazo de liquidación con motivo de corrección (`status='rejected'`).

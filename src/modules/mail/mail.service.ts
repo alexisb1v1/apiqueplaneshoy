@@ -14,6 +14,7 @@ import {
   SendOrganizerActivatedEmailPayload,
   SendOrganizerKycVerifiedEmailPayload,
   SendSettlementPaidEmailPayload,
+  SendSettlementRequestedEmailPayload,
   SendWelcomeGoogleEmailPayload,
 } from './mail.types';
 import {
@@ -27,6 +28,7 @@ import {
   buildPasswordChangedEmailContent,
   buildPasswordResetEmailContent,
   buildSettlementPaidEmailContent,
+  buildSettlementRequestedEmailContent,
   buildVerificationEmailContent,
   buildWelcomeGoogleEmailContent,
 } from './mail-template.builder';
@@ -519,6 +521,36 @@ export class MailService implements EmailService {
   }
 
   /**
+   * Notifica al organizador la recepción de su solicitud de liquidación final.
+   */
+  async sendSettlementRequestedEmail(
+    payload: SendSettlementRequestedEmailPayload,
+  ): Promise<EmailDeliveryResult> {
+    const content = buildSettlementRequestedEmailContent({
+      name: payload.name,
+      eventTitle: payload.eventTitle,
+      totalTicketsSold: payload.totalTicketsSold,
+      grossAmountFormatted: payload.grossAmountFormatted,
+      couponsDiscountFormatted: payload.couponsDiscountFormatted,
+      platformFeeFormatted: payload.platformFeeFormatted,
+      netPayoutFormatted: payload.netPayoutFormatted,
+      bankName: payload.bankName,
+      bankAccountNumber: payload.bankAccountNumber,
+      bankAccountCci: payload.bankAccountCci,
+      requestedAtIso: payload.requestedAtIso,
+      supportEmail: this.replyTo,
+    });
+
+    return this.sendEmail({
+      to: payload.to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+      tags: [{ name: 'template', value: 'settlement_requested' }],
+    });
+  }
+
+  /**
    * Notifica al organizador el pago y estado de cuenta oficial de la liquidación final.
    */
   async sendSettlementPaidEmail(
@@ -548,6 +580,7 @@ export class MailService implements EmailService {
       html: content.html,
       text: content.text,
       tags: [{ name: 'template', value: 'settlement_paid' }],
+      attachments: payload.attachments,
     });
   }
 }

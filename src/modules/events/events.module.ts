@@ -22,6 +22,8 @@ import { PublishEventHandler } from './commands/handlers/publish-event.handler';
 import { ApproveEventHandler } from './commands/handlers/approve-event.handler';
 import { ObserveEventHandler } from './commands/handlers/observe-event.handler';
 import { RequestEventSettlementHandler } from './commands/handlers/request-event-settlement.handler';
+import { AdminPaySettlementHandler } from './commands/handlers/admin-pay-settlement.handler';
+import { AdminRejectSettlementHandler } from './commands/handlers/admin-reject-settlement.handler';
 import { GetFeaturedEventsHandler } from './queries/handlers/get-featured-events.handler';
 import { GetUpcomingEventsHandler } from './queries/handlers/get-upcoming-events.handler';
 import { GetWeeklyFeaturedEventsHandler } from './queries/handlers/get-weekly-featured-events.handler';
@@ -32,6 +34,7 @@ import { GetOrganizerEventsHandler } from './queries/handlers/get-organizer-even
 import { GetOrganizerEventForEditHandler } from './queries/handlers/get-organizer-event-for-edit.handler';
 import { GetOrganizerEventReportHandler } from './queries/handlers/get-organizer-event-report.handler';
 import { GetEventSettlementHandler } from './queries/handlers/get-event-settlement.handler';
+import { ListAdminSettlementsHandler } from './queries/handlers/list-admin-settlements.handler';
 import { ListEventApprovalsHandler } from './queries/handlers/list-event-approvals.handler';
 import { EventStatusCronService } from './services/event-status-cron.service';
 import { EventSeederService } from './services/event-seeder.service';
@@ -45,6 +48,8 @@ const CommandHandlers = [
   ApproveEventHandler,
   ObserveEventHandler,
   RequestEventSettlementHandler,
+  AdminPaySettlementHandler,
+  AdminRejectSettlementHandler,
 ];
 const QueryHandlers = [
   GetFeaturedEventsHandler,
@@ -57,6 +62,7 @@ const QueryHandlers = [
   GetOrganizerEventForEditHandler,
   GetOrganizerEventReportHandler,
   GetEventSettlementHandler,
+  ListAdminSettlementsHandler,
   ListEventApprovalsHandler,
 ];
 

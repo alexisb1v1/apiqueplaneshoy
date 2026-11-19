@@ -26,11 +26,16 @@ import { OrganizerEventEditResponseDto } from '../dto/organizer-event-edit.respo
 import { OrganizerEventReportResponseDto } from '../dto/organizer-event-report.response.dto';
 import { RequestEventSettlementRequestDto } from '../dto/request-event-settlement.request.dto';
 import { EventSettlementResponseDto } from '../dto/event-settlement.response.dto';
+import { AdminSettlementListResponseDto } from '../dto/admin-settlement-list.response.dto';
+import { AdminPaySettlementRequestDto } from '../dto/admin-pay-settlement.request.dto';
+import { AdminRejectSettlementRequestDto } from '../dto/admin-reject-settlement.request.dto';
 import { PurgeFeaturedCacheResponseDto } from '../dto/purge-featured-cache.response.dto';
 import { CreateEventCommand } from '../commands/impl/create-event.command';
 import { UpdateEventCommand } from '../commands/impl/update-event.command';
 import { PublishEventCommand } from '../commands/impl/publish-event.command';
 import { RequestEventSettlementCommand } from '../commands/impl/request-event-settlement.command';
+import { AdminPaySettlementCommand } from '../commands/impl/admin-pay-settlement.command';
+import { AdminRejectSettlementCommand } from '../commands/impl/admin-reject-settlement.command';
 import { GetFeaturedEventsQuery } from '../queries/impl/get-featured-events.query';
 import { GetUpcomingEventsQuery } from '../queries/impl/get-upcoming-events.query';
 import { GetWeeklyFeaturedEventsQuery } from '../queries/impl/get-weekly-featured-events.query';
@@ -41,6 +46,7 @@ import { GetOrganizerEventsQuery } from '../queries/impl/get-organizer-events.qu
 import { GetOrganizerEventForEditQuery } from '../queries/impl/get-organizer-event-for-edit.query';
 import { GetOrganizerEventReportQuery } from '../queries/impl/get-organizer-event-report.query';
 import { GetEventSettlementQuery } from '../queries/impl/get-event-settlement.query';
+import { ListAdminSettlementsQuery } from '../queries/impl/list-admin-settlements.query';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
 import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
@@ -449,6 +455,84 @@ export class EventsController {
       {
         NOT_FOUND: 'Evento no encontrado',
         INTERNAL_ERROR: 'Error al observar el evento',
+      },
+    );
+  }
+
+  // ==========================================
+  // BACKOFFICE LIQUIDACIONES (SETTLEMENTS)
+  // ==========================================
+
+  @Get('admin/settlements')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar solicitudes de liquidación de eventos para el Backoffice' })
+  @ApiResponse({ status: 200, description: 'Listado de liquidaciones', type: [AdminSettlementListResponseDto] })
+  async listAdminSettlements(
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    const result = await this.queryBus.execute(new ListAdminSettlementsQuery(status, search));
+    return matchResult(
+      result,
+      (data) => data,
+      {
+        INTERNAL_ERROR: 'Error al listar liquidaciones',
+      },
+    );
+  }
+
+  @Post('admin/settlements/:id/pay')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Aprobar y pagar una solicitud de liquidación' })
+  @ApiResponse({ status: 200, description: 'Liquidación despachada y pagada exitosamente' })
+  async payAdminSettlement(
+    @Param('id') id: string,
+    @Body() dto: AdminPaySettlementRequestDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = req.user?.id ?? null;
+    const result = await this.commandBus.execute(new AdminPaySettlementCommand(id, dto, adminUserId));
+    return matchResult(
+      result,
+      (data) => ({
+        message: 'Liquidación despachada y pagada con éxito',
+        settlement: data,
+      }),
+      {
+        NOT_FOUND: 'Solicitud de liquidación no encontrada',
+        INVALID_INPUT: 'No se puede pagar una liquidación en este estado',
+        INTERNAL_ERROR: 'Error al procesar el pago de la liquidación',
+      },
+    );
+  }
+
+  @Post('admin/settlements/:id/reject')
+  @UseGuards(JwtAuthGuard, RolesAdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rechazar una solicitud de liquidación' })
+  @ApiResponse({ status: 200, description: 'Liquidación rechazada exitosamente' })
+  async rejectAdminSettlement(
+    @Param('id') id: string,
+    @Body() dto: AdminRejectSettlementRequestDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = req.user?.id ?? null;
+    const result = await this.commandBus.execute(new AdminRejectSettlementCommand(id, dto, adminUserId));
+    return matchResult(
+      result,
+      (data) => ({
+        message: 'Liquidación rechazada',
+        settlement: data,
+      }),
+      {
+        NOT_FOUND: 'Solicitud de liquidación no encontrada',
+        INVALID_INPUT: 'No se puede rechazar una liquidación en este estado',
+        INTERNAL_ERROR: 'Error al rechazar la liquidación',
       },
     );
   }
