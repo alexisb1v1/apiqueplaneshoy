@@ -106,6 +106,7 @@ export class GetMyOrdersHandler implements IQueryHandler<GetMyOrdersQuery> {
             category: event?.category || 'CONCERTS',
             venueName: event?.venue || 'Recinto Oficial',
             venueAddress: event?.address || 'Ubicación Confirmada, Perú',
+            googleMapsUrl: event?.googleMapsUrl || (event?.coordinates ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.coordinates)}` : (event?.venue ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.venue}, ${cityInfo.name}`)}` : null)),
             city: cityInfo.name,
             bannerImageUrl: banner,
             eventDateFormatted:

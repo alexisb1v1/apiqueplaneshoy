@@ -97,6 +97,11 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       return err('FORBIDDEN');
     }
 
+    // Regla de Negocio: No se permite editar un evento en estado publicado (a menos que sea administrador)
+    if (event.status === 'published' && user.role !== 'admin') {
+      return err('EVENT_PUBLISHED_CANNOT_EDIT');
+    }
+
     // Actualizar datos del organizador si se proporcionaron
     let userModified = false;
     if (dto.organizerName && dto.organizerName.trim() !== '') {

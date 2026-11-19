@@ -28,8 +28,11 @@ const DEFAULT_MESSAGES: Record<AppError, string> = {
   GATEWAY_ERROR: 'No se pudo establecer comunicación con la pasarela de pagos Culqi. Intenta nuevamente.',
   ORDER_EXPIRED: 'El tiempo de reserva de tu orden ha expirado y las entradas fueron liberadas.',
   EVENT_NOT_FOUND: 'El evento seleccionado no existe o ya no está disponible para compra.',
+  EVENT_PUBLISHED_CANNOT_EDIT: 'Los eventos en estado publicado no pueden ser modificados para proteger las entradas ya emitidas.',
   SHOW_NOT_FOUND: 'La función seleccionada no existe para este evento o no tiene fechas programadas.',
   ZONE_NOT_FOUND: 'La localidad o zona seleccionada ya no se encuentra disponible. Recarga la página del evento.',
+  SETTLEMENT_ALREADY_REQUESTED: 'Ya existe una solicitud de liquidación en proceso o completada para este evento.',
+  NO_FUNDS_TO_SETTLE: 'El evento no cuenta con fondos disponibles o ventas netas para liquidar.',
 };
 
 export function matchResult<T>(
@@ -44,12 +47,15 @@ export function matchResult<T>(
       case 'SHOW_NOT_FOUND':
       case 'ZONE_NOT_FOUND':
       case 'NOT_FOUND':              throw new NotFoundException(msg);
+      case 'EVENT_PUBLISHED_CANNOT_EDIT': throw new ForbiddenException(msg);
+      case 'SETTLEMENT_ALREADY_REQUESTED':
       case 'ALREADY_EXISTS':         throw new ConflictException(msg);
       case 'UNAUTHORIZED':           throw new UnauthorizedException(msg);
       case 'EMAIL_NOT_VERIFIED':
       case 'FORBIDDEN':              throw new ForbiddenException(msg);
       case 'GATEWAY_NOT_CONFIGURED': throw new ServiceUnavailableException(msg);
       case 'GATEWAY_ERROR':          throw new BadGatewayException(msg);
+      case 'NO_FUNDS_TO_SETTLE':
       case 'PAYMENT_REJECTED':
       case 'TICKET_LIMIT_EXCEEDED':
       case 'COUPON_INVALID_OR_EXPIRED':

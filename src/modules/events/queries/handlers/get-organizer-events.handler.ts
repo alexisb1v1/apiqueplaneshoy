@@ -289,10 +289,26 @@ export class GetOrganizerEventsHandler
             isPresaleActive,
             statusBadge,
             revenue: Math.round(zoneRevenue * 100) / 100,
+            feeIncluded: Boolean(zone.feeIncluded),
+            serviceFee: Number(zone.serviceFee) || 0,
           },
           { excludeExtraneousValues: true },
         );
       });
+
+    // Determinar a nivel de evento a quién se le cobra la comisión
+    const zonesList = event.zones || [];
+    const totalZones = zonesList.length;
+    const includedZonesCount = zonesList.filter((z) => z.feeIncluded).length;
+    let feeChargedTo: 'buyer' | 'promoter' | 'mixed' = 'buyer';
+    if (totalZones > 0) {
+      if (includedZonesCount === totalZones) {
+        feeChargedTo = 'promoter';
+      } else if (includedZonesCount > 0) {
+        feeChargedTo = 'mixed';
+      }
+    }
+    const isEventFeeIncluded = feeChargedTo === 'promoter';
 
     const totalRemaining = Math.max(0, totalCapacity - totalTicketsSold);
     const totalOccupancy =
@@ -371,6 +387,8 @@ export class GetOrganizerEventsHandler
         isSoldOut,
         statusLabel,
         hasLandingPage: Boolean(event.hasLandingPage),
+        feeIncluded: isEventFeeIncluded,
+        feeChargedTo,
         imageUrl: bannerImage,
         venue: event.venue,
         city: cityName,

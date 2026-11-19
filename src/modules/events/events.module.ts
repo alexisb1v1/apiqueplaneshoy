@@ -14,12 +14,14 @@ import { TicketEntity } from '@orders/domain/entities/ticket.entity';
 import { UserEntity } from '@users/domain/entities/user.entity';
 import { AuthModule } from '@auth/auth.module';
 import { SearchModule } from '../search/search.module';
+import { RedisModule } from '../redis/redis.module';
 import { EventsController } from './controllers/events.controller';
 import { CreateEventHandler } from './commands/handlers/create-event.handler';
 import { UpdateEventHandler } from './commands/handlers/update-event.handler';
 import { PublishEventHandler } from './commands/handlers/publish-event.handler';
 import { ApproveEventHandler } from './commands/handlers/approve-event.handler';
 import { ObserveEventHandler } from './commands/handlers/observe-event.handler';
+import { RequestEventSettlementHandler } from './commands/handlers/request-event-settlement.handler';
 import { GetFeaturedEventsHandler } from './queries/handlers/get-featured-events.handler';
 import { GetUpcomingEventsHandler } from './queries/handlers/get-upcoming-events.handler';
 import { GetWeeklyFeaturedEventsHandler } from './queries/handlers/get-weekly-featured-events.handler';
@@ -28,9 +30,12 @@ import { GetEventLandingHandler } from './queries/handlers/get-event-landing.han
 import { GetEventDetailHandler } from './queries/handlers/get-event-detail.handler';
 import { GetOrganizerEventsHandler } from './queries/handlers/get-organizer-events.handler';
 import { GetOrganizerEventForEditHandler } from './queries/handlers/get-organizer-event-for-edit.handler';
+import { GetOrganizerEventReportHandler } from './queries/handlers/get-organizer-event-report.handler';
+import { GetEventSettlementHandler } from './queries/handlers/get-event-settlement.handler';
 import { ListEventApprovalsHandler } from './queries/handlers/list-event-approvals.handler';
 import { EventStatusCronService } from './services/event-status-cron.service';
 import { EventSeederService } from './services/event-seeder.service';
+import { UmamiAnalyticsService } from './services/umami-analytics.service';
 import { AdminKeyGuard } from '@common/guards/admin-key.guard';
 
 const CommandHandlers = [
@@ -39,6 +44,7 @@ const CommandHandlers = [
   PublishEventHandler,
   ApproveEventHandler,
   ObserveEventHandler,
+  RequestEventSettlementHandler,
 ];
 const QueryHandlers = [
   GetFeaturedEventsHandler,
@@ -49,6 +55,8 @@ const QueryHandlers = [
   GetEventDetailHandler,
   GetOrganizerEventsHandler,
   GetOrganizerEventForEditHandler,
+  GetOrganizerEventReportHandler,
+  GetEventSettlementHandler,
   ListEventApprovalsHandler,
 ];
 
@@ -57,6 +65,7 @@ const QueryHandlers = [
     CqrsModule,
     AuthModule,
     SearchModule,
+    RedisModule,
     TypeOrmModule.forFeature([
       EventEntity,
       EventImageEntity,
@@ -77,12 +86,14 @@ const QueryHandlers = [
     ...QueryHandlers,
     EventStatusCronService,
     EventSeederService,
+    UmamiAnalyticsService,
     AdminKeyGuard,
   ],
   exports: [
     TypeOrmModule,
     EventStatusCronService,
     EventSeederService,
+    UmamiAnalyticsService,
     AdminKeyGuard,
   ],
 })

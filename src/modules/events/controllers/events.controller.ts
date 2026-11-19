@@ -23,10 +23,14 @@ import { EventDetailResponseDto } from '../dto/event-detail.response.dto';
 import { GetOrganizerEventsRequestDto } from '../dto/get-organizer-events.request.dto';
 import { OrganizerEventResponseDto } from '../dto/organizer-event.response.dto';
 import { OrganizerEventEditResponseDto } from '../dto/organizer-event-edit.response.dto';
+import { OrganizerEventReportResponseDto } from '../dto/organizer-event-report.response.dto';
+import { RequestEventSettlementRequestDto } from '../dto/request-event-settlement.request.dto';
+import { EventSettlementResponseDto } from '../dto/event-settlement.response.dto';
 import { PurgeFeaturedCacheResponseDto } from '../dto/purge-featured-cache.response.dto';
 import { CreateEventCommand } from '../commands/impl/create-event.command';
 import { UpdateEventCommand } from '../commands/impl/update-event.command';
 import { PublishEventCommand } from '../commands/impl/publish-event.command';
+import { RequestEventSettlementCommand } from '../commands/impl/request-event-settlement.command';
 import { GetFeaturedEventsQuery } from '../queries/impl/get-featured-events.query';
 import { GetUpcomingEventsQuery } from '../queries/impl/get-upcoming-events.query';
 import { GetWeeklyFeaturedEventsQuery } from '../queries/impl/get-weekly-featured-events.query';
@@ -35,6 +39,8 @@ import { GetEventLandingQuery } from '../queries/impl/get-event-landing.query';
 import { GetEventDetailQuery } from '../queries/impl/get-event-detail.query';
 import { GetOrganizerEventsQuery } from '../queries/impl/get-organizer-events.query';
 import { GetOrganizerEventForEditQuery } from '../queries/impl/get-organizer-event-for-edit.query';
+import { GetOrganizerEventReportQuery } from '../queries/impl/get-organizer-event-report.query';
+import { GetEventSettlementQuery } from '../queries/impl/get-event-settlement.query';
 import { RedisService } from '@modules/redis/redis.service';
 import { REDIS_CACHE_KEYS, REDIS_DEFAULT_TTL } from '@modules/redis/redis.constants';
 import { JwtAuthGuard, AuthenticatedRequest } from '@auth/infrastructure/guards/jwt-auth.guard';
@@ -269,6 +275,96 @@ export class EventsController {
       new GetOrganizerEventForEditQuery(publicUuid, identifier),
     );
     return matchResult(result, (event) => event);
+  }
+
+  @Get('organizer/:identifier/report')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Obtener reporte completo de ventas, recaudación, aforos y órdenes recientes del evento',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reporte de ventas y métricas operativas del evento para el organizador',
+    type: OrganizerEventReportResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'No tienes permiso para ver este evento' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async getOrganizerEventReport(
+    @Req() req: AuthenticatedRequest,
+    @Param('identifier') identifier: string,
+  ): Promise<OrganizerEventReportResponseDto> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.queryBus.execute(
+      new GetOrganizerEventReportQuery(publicUuid, identifier),
+    );
+    return matchResult(result, (report) => report);
+  }
+
+  @Get('organizer/:identifier/settlement')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Obtener resumen y estado de la liquidación del evento para el promotor',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumen financiero o corte de liquidación existente',
+    type: EventSettlementResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'No tienes permiso para ver este evento' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  async getOrganizerEventSettlement(
+    @Req() req: AuthenticatedRequest,
+    @Param('identifier') identifier: string,
+  ): Promise<EventSettlementResponseDto> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.queryBus.execute(
+      new GetEventSettlementQuery(publicUuid, identifier),
+    );
+    return matchResult(result, (settlement) => settlement);
+  }
+
+  @Post('organizer/:identifier/settlement')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Solicitar liquidación final y desembolso de fondos del evento indicando cuenta bancaria',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Solicitud de liquidación registrada exitosamente con estado requested',
+    type: EventSettlementResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Datos bancarios inválidos o sin fondos para liquidar' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'No tienes permiso para solicitar la liquidación' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  @ApiResponse({ status: 409, description: 'Ya existe una solicitud de liquidación en proceso' })
+  async requestOrganizerEventSettlement(
+    @Req() req: AuthenticatedRequest,
+    @Param('identifier') identifier: string,
+    @Body() dto: RequestEventSettlementRequestDto,
+  ): Promise<EventSettlementResponseDto> {
+    const publicUuid = req.user?.sub as string;
+    const result = await this.commandBus.execute(
+      new RequestEventSettlementCommand(publicUuid, identifier, dto),
+    );
+    return matchResult(
+      result,
+      (settlement) => settlement,
+      {
+        SETTLEMENT_ALREADY_REQUESTED: 'Ya existe una solicitud de liquidación registrada o en proceso para este evento.',
+        NO_FUNDS_TO_SETTLE: 'El evento no cuenta con entradas vendidas o recaudación neta positiva para liquidar.',
+        FORBIDDEN: 'No tienes permiso para solicitar la liquidación de este evento.',
+        NOT_FOUND: 'Evento no encontrado.',
+      },
+    );
   }
 
   // =========================================================================

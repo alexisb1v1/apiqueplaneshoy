@@ -103,6 +103,10 @@ export class UserOrderResponseDto {
   venueAddress: string;
 
   @Expose()
+  @ApiProperty({ description: 'URL de navegación a Google Maps o Waze', nullable: true, example: 'https://maps.google.com/?q=-8.3791,-74.5539' })
+  googleMapsUrl: string | null;
+
+  @Expose()
   @ApiProperty({ description: 'Ciudad donde se realiza el evento', example: 'Pucallpa' })
   city: string;
 
