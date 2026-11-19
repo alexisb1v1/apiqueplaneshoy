@@ -1,7 +1,7 @@
 # -------------------------
 # 1) Dependencies (Build)
 # -------------------------
-FROM node:20.18-alpine AS deps
+FROM node:22.14-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -10,7 +10,7 @@ RUN npm ci
 # -------------------------
 # 2) Build
 # -------------------------
-FROM node:20.18-alpine AS builder
+FROM node:22.14-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -21,7 +21,7 @@ RUN npm run build
 # -------------------------
 # 3) Production Dependencies
 # -------------------------
-FROM node:20.18-alpine AS prod-deps
+FROM node:22.14-alpine AS prod-deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -30,7 +30,7 @@ RUN npm ci --omit=dev --ignore-scripts
 # -------------------------
 # 4) Runner (No-Root Production)
 # -------------------------
-FROM node:20.18-alpine AS runner
+FROM node:22.14-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
