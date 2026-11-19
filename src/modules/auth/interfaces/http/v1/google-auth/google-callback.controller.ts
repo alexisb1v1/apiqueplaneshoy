@@ -49,6 +49,8 @@ export class GoogleCallbackController {
           'La sesión de autenticación con Google expiró o ya fue utilizada. Intenta iniciar sesión nuevamente.',
         INVALID_INPUT:
           'No se pudo validar tu cuenta con Google o tu correo no está verificado en Google.',
+        FORBIDDEN:
+          'Las cuentas con rol de administrador deben acceder a través del Backoffice.',
       },
     );
   }

@@ -143,6 +143,12 @@ export class GoogleCallbackHandler implements ICommandHandler<GoogleCallbackComm
         }
       }
 
+      // En la Web pública no deben ingresar usuarios con rol 'admin', únicamente usuarios con rol 'customer'
+      if (user.role === 'admin') {
+        await queryRunner.rollbackTransaction();
+        return err('FORBIDDEN');
+      }
+
       await queryRunner.commitTransaction();
 
       // Solo envía correo de bienvenida cuando se crea una cuenta nueva con Google
