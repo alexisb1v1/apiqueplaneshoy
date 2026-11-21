@@ -213,6 +213,9 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       if (dto.hasLandingPage !== undefined) {
         event.hasLandingPage = dto.hasLandingPage;
       }
+      if (dto.hasBannerText !== undefined) {
+        event.hasBannerText = dto.hasBannerText;
+      }
       if (dto.landingConfig !== undefined) {
         event.landingConfig = dto.landingConfig;
       }
@@ -265,7 +268,11 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
               Number(z.maxTicketsPerOrder) || 4,
             );
             const regularPriceNum = Number(z.regularPrice) || 0;
-            const officialFee = calculatePlatformFee(regularPriceNum);
+            const requestedFee = Number(z.serviceFee);
+            const officialFee =
+              !isNaN(requestedFee) && requestedFee >= 0
+                ? requestedFee
+                : calculatePlatformFee(regularPriceNum);
 
             const zone = manager.create(ZoneEntity, {
               eventId: updatedEvent.id,

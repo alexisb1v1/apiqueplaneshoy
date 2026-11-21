@@ -125,6 +125,7 @@ export class GetFeaturedEventsHandler implements IQueryHandler<GetFeaturedEvents
           minPrice,
           hasLandingPage: event.hasLandingPage,
           isFeatured: event.isFeatured,
+          hasBannerText: event.hasBannerText ?? false,
         },
         { excludeExtraneousValues: true },
       );

@@ -235,6 +235,12 @@ export class EventLandingResponseDto {
   bannerUrl!: string | null;
 
   @Expose()
+  flyerUrl!: string | null;
+
+  @Expose()
+  hasBannerText!: boolean;
+
+  @Expose()
   zoneMapUrl!: string | null;
 
   @Expose()

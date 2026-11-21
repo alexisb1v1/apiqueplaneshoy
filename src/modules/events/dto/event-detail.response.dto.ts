@@ -141,6 +141,17 @@ export class EventDetailResponseDto {
 
   @Expose()
   @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/banners/flyer-oficial.webp',
+    nullable: true,
+  })
+  flyerUrl!: string | null;
+
+  @Expose()
+  @ApiProperty({ example: false })
+  hasBannerText!: boolean;
+
+  @Expose()
+  @ApiProperty({
     example: 'https://pub-xxxx.r2.dev/maps/croquis-recinto.webp',
     nullable: true,
   })

@@ -176,6 +176,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
         termsAndConditionsUrl: dto.termsAndConditionsUrl || null,
         faqs: dto.faqs || null,
         hasLandingPage: dto.hasLandingPage || false,
+        hasBannerText: dto.hasBannerText ?? false,
         landingConfig: normalizedLandingConfig,
         promoVideoUrl: resolvedPromoVideoUrl,
         socialLinks: hasAnySocialLink ? resolvedSocialLinks : null,
@@ -220,7 +221,11 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
             Number(z.maxTicketsPerOrder) || 4,
           );
           const regularPriceNum = Number(z.regularPrice) || 0;
-          const officialFee = calculatePlatformFee(regularPriceNum);
+          const requestedFee = Number(z.serviceFee);
+          const officialFee =
+            !isNaN(requestedFee) && requestedFee >= 0
+              ? requestedFee
+              : calculatePlatformFee(regularPriceNum);
 
           const zone = this.zoneRepository.create({
             eventId: savedEvent.id,

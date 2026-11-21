@@ -120,6 +120,15 @@ export class CreateEventDto {
   @IsOptional()
   readonly bannerUrl?: string;
 
+  @ApiProperty({
+    example: false,
+    description: 'Indica si el banner ya incluye texto/diseño gráfico oficial',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  readonly hasBannerText?: boolean;
+
   @ApiProperty({ example: 'Av. José Pardo 123', required: false })
   @IsString()
   @IsOptional()

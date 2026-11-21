@@ -40,7 +40,7 @@ export class EventImageEntity {
     length: 50,
     default: 'gallery',
     comment:
-      'Tipo o clasificación de la imagen: banner (principal), gallery (galería), zone_map (mapa de zonas/croquis)',
+      'Tipo o clasificación de la imagen: banner (principal), flyer (afiche cuadrado/vertical), gallery (galería), zone_map (mapa de zonas/croquis)',
   })
   imageType: string;
 

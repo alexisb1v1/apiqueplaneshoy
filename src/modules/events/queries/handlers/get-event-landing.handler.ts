@@ -87,6 +87,7 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
     const banner =
       event.images?.find((img) => img.imageType === 'banner') ||
       event.images?.[0];
+    const flyer = event.images?.find((img) => img.imageType === 'flyer');
     const zoneMapImg = event.images?.find(
       (img) => img.imageType === 'zone_map',
     );
@@ -195,6 +196,8 @@ export class GetEventLandingHandler implements IQueryHandler<GetEventLandingQuer
         city,
         hasLandingPage: event.hasLandingPage,
         bannerUrl: banner?.imageUrl || null,
+        flyerUrl: flyer?.imageUrl || null,
+        hasBannerText: Boolean(event.hasBannerText),
         zoneMapUrl: zoneMapImg?.imageUrl || null,
         termsAndConditionsUrl: event.termsAndConditionsUrl,
         ageRestriction: event.ageRestriction,

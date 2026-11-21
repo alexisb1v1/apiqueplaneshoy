@@ -67,6 +67,15 @@ export class EventEntity {
   })
   isFeatured: boolean;
 
+  @Column({
+    name: 'has_banner_text',
+    type: 'boolean',
+    default: false,
+    comment:
+      'Indica si el banner del evento ya incluye texto/diseño gráfico (para no sobreimprimir texto HTML)',
+  })
+  hasBannerText: boolean;
+
   @Index()
   @Column({
     name: 'organizer_id',

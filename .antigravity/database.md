@@ -351,6 +351,7 @@ erDiagram
 * **`public_uuid`** (`uuid`, UNIQUE, INDEX): UUID público para URLs de detalle (`/events/:uuid`), vistas previas secretas y consumo seguro en APIs móviles.
 * **`slug`** (`varchar(150)`, UNIQUE, INDEX): Cadena alfanumérica amigable para la URL pública del evento en el navegador y posicionamiento en Google (ej: `corazon-serrano-pucallpa-2026`).
 * **`has_landing_page`** (`boolean`, default false, INDEX): Indicador de si el evento tiene activada la experiencia de Landing Page inmersiva y personalizada (`true`) o se muestra con la plantilla estándar de cartelera (`false`).
+* **`has_banner_text`** (`boolean`, default false): Indicador de si el banner oficial ya incluye textos, fechas y diseño gráfico (`true`, evitando sobreimprimir textos HTML) o es una foto limpia (`false`).
 * **`is_featured`** (`boolean`, default false, INDEX): Indicador de si el evento está seleccionado como destacado (*Featured*) para exhibirse en el Hero Carousel principal y en las secciones destacadas de la portada web y móvil (`GET /api/v1/events/featured`). Indexado para consultas de alto rendimiento y sincronizado con Meilisearch.
 * **`organizer_id`** (`integer`, FK -> `users.id`, INDEX): Usuario responsable del evento (promotor).
 * **`name`** (`varchar(255)`, INDEX): Título comercial del evento.
@@ -436,7 +437,7 @@ erDiagram
 * **`id`** (`bigint`, PK): Identificador de la imagen.
 * **`event_id`** (`bigint`, FK -> `events.id`, INDEX): Evento asociado.
 * **`image_url`** (`varchar(512)`): Enlace web del archivo en Cloudflare R2 / CDN público (ej: `https://pub-xxxxxx.r2.dev/banners/1730328900-uuid.webp` o `https://cdn.queplaneshoy.com/...`).
-* **`image_type`** (`varchar(50)`, INDEX): Tipo o clasificación (`banner` para portada principal, `gallery` para fotos promocionales, `zone_map` para croquis de localidades, `landing_header` para cabecera del landing, `landing_body` para banner del cuerpo, y `landing_footer` para auspiciadores/pie).
+* **`image_type`** (`varchar(50)`, INDEX): Tipo o clasificación (`banner` para portada principal horizontal, `flyer` para afiche oficial cuadrado/vertical para catálogo y móvil, `gallery` para fotos promocionales, `zone_map` para croquis de localidades, `landing_header` para cabecera del landing, `landing_body` para banner del cuerpo, y `landing_footer` para auspiciadores/pie).
 * **`sort_order`** (`integer`, default 0): Posición para ordenar en galerías (índices 0 a 3 para la galería).
 * **Estructura de Almacenamiento en Cloudflare R2:** Los objetos se suben mediante URLs prefirmadas (`Presigned URLs`) generadas por el endpoint `POST /api/media/presigned-url` en el bucket correspondiente (`qph-media-dev` / `qph-media-prod`), distribuidos por prefijos virtuales: `/banners`, `/croquis`, `/gallery`, `/landings` y `/organizers`.
 * **Regla de Negocio (Galería):** Para el tipo `gallery`, se restringe a un **máximo estricto de 4 fotos oficiales** por evento. Esta restricción garantiza un consumo de ancho de banda ligero y tiempos de carga instantáneos en la vista móvil de compra de entradas.

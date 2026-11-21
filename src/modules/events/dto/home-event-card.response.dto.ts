@@ -74,10 +74,25 @@ export class HomeEventCardResponseDto {
   @Expose()
   @ApiProperty({
     example: 'https://pub-xxxx.r2.dev/banners/cumbia.webp',
-    description: 'URL de la imagen de portada en Cloudflare R2',
+    description: 'URL de la imagen de portada cuadrada/flyer en Cloudflare R2',
     nullable: true,
   })
   imageUrl!: string | null;
+
+  @Expose()
+  @ApiProperty({
+    example: 'https://pub-xxxx.r2.dev/banners/cumbia-hero.webp',
+    description: 'URL del banner panorámico horizontal para pantallas anchas',
+    nullable: true,
+  })
+  bannerUrl!: string | null;
+
+  @Expose()
+  @ApiProperty({
+    example: false,
+    description: 'Indica si el banner ya incluye texto gráfico oficial',
+  })
+  hasBannerText!: boolean;
 
   @Expose()
   @ApiProperty({

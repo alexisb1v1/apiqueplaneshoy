@@ -257,6 +257,10 @@ export class OrganizerEventEditResponseDto {
 
   @Expose()
   @ApiPropertyOptional()
+  hasBannerText?: boolean;
+
+  @Expose()
+  @ApiPropertyOptional()
   landingConfig?: Record<string, any>;
 
   @Expose()
@@ -278,6 +282,10 @@ export class OrganizerEventEditResponseDto {
   @Expose()
   @ApiPropertyOptional()
   bannerUrl?: string;
+
+  @Expose()
+  @ApiPropertyOptional()
+  flyerUrl?: string;
 
   @Expose()
   @ApiPropertyOptional()

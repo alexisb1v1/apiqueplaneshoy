@@ -86,6 +86,7 @@ export class GetOrganizerEventForEditHandler implements IQueryHandler<
         : event.venue || '';
 
     const bannerImg = event.images?.find((img) => img.imageType === 'banner');
+    const flyerImg = event.images?.find((img) => img.imageType === 'flyer');
     const zoneMapImg = event.images?.find(
       (img) => img.imageType === 'zone_map',
     );
@@ -169,11 +170,13 @@ export class GetOrganizerEventForEditHandler implements IQueryHandler<
         termsAndConditionsUrl: event.termsAndConditionsUrl || '',
         faqs: event.faqs || [],
         hasLandingPage: Boolean(event.hasLandingPage),
+        hasBannerText: Boolean(event.hasBannerText),
         landingConfig: event.landingConfig || undefined,
         promoVideoUrl: event.promoVideoUrl || '',
         socialLinks: event.socialLinks || undefined,
         status: event.status,
         bannerUrl: bannerImg?.imageUrl || '',
+        flyerUrl: flyerImg?.imageUrl || '',
         zoneMapUrl: zoneMapImg?.imageUrl || '',
         galleryUrls: galleryImgs,
         shows: mappedShows,

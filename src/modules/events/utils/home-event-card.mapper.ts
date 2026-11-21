@@ -13,10 +13,15 @@ import { plainToInstance } from 'class-transformer';
 export function mapEventToHomeCard(
   event: EventEntity,
 ): HomeEventCardResponseDto {
-  // 1. Imagen de Portada
-  const banner =
-    event.images?.find((img) => img.imageType === 'banner') ||
-    event.images?.[0];
+  // 1. Imagen Cuadrada (Flyer oficial para tarjetas) y Banner Panorámico (para Hero/Desktop)
+  const flyerImg = event.images?.find((img) => img.imageType === 'flyer');
+  const bannerImg = event.images?.find((img) => img.imageType === 'banner');
+  const fallbackImg = event.images?.[0];
+
+  const cardImageUrl =
+    flyerImg?.imageUrl || bannerImg?.imageUrl || fallbackImg?.imageUrl || null;
+  const heroBannerUrl =
+    bannerImg?.imageUrl || flyerImg?.imageUrl || fallbackImg?.imageUrl || null;
 
   // 2. Próxima Función (prioriza funciones futuras)
   const now = new Date();
@@ -140,7 +145,9 @@ export function mapEventToHomeCard(
       hasLandingPage: event.hasLandingPage,
       title: event.name,
       category: event.category,
-      imageUrl: banner?.imageUrl || null,
+      imageUrl: cardImageUrl,
+      bannerUrl: heroBannerUrl,
+      hasBannerText: Boolean(event.hasBannerText),
       date,
       city,
       venue: event.venue,

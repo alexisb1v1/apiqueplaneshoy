@@ -50,4 +50,8 @@ export class FeaturedEventResponseDto {
   @ApiProperty({ description: 'Si está marcado como destacado editorial' })
   @Expose()
   isFeatured: boolean;
+
+  @ApiProperty({ description: 'Indica si el banner ya incluye texto gráfico oficial' })
+  @Expose()
+  hasBannerText: boolean;
 }
